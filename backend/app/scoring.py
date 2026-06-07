@@ -144,6 +144,7 @@ class TeamScore:
     fit_adjustment: float = 0.0      # positional fit bonus/penalty (sum)
     fit_notes: list[str] = field(default_factory=list)
     fit_deltas: dict = field(default_factory=dict)  # per-player signed fit delta
+    status_deltas: dict = field(default_factory=dict)  # per-player hot/slump rating delta (actual, post-clamp)
 
     @property
     def adjusted_total(self) -> float:
@@ -258,12 +259,17 @@ def roll_status(players: list[PlayerStats], rng) -> dict:
 def score_team(players: list[PlayerStats], status: dict | None = None) -> TeamScore:
     status = status or {}
     scores = [score_player(p) for p in players]
+    status_deltas: dict[str, float] = {}
     for s in scores:
         st = status.get(s.player.name)
         if st == "hot":
+            before = s.total
             s.total = min(100.0, s.total + HOT_RATING)
+            status_deltas[s.player.name] = round(s.total - before, 1)
         elif st == "slump":
+            before = s.total
             s.total = max(0.0, s.total + SLUMP_RATING)
+            status_deltas[s.player.name] = round(s.total - before, 1)
     base_total = sum(s.total for s in scores)
     fit_adj, fit_notes, fit_deltas = evaluate_fit(players)
     return TeamScore(
@@ -272,6 +278,7 @@ def score_team(players: list[PlayerStats], status: dict | None = None) -> TeamSc
         fit_adjustment=fit_adj,
         fit_notes=fit_notes,
         fit_deltas=fit_deltas,
+        status_deltas=status_deltas,
     )
 
 
@@ -314,15 +321,19 @@ def compute_matchups(home: TeamScore, away: TeamScore) -> list[MatchupResult]:
                     big, small = (h, a) if gap > 0 else (a, h)
                     note = f"{big.player.name} has a size edge over {small.player.name}"
 
-        # Per-player matchup delta = positional fit + size mismatch (signed).
-        # Displayed score stays the base rating; the delta is shown as a colored
-        # arrow and decides the head-to-head.
+        # Per-player matchup delta = positional fit + size mismatch + hot/slump.
+        # Displayed score is the player's TRUE base (pre hot/slump); the status
+        # boost/penalty is surfaced in the delta arrow alongside fit & size.
+        h_status = home.status_deltas.get(h.player.name, 0.0) if h else 0.0
+        a_status = away.status_deltas.get(a.player.name, 0.0) if a else 0.0
+        h_true = h_base - h_status
+        a_true = a_base - a_status
         h_bonus = max(0.0, size_adj)
         a_bonus = max(0.0, -size_adj)
-        h_delta = round((home.fit_deltas.get(h.player.name, 0.0) if h else 0.0) + h_bonus, 1)
-        a_delta = round((away.fit_deltas.get(a.player.name, 0.0) if a else 0.0) + a_bonus, 1)
-        h_eff = h_base + h_delta
-        a_eff = a_base + a_delta
+        h_delta = round((home.fit_deltas.get(h.player.name, 0.0) if h else 0.0) + h_bonus + h_status, 1)
+        a_delta = round((away.fit_deltas.get(a.player.name, 0.0) if a else 0.0) + a_bonus + a_status, 1)
+        h_eff = h_true + h_delta
+        a_eff = a_true + a_delta
 
         if abs(h_eff - a_eff) < 1e-6:
             winner = "tie"
@@ -335,8 +346,8 @@ def compute_matchups(home: TeamScore, away: TeamScore) -> list[MatchupResult]:
                 position=pos,
                 home_player=h.player.name if h else "(none)",
                 away_player=a.player.name if a else "(none)",
-                home_score=h_base,
-                away_score=a_base,
+                home_score=h_true,
+                away_score=a_true,
                 winner=winner,
                 note=note,
                 home_delta=h_delta,

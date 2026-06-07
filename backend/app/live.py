@@ -17,7 +17,7 @@ import time
 
 from . import db, game
 from .models import player_from_dict
-from .scoring import score_player
+from .scoring import score_player, roll_status
 from .positions import SLOTS
 from . import rating
 
@@ -208,8 +208,14 @@ class LiveGame:
         b_old = self.b.record()["rating"]
         a_disp = self.a.record()["display_name"]
         b_disp = self.b.record()["display_name"]
-        a_out, pa = game.score_lineups(self.a.lineup(), self.b.lineup(), f"{b_disp}'s squad")
-        _, pb = game.score_lineups(self.b.lineup(), self.a.lineup(), f"{a_disp}'s squad")
+        # Roll Hot/Slump ONCE per lineup and reuse for both players' scorings, so
+        # both views agree on who's hot/cold (and the same boost/penalty applies).
+        a_status = roll_status(self.a.lineup(), self.rng)
+        b_status = roll_status(self.b.lineup(), self.rng)
+        a_out, pa = game.score_lineups(self.a.lineup(), self.b.lineup(), f"{b_disp}'s squad",
+                                       home_status=a_status, away_status=b_status)
+        _, pb = game.score_lineups(self.b.lineup(), self.a.lineup(), f"{a_disp}'s squad",
+                                   home_status=b_status, away_status=a_status)
         b_out = _INVERSE[a_out]
         self._settle(self.a, pa, a_out, a_old)
         self._settle(self.b, pb, b_out, b_old)

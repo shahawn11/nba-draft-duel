@@ -193,12 +193,15 @@ def _simulate_box(players: list, team_pts: int, rng: random.Random,
 
 
 def score_lineups(home_players: list, away_players: list, opponent_label: str,
-                  rng: random.Random | None = None) -> tuple[str, dict]:
+                  rng: random.Random | None = None,
+                  home_status: dict | None = None, away_status: dict | None = None) -> tuple[str, dict]:
     """Score two lineups head-to-head from the home side's POV. Returns
-    (outcome, payload) where payload omits match_id/record (caller adds them)."""
+    (outcome, payload) where payload omits match_id/record (caller adds them).
+    Pass home_status/away_status to reuse pre-rolled Hot/Slump (so both players
+    in a PvP match see identical statuses); otherwise they're rolled here."""
     rng = rng or random.Random()
-    home_status = roll_status(home_players, rng)
-    away_status = roll_status(away_players, rng)
+    home_status = roll_status(home_players, rng) if home_status is None else home_status
+    away_status = roll_status(away_players, rng) if away_status is None else away_status
     result = duel(home_players=home_players, away_players=away_players,
                   home_status=home_status, away_status=away_status, rng=rng)
     outcome = {"home": "win", "away": "loss", "tie": "tie"}[result.winner]
@@ -221,7 +224,7 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
                     "team": s.player.team,
                     "decade": s.player.decade,
                     "height_in": s.player.height_in,
-                    "rating": round(s.total, 1),
+                    "rating": round(s.total - team.status_deltas.get(s.player.name, 0.0), 1),
                     "delta": round(delta_by_pos.get(s.player.position, 0.0), 1),
                     "status": status.get(s.player.name),
                     "game": box.get(s.player.name, {}),
