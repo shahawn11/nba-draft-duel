@@ -120,7 +120,11 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <h1>🏀 5v5 Duel</h1>
+        <h1 className="brand">
+          <span className="brand-ball">🏀</span>
+          <span className="brand-5v5">5<span className="brand-v">v</span>5</span>
+          <span className="brand-duel">DUEL</span>
+        </h1>
         <div className="header-right">
           <button className="lb-toggle" onClick={() => { toggleMuted(); setMuted(isMuted()) }} title={muted ? 'Unmute' : 'Mute'}>
             {muted ? '🔇' : '🔊'}
