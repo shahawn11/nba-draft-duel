@@ -43,7 +43,9 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   font-weight: 900;
   line-height: 1;
   user-select: none;
+  cursor: pointer;
 }
+.brand:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
 .brand-ball {
   font-size: 1.7rem;
   filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45));
@@ -108,6 +110,13 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 }
 
 /* ---- setup ---- */
+.setup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.setup .submit { align-self: center; min-width: 220px; }
 .setup form { display: flex; gap: 10px; margin-top: 16px; }
 .setup input {
   flex: 1;

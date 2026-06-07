@@ -79,6 +79,14 @@ export default function App() {
     setRecord(rec)
   }
 
+  function goHome() {
+    setResult(null)
+    setView(null)
+    setLive(false)
+    setShowLeaderboard(false)
+    setError('')
+  }
+
   async function startMatch(chosenMode = 'offline') {
     setCommittedMode(chosenMode)
     if (chosenMode === 'pvp') {
@@ -120,7 +128,8 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <h1 className="brand">
+        <h1 className="brand" onClick={goHome} title="Home" role="button" tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') goHome() }}>
           <span className="brand-ball">🏀</span>
           <span className="brand-5v5">5<span className="brand-v">v</span>5</span>
           <span className="brand-duel">DUEL</span>
