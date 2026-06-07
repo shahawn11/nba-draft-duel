@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api.js'
 import Avatar from './Avatar.jsx'
+import { nameLabel } from '../nameLabel.js'
 
 const TIER_CLASS = {
   'Amateur': 'amateur', 'Pro': 'pro', 'All-Star': 'allstar',
@@ -37,7 +38,7 @@ export default function Leaderboard({ onClose, highlight }) {
                 <td className="lb-name">
                   <span className="lb-player">
                     <Avatar id={r.avatar || 'amateur'} size={28} />
-                    {r.display_name || r.username}
+                    {nameLabel(r)}
                   </span>
                 </td>
                 <td><span className={`tier-badge ${TIER_CLASS[r.tier] || ''}`}>{r.tier}</span></td>

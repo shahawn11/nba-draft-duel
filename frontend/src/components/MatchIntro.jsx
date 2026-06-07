@@ -3,13 +3,14 @@
 import { useEffect } from 'react'
 import { playClash } from '../sound.js'
 import Avatar from './Avatar.jsx'
+import { nameLabel } from '../nameLabel.js'
 
 function tierCls(tier) {
   return (tier || '').toLowerCase().replace(/[^a-z]/g, '')
 }
 
 function Fighter({ side, name, record }) {
-  const label = name || (record && record.display_name) || 'Player'
+  const label = record ? nameLabel(record) : (name || 'Player')
   return (
     <div className={`fighter ${side}`}>
       <Avatar id={(record && record.avatar) || 'amateur'} size={56} />
