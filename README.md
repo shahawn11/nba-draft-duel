@@ -47,14 +47,22 @@ frontend/             # React + Vite (draft board, results, record)
 cd backend
 python3 -m app.demo          # runs a sample offline duel, no deps needed
 
-# Run the API:
-python3 -m venv .venv && ./.venv/bin/python -m ensurepip --upgrade
-./.venv/bin/python -m pip install -r requirements.txt
-./.venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-# interactive docs at http://127.0.0.1:8000/docs
+# One-time setup of the backend venv (this host needs a real arm64 interpreter
+# with PYTHONPATH cleared — see Troubleshooting):
+PY=/Users/shahawn/.local/share/mise/installs/python/3.12.13/bin/python3
+env PYTHONPATH= $PY -m venv .venv312
+env PYTHONPATH= ./.venv312/bin/python -m pip install -r requirements.txt
 
-./.venv/bin/python -m tests.test_api   # end-to-end smoke test
+# Run the API (launcher clears PYTHONPATH + uses the clean venv):
+./run.sh                     # http://127.0.0.1:8000  (docs at /docs)
+
+env PYTHONPATH= ./.venv312/bin/python -m tests.test_api   # end-to-end smoke test
 ```
+
+> ⚠️ Do **not** launch with a bare `python3 -m venv .venv` on this host: it
+> produces an x86_64 / wrong-pip venv and you'll hit
+> `incompatible architecture (have 'x86_64', need 'arm64')` on pydantic_core.
+> Always use `.venv312` + `./run.sh`.
 
 Then start the frontend (separate terminal):
 
