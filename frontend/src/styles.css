@@ -655,3 +655,36 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .mscore.up { color: var(--win); font-weight: 700; }
 .mscore.down { color: var(--loss); font-weight: 700; }
 .mdelta { font-size: 0.74rem; font-weight: 800; }
+
+/* ---- auth ---- */
+.auth-modal { width: min(360px, 92vw); text-align: left; }
+.auth-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.auth-tabs button {
+  flex: 1;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.auth-tabs button.active { color: var(--text); border-color: var(--accent); background: rgba(255, 122, 0, 0.12); }
+.auth-form { display: flex; flex-direction: column; gap: 10px; }
+.auth-form input {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 11px 12px;
+  font-size: 1rem;
+}
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}

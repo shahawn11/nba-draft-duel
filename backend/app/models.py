@@ -64,6 +64,12 @@ class NewMatchRequest(BaseModel):
     username: str = Field(min_length=1, max_length=40)
 
 
+class AuthRequest(BaseModel):
+    username: str = Field(min_length=2, max_length=24)
+    password: str = Field(min_length=4, max_length=128)
+    guest_id: str | None = None   # signup: transfer this guest's stats
+
+
 class PickRequest(BaseModel):
     player_name: str = Field(min_length=1)
     slot: str = Field(min_length=1)   # which open lineup slot to assign the player to

@@ -36,6 +36,20 @@ CREATE TABLE IF NOT EXISTS matches (
 );
 """
 
+AUTH_SCHEMA = """
+CREATE TABLE IF NOT EXISTS accounts (
+    username    TEXT PRIMARY KEY,
+    pw_hash     TEXT NOT NULL,
+    salt        TEXT NOT NULL,
+    created_at  REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sessions (
+    token       TEXT PRIMARY KEY,
+    username    TEXT NOT NULL,
+    created_at  REAL NOT NULL
+);
+"""
+
 
 def _conn() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -47,6 +61,7 @@ def _conn() -> sqlite3.Connection:
 def init_db() -> None:
     with _conn() as c:
         c.executescript(SCHEMA)
+        c.executescript(AUTH_SCHEMA)
         # Migration: add rating to pre-existing users tables.
         cols = {r[1] for r in c.execute("PRAGMA table_info(users)")}
         if "rating" not in cols:
@@ -161,3 +176,60 @@ def resolve_match(match_id: str, state_json: dict, result_json: dict) -> None:
             "UPDATE matches SET status = 'resolved', state_json = ?, result_json = ? WHERE id = ?",
             (json.dumps(state_json), json.dumps(result_json), match_id),
         )
+
+
+# ---- accounts / sessions ---------------------------------------------------
+def account_exists(username: str) -> bool:
+    with _conn() as c:
+        return c.execute("SELECT 1 FROM accounts WHERE username = ?", (username,)).fetchone() is not None
+
+
+def get_account(username: str) -> dict | None:
+    with _conn() as c:
+        row = c.execute("SELECT username, pw_hash, salt FROM accounts WHERE username = ?", (username,)).fetchone()
+    return dict(row) if row else None
+
+
+def create_account(username: str, pw_hash: str, salt: str) -> None:
+    with _conn() as c:
+        c.execute(
+            "INSERT INTO accounts(username, pw_hash, salt, created_at) VALUES (?,?,?,?)",
+            (username, pw_hash, salt, time.time()),
+        )
+
+
+def create_session(username: str, token: str) -> None:
+    with _conn() as c:
+        c.execute(
+            "INSERT INTO sessions(token, username, created_at) VALUES (?,?,?)",
+            (token, username, time.time()),
+        )
+
+
+def username_for_token(token: str | None) -> str | None:
+    if not token:
+        return None
+    with _conn() as c:
+        row = c.execute("SELECT username FROM sessions WHERE token = ?", (token,)).fetchone()
+    return row["username"] if row else None
+
+
+def delete_session(token: str) -> None:
+    with _conn() as c:
+        c.execute("DELETE FROM sessions WHERE token = ?", (token,))
+
+
+def transfer_stats(src: str, dst: str) -> None:
+    """Move a guest's W/L/T + rating into a (new) account, then clear the guest."""
+    if not src or src == dst:
+        return
+    with _conn() as c:
+        s = c.execute("SELECT wins, losses, ties, rating FROM users WHERE username = ?", (src,)).fetchone()
+        if not s:
+            return
+        c.execute("INSERT OR IGNORE INTO users(username) VALUES (?)", (dst,))
+        c.execute(
+            "UPDATE users SET wins = wins + ?, losses = losses + ?, ties = ties + ?, rating = ? WHERE username = ?",
+            (s["wins"], s["losses"], s["ties"], s["rating"], dst),
+        )
+        c.execute("DELETE FROM users WHERE username = ?", (src,))

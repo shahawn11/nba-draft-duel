@@ -5,12 +5,13 @@ import MatchIntro from './MatchIntro.jsx'
 
 const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
 
-function wsUrl(username) {
+function wsUrl(username, token) {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${proto}//${location.host}/ws/pvp?username=${encodeURIComponent(username)}`
+  const t = token ? `&token=${encodeURIComponent(token)}` : ''
+  return `${proto}//${location.host}/ws/pvp?username=${encodeURIComponent(username)}${t}`
 }
 
-export default function LivePvP({ username, onExit, onRecord, meRecord }) {
+export default function LivePvP({ username, token, onExit, onRecord, meRecord }) {
   const [status, setStatus] = useState('connecting') // connecting|waiting|drafting|result|left|error
   const [opponent, setOpponent] = useState('')
   const [opponentRecord, setOpponentRecord] = useState(null)
@@ -31,7 +32,7 @@ export default function LivePvP({ username, onExit, onRecord, meRecord }) {
   const connect = useCallback(() => {
     setStatus('connecting'); setResult(null); setFilled([]); setPicksMade(0)
     setOpponentPicks(0); setWaitingForOpp(false); setError('')
-    const ws = new WebSocket(wsUrl(username))
+    const ws = new WebSocket(wsUrl(username, token))
     wsRef.current = ws
     ws.onmessage = (ev) => {
       const m = JSON.parse(ev.data)
@@ -66,8 +67,7 @@ export default function LivePvP({ username, onExit, onRecord, meRecord }) {
     }
     ws.onerror = () => setError('connection error')
     ws.onclose = () => { if (statusRef.current === 'connecting') setStatus('error') }
-  }, [username, onRecord])
-
+  }, [username, token, onRecord])
   // keep a ref of status for onclose
   const statusRef = useRef(status)
   useEffect(() => { statusRef.current = status }, [status])

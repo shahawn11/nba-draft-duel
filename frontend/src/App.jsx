@@ -1,43 +1,83 @@
-import { useState } from 'react'
-import { api } from './api.js'
+import { useState, useEffect } from 'react'
+import { api, setAuthToken } from './api.js'
 import DraftBoard from './components/DraftBoard.jsx'
 import Results from './components/Results.jsx'
 import LivePvP from './components/LivePvP.jsx'
 import Leaderboard from './components/Leaderboard.jsx'
+import AuthModal from './components/AuthModal.jsx'
 import { isMuted, toggleMuted } from './audio.js'
 
+function loadAuth() {
+  try { return JSON.parse(localStorage.getItem('ndd_auth') || 'null') } catch { return null }
+}
+function getGuestId() {
+  let g = localStorage.getItem('ndd_guest')
+  if (!g) { g = 'guest_' + Math.random().toString(36).slice(2, 10); localStorage.setItem('ndd_guest', g) }
+  return g
+}
+
 export default function App() {
-  const [username, setUsername] = useState('')
-  const [committedName, setCommittedName] = useState('')
+  const [guestId] = useState(getGuestId)
+  const [auth, setAuth] = useState(loadAuth)
   const [mode, setMode] = useState('offline')
   const [committedMode, setCommittedMode] = useState('offline')
   const [record, setRecord] = useState(null)
-  const [view, setView] = useState(null) // latest step view from backend
+  const [view, setView] = useState(null)
   const [result, setResult] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [live, setLive] = useState(false)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
+  const [showAuth, setShowAuth] = useState(false)
   const [muted, setMuted] = useState(isMuted())
 
-  async function startMatch(name, chosenMode = 'offline') {
-    setCommittedName(name)
+  const identity = (auth && auth.username) || guestId
+
+  // On load: restore token, fetch record, validate session.
+  useEffect(() => {
+    if (auth && auth.token) setAuthToken(auth.token)
+    api.record(identity).then(setRecord).catch(() => {})
+    if (auth && auth.token) {
+      api.me().then((d) => setRecord(d.record)).catch(() => {
+        setAuth(null); localStorage.removeItem('ndd_auth'); setAuthToken(null)
+        api.record(guestId).then(setRecord).catch(() => {})
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function onAuth(data) {
+    const a = { token: data.token, username: data.username }
+    setAuth(a)
+    localStorage.setItem('ndd_auth', JSON.stringify(a))
+    setAuthToken(data.token)
+    setRecord(data.record)
+    setShowAuth(false)
+  }
+
+  function logout() {
+    api.logout().catch(() => {})
+    setAuth(null)
+    localStorage.removeItem('ndd_auth')
+    setAuthToken(null)
+    api.record(guestId).then(setRecord).catch(() => {})
+  }
+
+  async function startMatch(chosenMode = 'offline') {
     setCommittedMode(chosenMode)
     if (chosenMode === 'pvp') {
       setLive(true)
-      try { setRecord(await api.record(name)) } catch { /* */ }
+      try { setRecord(await api.record(identity)) } catch { /* */ }
       return
     }
     setLive(false)
     setError('')
     setBusy(true)
     try {
-      const v = await api.newMatch(name, chosenMode)
+      const v = await api.newMatch(identity)
       setView(v)
       setResult(null)
-      setCommittedName(name)
-      setCommittedMode(chosenMode)
-      setRecord(await api.record(name))
+      setRecord(await api.record(identity))
     } catch (e) {
       setError(e.message)
     } finally {
@@ -50,12 +90,8 @@ export default function App() {
     setBusy(true)
     try {
       const res = await api.pick(view.match_id, playerName, slot)
-      if (res.done) {
-        setResult(res.result)
-        setRecord(res.result.record)
-      } else {
-        setView(res)
-      }
+      if (res.done) { setResult(res.result); setRecord(res.result.record) }
+      else setView(res)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -64,29 +100,25 @@ export default function App() {
   }
 
   const phase = result ? 'result' : view ? 'drafting' : 'setup'
+  const loggedIn = !!(auth && auth.username)
 
   return (
     <div className="app">
       <header>
         <h1>🏀 NBA Draft Duel</h1>
         <div className="header-right">
-          <button
-            className="lb-toggle"
-            onClick={() => { toggleMuted(); setMuted(isMuted()) }}
-            title={muted ? 'Unmute' : 'Mute'}
-          >
+          <button className="lb-toggle" onClick={() => { toggleMuted(); setMuted(isMuted()) }} title={muted ? 'Unmute' : 'Mute'}>
             {muted ? '🔇' : '🔊'}
           </button>
-          <button
-            className="lb-toggle"
-            onClick={() => setShowLeaderboard((s) => !s)}
-            title="Leaderboard"
-          >
+          <button className="lb-toggle" onClick={() => setShowLeaderboard((s) => !s)} title="Leaderboard">
             🏆 {showLeaderboard ? 'Back' : 'Leaderboard'}
           </button>
-          {committedName && record && (
+          {loggedIn
+            ? <button className="lb-toggle" onClick={logout}>Log out</button>
+            : <button className="lb-toggle" onClick={() => setShowAuth(true)}>Log in / Sign up</button>}
+          {record && (
             <div className="record">
-              <span className="who">{committedName}</span>
+              <span className="who">{loggedIn ? identity : 'Guest'}</span>
               <span className="rating-line">
                 {record.tier && (
                   <span className={`tier-badge ${(record.tier || '').toLowerCase().replace(/[^a-z]/g, '')}`}>
@@ -96,9 +128,7 @@ export default function App() {
                 {record.rating != null && <b className="rating-num">{record.rating}</b>}
               </span>
               <span className="wlt">
-                <b className="w">{record.wins}W</b> ·{' '}
-                <b className="l">{record.losses}L</b> ·{' '}
-                <b className="t">{record.ties}T</b>
+                <b className="w">{record.wins}W</b> · <b className="l">{record.losses}L</b> · <b className="t">{record.ties}T</b>
               </span>
             </div>
           )}
@@ -107,53 +137,34 @@ export default function App() {
 
       {error && <div className="error">{error}</div>}
 
-      {showLeaderboard && (
-        <Leaderboard onClose={() => setShowLeaderboard(false)} highlight={committedName} />
-      )}
+      {showAuth && <AuthModal guestId={guestId} onClose={() => setShowAuth(false)} onAuth={onAuth} />}
 
-      {!showLeaderboard && live && <LivePvP username={committedName} onExit={() => setLive(false)} onRecord={setRecord} meRecord={record} />}
+      {showLeaderboard && <Leaderboard onClose={() => setShowLeaderboard(false)} highlight={identity} />}
+
+      {!showLeaderboard && live && (
+        <LivePvP username={identity} token={auth && auth.token} onExit={() => setLive(false)} onRecord={setRecord} meRecord={record} />
+      )}
 
       {!showLeaderboard && !live && phase === 'setup' && (
         <div className="setup">
           <h2>Enter the arena</h2>
           <p className="hint">
-            Each of your five slots reveals a random decade &amp; team — draft a
-            player who fits, one pick at a time.
+            Playing as <b>{loggedIn ? identity : 'Guest'}</b>
+            {!loggedIn && <> — <button className="link-btn" onClick={() => setShowAuth(true)}>sign up</button> to keep your record.</>}
           </p>
           <div className="mode-toggle">
-            <button
-              className={`mode-btn ${mode === 'offline' ? 'active' : ''}`}
-              onClick={() => setMode('offline')}
-              type="button"
-            >
+            <button className={`mode-btn ${mode === 'offline' ? 'active' : ''}`} onClick={() => setMode('offline')} type="button">
               🏀 Offline
-              <span className="mode-sub">vs a current NBA starting five</span>
+              <span className="mode-sub">unranked · vs a current NBA starting five</span>
             </button>
-            <button
-              className={`mode-btn ${mode === 'pvp' ? 'active' : ''}`}
-              onClick={() => setMode('pvp')}
-              type="button"
-            >
+            <button className={`mode-btn ${mode === 'pvp' ? 'active' : ''}`} onClick={() => setMode('pvp')} type="button">
               ⚔️ PvP
-              <span className="mode-sub">real-time head-to-head draft</span>
+              <span className="mode-sub">ranked · real-time head-to-head draft</span>
             </button>
           </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (username.trim()) startMatch(username.trim(), mode)
-            }}
-          >
-            <input
-              autoFocus
-              placeholder="your name"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            <button className="submit" disabled={busy || !username.trim()}>
-              {busy ? 'Loading…' : 'Start match'}
-            </button>
-          </form>
+          <button className="submit" disabled={busy} onClick={() => startMatch(mode)}>
+            {busy ? 'Loading…' : 'Start match'}
+          </button>
         </div>
       )}
 
@@ -162,7 +173,7 @@ export default function App() {
       )}
 
       {!showLeaderboard && phase === 'result' && result && (
-        <Results result={result} onPlayAgain={() => startMatch(committedName, committedMode)} />
+        <Results result={result} onPlayAgain={() => startMatch(committedMode)} />
       )}
     </div>
   )

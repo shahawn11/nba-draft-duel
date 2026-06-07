@@ -108,6 +108,18 @@ npm run dev                  # http://127.0.0.1:5173  (proxies /api -> :8000)
 | POST | `/match/{id}/pick` | draft `{player_name, slot}` → next step or final result |
 | GET  | `/record/{username}` | current W/L/T + rating & tier |
 | GET  | `/leaderboard` | top players by rating (W/L/T + tier) |
+| POST | `/auth/signup` | create account `{username,password,guest_id?}` → token (migrates guest stats) |
+| POST | `/auth/login` | `{username,password}` → token |
+| POST | `/auth/logout` | invalidate the bearer token |
+| GET  | `/auth/me` | current account + record (bearer token) |
+
+## Accounts & guests
+
+You can play immediately as a **guest** — a persistent `guest_xxxx` id is stored
+in the browser and your record/rating accumulate under it. **Sign up** (username
++ password) to claim your progress: the guest's W/L + rating transfer to the new
+account. Passwords are hashed with PBKDF2 (stdlib); sessions are bearer tokens.
+Writing to a *registered* username requires its token (guests stay open).
 
 ## Rating & tiers
 
