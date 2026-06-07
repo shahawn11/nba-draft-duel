@@ -17,13 +17,25 @@ import time
 
 from . import db, game
 from .models import player_from_dict
+from .scoring import score_player
 from .positions import SLOTS
 from . import rating
 
 ROUND_SECONDS = 10
 INTRO_SECONDS = 3.6      # brief pause after match-up so the intro animation plays
+AI_WAIT_SECONDS = 60     # how long to wait for a human before falling back to AI
 NUM_ROUNDS = len(SLOTS)
 _INVERSE = {"win": "loss", "loss": "win", "tie": "tie"}
+
+
+def _ai_record() -> dict:
+    """The fabricated record for the AI fallback opponent (never persisted)."""
+    return {
+        "username": "Guest", "display_name": "Guest",
+        "wins": 0, "losses": 0, "rating": 1000, "peak_rating": 1000,
+        "tier": "Amateur", "next_tier": "Pro", "next_tier_at": 1500,
+        "avatar": "amateur", "unlocked": ["amateur"], "achievements": [],
+    }
 
 
 class PlayerLeft(Exception):
@@ -32,9 +44,10 @@ class PlayerLeft(Exception):
 
 
 class Player:
-    def __init__(self, ws, username: str):
+    def __init__(self, ws, username: str, is_ai: bool = False):
         self.ws = ws
         self.username = username
+        self.is_ai = is_ai
         self.inbox: asyncio.Queue = asyncio.Queue()
         self.done = asyncio.Event()
         self.reader: asyncio.Task | None = None
@@ -48,7 +61,12 @@ class Player:
     def lineup(self):
         return [player_from_dict(p["player"]) for p in self.picks]
 
+    def record(self) -> dict:
+        return _ai_record() if self.is_ai else db.get_record(self.username)
+
     async def send(self, msg: dict) -> None:
+        if self.is_ai:
+            return
         try:
             await self.ws.send_json(msg)
         except Exception:
@@ -66,8 +84,8 @@ class LiveGame:
             p.open_slots = list(SLOTS)
             p.picks = []
             p.step = game._build_step(self.rng, p.open_slots, set())
-        a_rec = db.get_record(self.a.username)
-        b_rec = db.get_record(self.b.username)
+        a_rec = self.a.record()
+        b_rec = self.b.record()
         await self.a.send({"type": "matched", "opponent": self.b.username,
                            "opponent_record": b_rec, "total_slots": NUM_ROUNDS})
         await self.b.send({"type": "matched", "opponent": self.a.username,
@@ -104,6 +122,14 @@ class LiveGame:
 
     async def _collect(self, p: Player, deadline: float, rnd: int) -> None:
         other = self.b if p is self.a else self.a
+        if p.is_ai:
+            # AI "thinks" briefly (under the clock), then drafts its best option.
+            think = min(self.rng.uniform(1.0, 3.0), max(0.0, deadline - time.time() - 0.2))
+            if think > 0:
+                await asyncio.sleep(think)
+            self._ai_best_pick(p)
+            await other.send({"type": "opponent_progress", "picks_made": len(p.picks)})
+            return
         while True:
             remaining = deadline - time.time()
             if remaining <= 0:
@@ -153,33 +179,40 @@ class LiveGame:
                 self._apply(p, c["name"], c["eligible_slots"][0])
                 return
 
+    def _ai_best_pick(self, p: Player) -> None:
+        """Draft the highest-rated eligible candidate into its first open slot."""
+        best = None
+        best_score = -1.0
+        for c in p.step["candidates"]:
+            if not (c.get("eligible") and c.get("eligible_slots")):
+                continue
+            if c["name"] in p.picked_names():
+                continue
+            try:
+                score = score_player(player_from_dict(c)).total
+            except Exception:
+                score = 0.0
+            if score > best_score:
+                best_score, best = score, c
+        if best is not None:
+            self._apply(p, best["name"], best["eligible_slots"][0])
+        else:
+            self._autopick(p)
+
     def _filled(self, p: Player) -> list[dict]:
         return [{"slot": pk["slot"], "name": pk["player"]["name"]} for pk in p.picks]
 
     # ---- end states ----
     async def _finish(self) -> None:
-        a_old = db.get_record(self.a.username)["rating"]
-        b_old = db.get_record(self.b.username)["rating"]
-        a_disp = db.get_record(self.a.username)["display_name"]
-        b_disp = db.get_record(self.b.username)["display_name"]
+        a_old = self.a.record()["rating"]
+        b_old = self.b.record()["rating"]
+        a_disp = self.a.record()["display_name"]
+        b_disp = self.b.record()["display_name"]
         a_out, pa = game.score_lineups(self.a.lineup(), self.b.lineup(), f"{b_disp}'s squad")
         _, pb = game.score_lineups(self.b.lineup(), self.a.lineup(), f"{a_disp}'s squad")
         b_out = _INVERSE[a_out]
-        pa["record"] = db.apply_result(self.a.username, a_out)
-        pb["record"] = db.apply_result(self.b.username, b_out)
-        # Cosmetic achievement avatars (own lineup): hot/slump/50pt/triple-double + game counts.
-        db.award_achievements(self.a.username, a_out == "win", pa["your_team"]["players"])
-        db.award_achievements(self.b.username, b_out == "win", pb["your_team"]["players"])
-        pa["record"] = db.get_record(self.a.username)
-        pb["record"] = db.get_record(self.b.username)
-        pa["ranked"] = pb["ranked"] = True
-        pa["rating_change"] = pa["record"]["rating"] - a_old
-        pb["rating_change"] = pb["record"]["rating"] - b_old
-        a_prev, b_prev = rating.tier_name(a_old), rating.tier_name(b_old)
-        pa["previous_tier"] = a_prev
-        pb["previous_tier"] = b_prev
-        pa["promoted"] = pa["rating_change"] > 0 and pa["record"]["tier"] != a_prev
-        pb["promoted"] = pb["rating_change"] > 0 and pb["record"]["tier"] != b_prev
+        self._settle(self.a, pa, a_out, a_old)
+        self._settle(self.b, pb, b_out, b_old)
         pa["mode"] = pb["mode"] = "live"
         # Await the sends so results arrive before the sockets close.
         await self.a.send({"type": "result", "result": pa})
@@ -187,9 +220,29 @@ class LiveGame:
         self.a.done.set()
         self.b.done.set()
 
+    def _settle(self, p: Player, payload: dict, outcome: str, old_rating: int) -> None:
+        """Apply a finished result for one player. The AI ('Guest') is cosmetic
+        only -- its record/rating/achievements are never persisted."""
+        prev_tier = rating.tier_name(old_rating)
+        if p.is_ai:
+            payload["record"] = _ai_record()
+            payload["ranked"] = True
+            payload["rating_change"] = 0
+            payload["previous_tier"] = prev_tier
+            payload["promoted"] = False
+            return
+        db.apply_result(p.username, outcome)
+        db.award_achievements(p.username, outcome == "win", payload["your_team"]["players"])
+        rec = db.get_record(p.username)
+        payload["record"] = rec
+        payload["ranked"] = True
+        payload["rating_change"] = rec["rating"] - old_rating
+        payload["previous_tier"] = prev_tier
+        payload["promoted"] = payload["rating_change"] > 0 and rec["tier"] != prev_tier
+
     async def _handle_left(self, left: Player) -> None:
         other = self.b if left is self.a else self.a
-        rec = db.apply_result(other.username, "win")
+        rec = other.record() if other.is_ai else db.apply_result(other.username, "win")
         await other.send({"type": "opponent_left", "record": rec})
         self.a.done.set()
         self.b.done.set()
@@ -224,7 +277,21 @@ class LiveManager:
         try:
             if waiter:
                 await p.send({"type": "waiting"})
-                await p.done.wait()
+                # Wait for a human; after AI_WAIT_SECONDS, fall back to the AI.
+                try:
+                    await asyncio.wait_for(p.done.wait(), timeout=AI_WAIT_SECONDS)
+                except asyncio.TimeoutError:
+                    async with self.lock:
+                        start_ai = self.waiting is p
+                        if start_ai:
+                            self.waiting = None
+                    if start_ai:
+                        ai = Player(None, "Guest", is_ai=True)
+                        await LiveGame(p, ai).run()
+                    else:
+                        # A human matched us right at the deadline; their game
+                        # is already running -- just wait for it to finish.
+                        await p.done.wait()
             else:
                 await LiveGame(other, p).run()
         except Exception:
