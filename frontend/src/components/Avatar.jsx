@@ -18,7 +18,7 @@ export const ACHIEVEMENT_AVATARS = [
   { id: 'fifty', label: 'Bucket Getter', how: 'Have a player score 50', ring: '#ffb01f' },
   { id: 'tripledouble', label: 'Stat Stuffer', how: 'Have a player record a triple-double', ring: '#2bb39a' },
   { id: 'games25', label: 'Regular', how: 'Play 25 games', ring: '#8aa0c0' },
-  { id: 'wins100', label: 'Centurion', how: 'Win 100 games', ring: '#d04a6a' },
+  { id: 'wins100', label: 'Centurion', how: 'Win 100 games', ring: '#ff2d4b' },
 ]
 
 export const AVATAR_BY_ID = Object.fromEntries(
@@ -94,12 +94,15 @@ function Emblem({ id }) {
           <path d="M37 44 L41 41 M60 56 L64 53" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
         </g>
       )
-    case 'fifty': // basketball with "50"
+    case 'fifty': // a bucket (slang for buckets) with a ball dropping in
       return (
-        <g>
-          <circle cx="50" cy="52" r="21" fill="#e8743b" stroke="#7a3a16" strokeWidth="3" />
-          <text x="50" y="59" textAnchor="middle" fontSize="20" fontWeight="800"
-                fill="#2a1400" fontFamily="system-ui, sans-serif">50</text>
+        <g stroke="#7a3a16" strokeWidth="2.6" strokeLinejoin="round">
+          <circle cx="50" cy="36" r="9" fill="#e8743b" />
+          <path d="M50 27 V45 M41 36 H59" fill="none" stroke="#7a3a16" strokeWidth="1.8" />
+          <path d="M34 48 H66 L62 72 Q50 76 38 72 Z" fill="#c0c6cf" stroke="#5b6270" />
+          <path d="M34 48 Q50 54 66 48" fill="none" stroke="#5b6270" strokeWidth="2.4" />
+          <text x="50" y="69" textAnchor="middle" fontSize="13" fontWeight="800"
+                fill="#2a2f38" stroke="none" fontFamily="system-ui, sans-serif">50</text>
         </g>
       )
     case 'tripledouble': // three stacked stat bars
@@ -122,13 +125,14 @@ function Emblem({ id }) {
           <rect x="44" y="28" width="12" height="5" rx="2" fill="#8aa0c0" stroke="none" />
         </g>
       )
-    case 'wins100': // medal with "100"
+    case 'wins100': // the 💯 "hundred points" emoji style
       return (
-        <g stroke="#9a2d44" strokeWidth="2.6" strokeLinejoin="round">
-          <path d="M40 30 L46 50 M60 30 L54 50" stroke="#d04a6a" strokeWidth="5" strokeLinecap="round" />
-          <circle cx="50" cy="58" r="16" fill="#ffce54" stroke="#b88311" />
-          <text x="50" y="63" textAnchor="middle" fontSize="12" fontWeight="800"
-                fill="#5a3a00" stroke="none" fontFamily="system-ui, sans-serif">100</text>
+        <g>
+          <text x="50" y="56" textAnchor="middle" fontSize="26" fontWeight="900"
+                fill="#ff2d4b" stroke="#b3001e" strokeWidth="0.8"
+                fontFamily="system-ui, sans-serif" letterSpacing="-1">100</text>
+          <rect x="28" y="62" width="44" height="3.4" rx="1.7" fill="#ff2d4b" />
+          <rect x="28" y="68" width="44" height="3.4" rx="1.7" fill="#ff2d4b" />
         </g>
       )
     default:
