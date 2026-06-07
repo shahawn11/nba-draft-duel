@@ -7,6 +7,7 @@ import Leaderboard from './components/Leaderboard.jsx'
 import AuthModal from './components/AuthModal.jsx'
 import Avatar from './components/Avatar.jsx'
 import AvatarPicker from './components/AvatarPicker.jsx'
+import ConfirmModal from './components/ConfirmModal.jsx'
 import { isMuted, toggleMuted } from './audio.js'
 
 function loadAuth() {
@@ -33,6 +34,7 @@ export default function App() {
   const [showLeaderboard, setShowLeaderboard] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
   const [showAvatar, setShowAvatar] = useState(false)
+  const [confirmLeave, setConfirmLeave] = useState(false)
   const [muted, setMuted] = useState(isMuted())
 
   const identity = (auth && auth.username) || guestId
@@ -79,15 +81,18 @@ export default function App() {
     setRecord(rec)
   }
 
-  function goHome() {
-    if (live && !window.confirm('Leave the live match? If a game is in progress, this counts as a forfeit (your opponent wins).')) {
-      return
-    }
+  function doGoHome() {
     setResult(null)
     setView(null)
     setLive(false)
     setShowLeaderboard(false)
     setError('')
+    setConfirmLeave(false)
+  }
+
+  function goHome() {
+    if (live) { setConfirmLeave(true); return }
+    doGoHome()
   }
 
   async function startMatch(chosenMode = 'offline') {
@@ -174,6 +179,17 @@ export default function App() {
       {showAvatar && record && (
         <AvatarPicker record={record} onSelect={chooseAvatar} onClose={() => setShowAvatar(false)} />
       )}
+
+      <ConfirmModal
+        open={confirmLeave}
+        title="Leave the live match?"
+        message="If a game is in progress, this counts as a forfeit (your opponent wins)."
+        confirmLabel="Leave match"
+        cancelLabel="Stay"
+        danger
+        onConfirm={doGoHome}
+        onCancel={() => setConfirmLeave(false)}
+      />
 
       {showLeaderboard && <Leaderboard onClose={() => setShowLeaderboard(false)} highlight={identity} />}
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import DraftBoard from './DraftBoard.jsx'
 import Results from './Results.jsx'
 import MatchIntro from './MatchIntro.jsx'
+import ConfirmModal from './ConfirmModal.jsx'
 
 const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
 
@@ -14,6 +15,7 @@ function wsUrl(username, token, displayName) {
 
 export default function LivePvP({ username, token, displayName, onExit, onRecord, meRecord }) {
   const [status, setStatus] = useState('connecting') // connecting|waiting|drafting|result|left|error
+  const [confirmBack, setConfirmBack] = useState(false)
   const [opponent, setOpponent] = useState('')
   const [opponentRecord, setOpponentRecord] = useState(null)
   const [step, setStep] = useState(null)
@@ -143,9 +145,19 @@ export default function LivePvP({ username, token, displayName, onExit, onRecord
           <h2 className="banner win" style={{ padding: '18px 24px' }}>Opponent left — you win! 🏆</h2>
           {record && <p className="hint">Record: {record.wins}W · {record.losses}L</p>}
           <button className="submit" onClick={() => setNonce((n) => n + 1)}>Find new match</button>
-          <button className="btn-cancel" style={{ marginTop: 8 }} onClick={onExit}>Back</button>
+          <button className="btn-cancel" style={{ marginTop: 8 }} onClick={() => setConfirmBack(true)}>Back</button>
         </div>
       )}
+      <ConfirmModal
+        open={confirmBack}
+        title="Leave the match?"
+        message="Return to the home screen?"
+        confirmLabel="Leave"
+        cancelLabel="Stay"
+        danger
+        onConfirm={onExit}
+        onCancel={() => setConfirmBack(false)}
+      />
     </div>
   )
 }
