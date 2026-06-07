@@ -25,7 +25,7 @@ from .models import (
     Record,
 )
 
-app = FastAPI(title="Draft Duel", version="0.2.0")
+app = FastAPI(title="5v5 Duel", version="0.2.0")
 
 # Ensure schema exists as soon as the app module is imported (covers TestClient
 # usage and any ASGI server, not just the startup event).
