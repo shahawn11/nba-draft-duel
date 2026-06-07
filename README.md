@@ -155,10 +155,11 @@ rating     = 0.60·normalized(production) + 0.40·normalized(impact)
 Team & game:
 ```
 fit        = small per-player bonus/penalty for slot quality (PG=assists,
-             SG/SF=scoring, PF/C=height); caps +1 / -3 — a light tiebreaker
-matchups   = head-to-head per slot by rating + a size mismatch (real height,
-             rebound fallback); each matchup won adds 8 to team strength
-strength   = Σ rating + fit + 8·matchupWins
+             SG/SF=scoring, PF/C=height); capped ±1 — a light tiebreaker
+matchups   = head-to-head per slot by rating + a size mismatch (real height
+             ~0.5/inch, capped ±4; rebound fallback); each matchup won adds 7
+             to team strength
+strength   = Σ rating + (fit + size in the matchups) + 7·matchupWins
 finalScore = realistic NBA total projected from the strength gap (≈106 baseline)
 ```
 Each player's **box score is simulated for that game** (points allocated by

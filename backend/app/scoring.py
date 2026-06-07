@@ -34,7 +34,7 @@ ADVANCED_WEIGHT = 0.40
 TEAM_TOTAL_WEIGHT = 0.70
 MATCHUP_WEIGHT = 0.30
 # Realistic game-score projection.
-MATCHUP_STRENGTH = 8.0    # strength points added per head-to-head matchup won
+MATCHUP_STRENGTH = 7.0    # strength points added per head-to-head matchup won
 GAME_BASE = 106.0         # league-ish baseline points both teams sit near
 GAME_SCALE = 0.22         # how strongly a strength gap turns into a points margin
 GAME_MIN, GAME_MAX = 80, 150
@@ -55,16 +55,16 @@ SLOT_EXPECTATION: dict[str, dict] = {
           "good": "true center", "bad": "undersized at C"},
 }
 FIT_BONUS_SCALE = 0.25      # fraction of the surplus turned into a bonus
-MAX_FIT_BONUS = 1.0         # cap on per-player fit bonus (small: minor factor)
-MAX_FIT_PENALTY = 3.0       # cap on per-player fit penalty (small: minor factor)
+MAX_FIT_BONUS = 1.0         # cap on per-player fit bonus
+MAX_FIT_PENALTY = 1.0       # cap on per-player fit penalty (fit is a light nudge: -1..+1)
 # Size/physical mismatch at a matchup. Uses real height (inches) when both
 # players have it, else falls back to a rebounding proxy. Weighted to matter --
 # player matchups are the focus, especially for PvP.
-HEIGHT_MISMATCH_WEIGHT = 1.0    # rating points per inch of height gap
+HEIGHT_MISMATCH_WEIGHT = 0.5    # rating points per inch of height gap
 HEIGHT_MISMATCH_THRESHOLD = 4.0 # inches gap that counts as a notable mismatch
-SIZE_MISMATCH_WEIGHT = 1.0      # rating points per rebound of size gap (fallback)
+SIZE_MISMATCH_WEIGHT = 0.5      # rating points per rebound of size gap (fallback)
 SIZE_MISMATCH_THRESHOLD = 4.0   # rebound gap that counts (fallback)
-MAX_SIZE_MISMATCH = 7.0         # cap on the per-matchup nudge
+MAX_SIZE_MISMATCH = 4.0         # cap on the per-matchup nudge
 
 
 def format_height(inches: float) -> str:
