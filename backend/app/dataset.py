@@ -142,44 +142,52 @@ def _load_current_starters(path: Path) -> dict[str, list[PlayerStats]]:
     for r in rows:
         by_team[r["team"]].append(r)
 
+    # Fill the hard/scarce frontcourt slots first so a forward isn't "used up"
+    # at SG (leaving a guard stranded at PF). Backcourt fills from what's left.
+    FILL_ORDER = ["C", "PF", "SF", "SG", "PG"]
+
+    def _height(r) -> float:
+        return (r["height_in"] if has_height else 0.0) or 0.0
+
+    def _mk(r, slot, elig) -> PlayerStats:
+        return PlayerStats(
+            name=r["name"], position=slot,
+            ppg=r["ppg"] or 0, rpg=r["rpg"] or 0, apg=r["apg"] or 0,
+            spg=r["spg"] or 0, bpg=r["bpg"] or 0, bpm=r["bpm"] or 0,
+            team=team, season=season, height_in=_height(r),
+            eligible_positions=elig,
+        )
+
     out: dict[str, list[PlayerStats]] = {}
     for team, players in by_team.items():
         players.sort(key=lambda r: -(r["mpg"] or 0))  # minutes => starter proxy
         assigned: dict[str, PlayerStats] = {}
         used: set[str] = set()
-        for slot in SLOTS:
+        for slot in FILL_ORDER:
             for r in players:
                 if r["name"] in used:
                     continue
                 elig = tuple(p for p in ((r["eligible"] if has_elig else "") or "").split(",") if p) \
                     or eligible_from_raw(None, r["position"])
                 if slot in elig:
-                    assigned[slot] = PlayerStats(
-                        name=r["name"], position=slot,
-                        ppg=r["ppg"] or 0, rpg=r["rpg"] or 0, apg=r["apg"] or 0,
-                        spg=r["spg"] or 0, bpg=r["bpg"] or 0, bpm=r["bpm"] or 0,
-                        team=team, season=season,
-                        height_in=(r["height_in"] if has_height else 0.0) or 0.0,
-                        eligible_positions=elig,
-                    )
+                    assigned[slot] = _mk(r, slot, elig)
                     used.add(r["name"])
                     break
-        # Fallback: if eligibility left a slot open (thin/odd roster, e.g. a team
-        # gutted by injuries/trades), fill it with the best remaining player.
+        # Fallback for any slot eligibility couldn't fill (thin/injured roster):
+        # frontcourt slots take the TALLEST remaining player, others the highest-
+        # minutes one -- so a 6'1" guard never lands at PF/C if a bigger body exists.
         if len(assigned) < len(SLOTS):
-            remaining = [r for r in players if r["name"] not in used]
-            for slot in SLOTS:
-                if slot in assigned or not remaining:
+            for slot in FILL_ORDER:
+                if slot in assigned:
                     continue
-                r = remaining.pop(0)
-                assigned[slot] = PlayerStats(
-                    name=r["name"], position=slot,
-                    ppg=r["ppg"] or 0, rpg=r["rpg"] or 0, apg=r["apg"] or 0,
-                    spg=r["spg"] or 0, bpg=r["bpg"] or 0, bpm=r["bpm"] or 0,
-                    team=team, season=season,
-                    height_in=(r["height_in"] if has_height else 0.0) or 0.0,
-                    eligible_positions=(slot,),
-                )
+                remaining = [r for r in players if r["name"] not in used]
+                if not remaining:
+                    break
+                if slot in ("C", "PF"):
+                    r = max(remaining, key=_height)
+                else:
+                    r = remaining[0]
+                assigned[slot] = _mk(r, slot, (slot,))
                 used.add(r["name"])
         if len(assigned) == 5:
             out[team] = [assigned[s] for s in SLOTS]
