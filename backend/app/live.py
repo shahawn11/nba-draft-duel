@@ -204,10 +204,12 @@ class LiveGame:
 
     # ---- end states ----
     async def _finish(self) -> None:
-        a_old = self.a.record()["rating"]
-        b_old = self.b.record()["rating"]
-        a_disp = self.a.record()["display_name"]
-        b_disp = self.b.record()["display_name"]
+        a_rec = self.a.record()
+        b_rec = self.b.record()
+        a_old = a_rec["rating"]
+        b_old = b_rec["rating"]
+        a_disp = db.name_label(a_rec)
+        b_disp = db.name_label(b_rec)
         # Roll Hot/Slump ONCE per lineup and reuse for both players' scorings, so
         # both views agree on who's hot/cold (and the same boost/penalty applies).
         a_status = roll_status(self.a.lineup(), self.rng)

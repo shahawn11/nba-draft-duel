@@ -3,6 +3,7 @@ import DraftBoard from './DraftBoard.jsx'
 import Results from './Results.jsx'
 import MatchIntro from './MatchIntro.jsx'
 import { wsBaseUrl } from '../api.js'
+import { nameLabel } from '../nameLabel.js'
 
 const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
 
@@ -127,7 +128,7 @@ export default function LivePvP({ username, token, displayName, onExit, onRecord
       {status === 'drafting' && view && (
         <>
           <div className="live-banner">
-            ⚔️ Live vs <b>{(opponentRecord && opponentRecord.display_name) || opponent || 'opponent'}</b>
+            ⚔️ Live vs <b>{opponentRecord ? nameLabel(opponentRecord) : (opponent || 'opponent')}</b>
             {opponentRecord && (
               <span className="opp-rec">
                 {' '}— <span className={`tier-badge ${(opponentRecord.tier || '').toLowerCase().replace(/[^a-z]/g, '')}`}>{opponentRecord.tier}</span>

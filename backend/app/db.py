@@ -195,6 +195,22 @@ _REC_COLS = (users.c.username, users.c.wins, users.c.losses, users.c.rating,
              users.c.peak_rating, users.c.display_name, users.c.avatar, users.c.achievements)
 
 
+def name_label(record: dict) -> str:
+    """UI label for a player record. display_name is not unique (only username
+    is the PK), so two guests can both pick "Kiro". Append the guest id suffix
+    to a named guest's display name ("Kiro" -> "Kiro_u86v9sbv") so they are
+    distinguishable. Registered users and unnamed guests are unchanged.
+    Mirrors frontend/src/nameLabel.js."""
+    username = record.get("username") or ""
+    display = record.get("display_name") or username
+    if username.startswith("guest_"):
+        suffix = username[len("guest_"):]
+        if display and display != username:
+            return f"{display}_{suffix}"
+        return username
+    return display
+
+
 def get_record(username: str) -> dict:
     with _engine.connect() as c:
         row = c.execute(select(*_REC_COLS).where(users.c.username == username)).first()

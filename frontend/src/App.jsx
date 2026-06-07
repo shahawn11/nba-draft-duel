@@ -9,6 +9,7 @@ import Avatar from './components/Avatar.jsx'
 import AvatarPicker from './components/AvatarPicker.jsx'
 import ConfirmModal from './components/ConfirmModal.jsx'
 import { isMuted, toggleMuted } from './audio.js'
+import { nameLabel } from './nameLabel.js'
 
 function loadAuth() {
   try { return JSON.parse(localStorage.getItem('ndd_auth') || 'null') } catch { return null }
@@ -161,7 +162,7 @@ export default function App() {
             <button className="identity-card" onClick={() => setShowAvatar(true)} title="Change avatar">
               <Avatar id={record.avatar || 'amateur'} size={44} />
               <span className="id-text">
-                <span className="id-name">{loggedIn ? identity : (guestName.trim() || 'Guest')}</span>
+                <span className="id-name">{loggedIn ? identity : (guestNamed ? nameLabel({ username: guestId, display_name: record.display_name }) : (guestName.trim() || 'Guest'))}</span>
                 <span className="id-stats">
                   {record.tier && (
                     <span className={`tier-badge ${(record.tier || '').toLowerCase().replace(/[^a-z]/g, '')}`}>
