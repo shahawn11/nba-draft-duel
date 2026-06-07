@@ -4,6 +4,7 @@ import DraftBoard from './components/DraftBoard.jsx'
 import Results from './components/Results.jsx'
 import LivePvP from './components/LivePvP.jsx'
 import Leaderboard from './components/Leaderboard.jsx'
+import { isMuted, toggleMuted } from './audio.js'
 
 export default function App() {
   const [username, setUsername] = useState('')
@@ -17,6 +18,7 @@ export default function App() {
   const [error, setError] = useState('')
   const [live, setLive] = useState(false)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
+  const [muted, setMuted] = useState(isMuted())
 
   async function startMatch(name, chosenMode = 'offline') {
     setCommittedName(name)
@@ -68,6 +70,13 @@ export default function App() {
       <header>
         <h1>🏀 NBA Draft Duel</h1>
         <div className="header-right">
+          <button
+            className="lb-toggle"
+            onClick={() => { toggleMuted(); setMuted(isMuted()) }}
+            title={muted ? 'Unmute' : 'Mute'}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
           <button
             className="lb-toggle"
             onClick={() => setShowLeaderboard((s) => !s)}

@@ -1,10 +1,12 @@
 // Lightweight synthesized SFX via the Web Audio API (no audio files).
 // The AudioContext is created lazily on first play (after a user gesture like
 // clicking Start/PvP), and calls fail silently if audio is blocked.
+import { isMuted } from './audio.js'
 
 let ctx = null
 
 function ac() {
+  if (isMuted()) return null
   try {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)()
     if (ctx.state === 'suspended') ctx.resume()

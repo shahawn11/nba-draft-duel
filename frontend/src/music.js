@@ -1,7 +1,7 @@
 // Ambient looping background music for the draft, synthesized with the Web
 // Audio API (no audio files). A gentle A-minor pentatonic melody over a
 // root/fifth drone — consonant by construction, kept quiet so it's background.
-// start()/stop() are ref-counted-ish via a single playing flag.
+import { isMuted, onMuteChange } from './audio.js'
 
 let ctx = null
 let master = null
@@ -9,6 +9,7 @@ let timer = null
 let step = 0
 let nextTime = 0
 let playing = false
+let wantPlaying = false
 
 const STEP = 0.22 // seconds per step
 // A-minor pentatonic melody (A C D E G across octaves) — 16 steps.
@@ -55,7 +56,7 @@ function scheduler() {
   }
 }
 
-export function startMusic() {
+function _start() {
   const c = ensure()
   if (!c || playing) return
   master = c.createGain()
@@ -68,7 +69,7 @@ export function startMusic() {
   timer = setInterval(scheduler, 60)
 }
 
-export function stopMusic() {
+function _stop() {
   if (!playing) return
   playing = false
   if (timer) { clearInterval(timer); timer = null }
@@ -77,6 +78,23 @@ export function stopMusic() {
     master.gain.cancelScheduledValues(now)
     master.gain.setValueAtTime(master.gain.value, now)
     master.gain.exponentialRampToValueAtTime(0.0001, now + 0.4) // fade out
-    setTimeout(() => { try { master.disconnect() } catch { /* */ } }, 600)
+    const m = master
+    setTimeout(() => { try { m.disconnect() } catch { /* */ } }, 600)
   } catch { /* */ }
 }
+
+export function startMusic() {
+  wantPlaying = true
+  if (!isMuted()) _start()
+}
+
+export function stopMusic() {
+  wantPlaying = false
+  _stop()
+}
+
+// React to the mute toggle while a draft is in progress.
+onMuteChange((muted) => {
+  if (muted) _stop()
+  else if (wantPlaying) _start()
+})
