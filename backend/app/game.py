@@ -239,8 +239,8 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
                 "away_score": round(m.away_score, 2),
                 "winner": m.winner,
                 "note": m.note,
-                "home_bonus": round(m.home_bonus, 1),
-                "away_bonus": round(m.away_bonus, 1),
+                "home_delta": round(m.home_delta, 1),
+                "away_delta": round(m.away_delta, 1),
             }
             for m in result.matchups
         ],

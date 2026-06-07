@@ -124,16 +124,17 @@ class MatchupResult:
     away_score: float
     winner: Literal["home", "away", "tie"]
     note: str = ""
-    home_bonus: float = 0.0
-    away_bonus: float = 0.0
+    home_delta: float = 0.0   # fit + size adjustment applied to home (signed)
+    away_delta: float = 0.0
 
 
 @dataclass
 class TeamScore:
     player_scores: list[PlayerScore] = field(default_factory=list)
     base_total: float = 0.0          # sum of player totals
-    fit_adjustment: float = 0.0      # positional fit bonus/penalty
+    fit_adjustment: float = 0.0      # positional fit bonus/penalty (sum)
     fit_notes: list[str] = field(default_factory=list)
+    fit_deltas: dict = field(default_factory=dict)  # per-player signed fit delta
 
     @property
     def adjusted_total(self) -> float:
@@ -183,12 +184,14 @@ def score_player(p: PlayerStats) -> PlayerScore:
 
 
 # ---- Positional fit quality ------------------------------------------------
-def evaluate_fit(players: list[PlayerStats]) -> tuple[float, list[str]]:
+def evaluate_fit(players: list[PlayerStats]) -> tuple[float, list[str], dict]:
     """Judge how well each player suits the slot they're playing. Players short
     of a slot's signature stat are penalized; strong fits earn a small bonus.
-    PF/C size is judged by height (rebound fallback only when height unknown)."""
+    PF/C size is judged by height (rebound fallback only when height unknown).
+    Returns (total_adjustment, notes, {player_name: signed_delta})."""
     notes: list[str] = []
     adjustment = 0.0
+    deltas: dict[str, float] = {}
 
     for p in players:
         spec = SLOT_EXPECTATION.get(p.position)
@@ -207,6 +210,7 @@ def evaluate_fit(players: list[PlayerStats]) -> tuple[float, list[str]]:
             if pen < 0.1:
                 continue
             adjustment -= pen
+            deltas[p.name] = -pen
             if is_height:
                 detail = format_height(value)
             elif attr == "rpg":
@@ -220,20 +224,22 @@ def evaluate_fit(players: list[PlayerStats]) -> tuple[float, list[str]]:
             bonus = min(MAX_FIT_BONUS, round((value - expected) * weight * FIT_BONUS_SCALE, 1))
             if bonus >= 0.5:
                 adjustment += bonus
+                deltas[p.name] = bonus
                 notes.append(f"{p.name} — {spec['good']} (+{bonus:.1f})")
 
-    return adjustment, notes
+    return adjustment, notes, deltas
 
 
 def score_team(players: list[PlayerStats]) -> TeamScore:
     scores = [score_player(p) for p in players]
     base_total = sum(s.total for s in scores)
-    fit_adj, fit_notes = evaluate_fit(players)
+    fit_adj, fit_notes, fit_deltas = evaluate_fit(players)
     return TeamScore(
         player_scores=scores,
         base_total=base_total,
         fit_adjustment=fit_adj,
         fit_notes=fit_notes,
+        fit_deltas=fit_deltas,
     )
 
 
@@ -276,13 +282,15 @@ def compute_matchups(home: TeamScore, away: TeamScore) -> list[MatchupResult]:
                     big, small = (h, a) if gap > 0 else (a, h)
                     note = f"{big.player.name} has a size edge over {small.player.name}"
 
-        # Displayed score is each player's base rating (consistent with the
-        # lineup view); the size mismatch is a separate, visible bonus that
-        # decides the head-to-head.
+        # Per-player matchup delta = positional fit + size mismatch (signed).
+        # Displayed score stays the base rating; the delta is shown as a colored
+        # arrow and decides the head-to-head.
         h_bonus = max(0.0, size_adj)
         a_bonus = max(0.0, -size_adj)
-        h_eff = h_base + h_bonus
-        a_eff = a_base + a_bonus
+        h_delta = round((home.fit_deltas.get(h.player.name, 0.0) if h else 0.0) + h_bonus, 1)
+        a_delta = round((away.fit_deltas.get(a.player.name, 0.0) if a else 0.0) + a_bonus, 1)
+        h_eff = h_base + h_delta
+        a_eff = a_base + a_delta
 
         if abs(h_eff - a_eff) < 1e-6:
             winner = "tie"
@@ -299,8 +307,8 @@ def compute_matchups(home: TeamScore, away: TeamScore) -> list[MatchupResult]:
                 away_score=a_base,
                 winner=winner,
                 note=note,
-                home_bonus=h_bonus,
-                away_bonus=a_bonus,
+                home_delta=h_delta,
+                away_delta=a_delta,
             )
         )
     return results
@@ -321,8 +329,10 @@ def duel(home_players: list[PlayerStats], away_players: list[PlayerStats]) -> Du
     away_wins = sum(1 for m in matchups if m.winner == "away")
 
     # Blend team strength with the head-to-head matchup edge into one number.
-    home_strength = home.adjusted_total + home_wins * MATCHUP_STRENGTH
-    away_strength = away.adjusted_total + away_wins * MATCHUP_STRENGTH
+    # Fit is intentionally NOT added here -- it now lives in the per-player
+    # matchup deltas (so it's counted once, via matchup wins).
+    home_strength = home.base_total + home_wins * MATCHUP_STRENGTH
+    away_strength = away.base_total + away_wins * MATCHUP_STRENGTH
 
     # Project a realistic NBA-style final score: both teams sit near a league
     # baseline, separated by their relative strength. Round to whole points so

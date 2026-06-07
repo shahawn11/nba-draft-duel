@@ -26,6 +26,18 @@ function useCountUp(from, to, ms = 1100) {
 
 const CONFETTI_COLORS = ['#ff7a00', '#2ecc71', '#3a86ff', '#ffd700', '#e74c3c', '#a35bff']
 
+function MatchScore({ base, delta }) {
+  const eff = base + (delta || 0)
+  const cls = delta > 0 ? 'up' : delta < 0 ? 'down' : ''
+  return (
+    <span className={`mscore ${cls}`}>
+      {eff.toFixed(1)}
+      {delta > 0 && <span className="mdelta"> ↑+{delta.toFixed(1)}</span>}
+      {delta < 0 && <span className="mdelta"> ↓{Math.abs(delta).toFixed(1)}</span>}
+    </span>
+  )
+}
+
 function Confetti() {
   return (
     <div className="confetti" aria-hidden="true">
@@ -135,13 +147,11 @@ export default function Results({ result, onPlayAgain }) {
           <div className="matchup-row">
             <span className="m-pos">{m.position}</span>
             <span className="m-home">
-              {m.home_player} · {m.home_score.toFixed(1)}
-              {m.home_bonus > 0 && <span className="size-bonus"> +{m.home_bonus.toFixed(1)}</span>}
+              {m.home_player} · <MatchScore base={m.home_score} delta={m.home_delta} />
             </span>
             <span className="m-vs">vs</span>
             <span className="m-away">
-              {m.away_bonus > 0 && <span className="size-bonus">{m.away_bonus.toFixed(1)}+ </span>}
-              {m.away_score.toFixed(1)} · {m.away_player}
+              <MatchScore base={m.away_score} delta={m.away_delta} /> · {m.away_player}
             </span>
           </div>
           {m.note && <div className="matchup-note">⚠ {m.note}</div>}

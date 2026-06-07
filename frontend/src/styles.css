@@ -652,3 +652,6 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 
 /* ---- matchup size bonus ---- */
 .size-bonus { color: var(--accent); font-weight: 800; font-size: 0.78rem; }
+.mscore.up { color: var(--win); font-weight: 700; }
+.mscore.down { color: var(--loss); font-weight: 700; }
+.mdelta { font-size: 0.74rem; font-weight: 800; }

@@ -71,11 +71,14 @@ def test_full_flow() -> None:
                         json={"player_name": bad[0], "slot": bad[1]})
         assert r.status_code == 400, "ineligible slot assignment should be rejected"
 
+    # Offline mode is unranked: result is flagged and W/L/T must NOT change.
+    assert result["ranked"] is False
+    assert result["rating_change"] == 0
     rec = client.get(f"/record/{user}").json()
-    assert rec["wins"] + rec["losses"] + rec["ties"] >= 1
+    assert rec["wins"] + rec["losses"] + rec["ties"] == 0
     print("OK:", result["outcome"], "vs", result["opponent_team"],
-          "| final", result["your_final"], "-", result["opponent_final"],
-          "| record", rec)
+          "| final", round(result["your_final"]), "-", round(result["opponent_final"]),
+          "| unranked, record", rec)
 
 
 if __name__ == "__main__":
