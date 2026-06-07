@@ -773,6 +773,24 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .ot-tag { color: var(--tie); font-weight: 800; }
 
 
+/* ---- Achievement unlock overlay ---- */
+.unlock-avatars { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 12px 0; }
+.unlock-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.unlock-label { font-weight: 800; font-size: 0.85rem; }
+
+/* ---- Hot/Slump matchup chip ---- */
+.status-chip {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+.status-chip.hot { background: rgba(232,71,59,0.18); color: #ff8a5c; border: 1px solid #e8473b; }
+.status-chip.slump { background: rgba(79,195,255,0.16); color: #8fd6ff; border: 1px solid #4fc3ff; }
+
 /* ---- Confirm modal ---- */
 .confirm-modal { width: min(380px, 92vw); }
 .confirm-title { margin: 0 0 8px; }

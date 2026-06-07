@@ -238,9 +238,9 @@ class LiveGame:
             payload["promoted"] = False
             return
         db.apply_result(p.username, outcome)
-        db.award_achievements(p.username, outcome == "win", payload["your_team"]["players"])
-        rec = db.get_record(p.username)
+        rec, newly = db.award_achievements(p.username, outcome == "win", payload["your_team"]["players"])
         payload["record"] = rec
+        payload["newly_unlocked"] = newly
         payload["ranked"] = True
         payload["rating_change"] = rec["rating"] - old_rating
         payload["previous_tier"] = prev_tier

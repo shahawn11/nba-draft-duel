@@ -35,6 +35,7 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false)
   const [showAvatar, setShowAvatar] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const [liveActive, setLiveActive] = useState(false)
   const [muted, setMuted] = useState(isMuted())
 
   const identity = (auth && auth.username) || guestId
@@ -88,10 +89,11 @@ export default function App() {
     setShowLeaderboard(false)
     setError('')
     setConfirmLeave(false)
+    setLiveActive(false)
   }
 
   function goHome() {
-    if (live) { setConfirmLeave(true); return }
+    if (live && liveActive) { setConfirmLeave(true); return }
     doGoHome()
   }
 
@@ -194,7 +196,7 @@ export default function App() {
       {showLeaderboard && <Leaderboard onClose={() => setShowLeaderboard(false)} highlight={identity} />}
 
       {!showLeaderboard && live && (
-        <LivePvP username={identity} token={auth && auth.token} displayName={displayName} onExit={() => setLive(false)} onRecord={setRecord} meRecord={record} />
+        <LivePvP username={identity} token={auth && auth.token} displayName={displayName} onExit={() => setLive(false)} onRecord={setRecord} meRecord={record} onActive={setLiveActive} />
       )}
 
       {!showLeaderboard && !live && phase === 'setup' && (

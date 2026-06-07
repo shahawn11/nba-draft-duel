@@ -2,6 +2,7 @@
 // both scored lineups, and positional-fit notes.
 import { useState, useEffect } from 'react'
 import { playTick, playPromo, playResult } from '../sound.js'
+import Avatar, { AVATAR_BY_ID } from './Avatar.jsx'
 
 function useCountUp(from, to, ms = 1100) {
   const [v, setV] = useState(from)
@@ -26,14 +27,18 @@ function useCountUp(from, to, ms = 1100) {
 
 const CONFETTI_COLORS = ['#ff7a00', '#2ecc71', '#3a86ff', '#ffd700', '#e74c3c', '#a35bff']
 
-function MatchScore({ base, delta }) {
+function MatchScore({ base, delta, statusDelta }) {
   const eff = base + (delta || 0)
+  const sd = statusDelta || 0
+  const fit = Math.round(((delta || 0) - sd) * 10) / 10   // fit + size portion
   const cls = delta > 0 ? 'up' : delta < 0 ? 'down' : ''
   return (
     <span className={`mscore ${cls}`}>
       {eff.toFixed(1)}
-      {delta > 0 && <span className="mdelta"> ↑+{delta.toFixed(1)}</span>}
-      {delta < 0 && <span className="mdelta"> ↓{Math.abs(delta).toFixed(1)}</span>}
+      {fit > 0 && <span className="mdelta"> ↑+{fit.toFixed(1)}</span>}
+      {fit < 0 && <span className="mdelta"> ↓{Math.abs(fit).toFixed(1)}</span>}
+      {sd > 0 && <span className="status-chip hot" title="Hot — rating +10">🔥 +{sd.toFixed(0)}</span>}
+      {sd < 0 && <span className="status-chip slump" title="Slump — rating −10">🥶 {sd.toFixed(0)}</span>}
     </span>
   )
 }
@@ -65,6 +70,29 @@ function PromotionOverlay({ tier, onDismiss }) {
         <div className="promo-sub">TIER UP!</div>
         <div className={`promo-tier tier-badge ${cls}`}>{tier}</div>
         <div className="promo-msg">You've been promoted to <b>{tier}</b> 🎉</div>
+        <button className="submit" onClick={onDismiss}>Nice!</button>
+      </div>
+    </div>
+  )
+}
+
+function AchievementOverlay({ ids, onDismiss }) {
+  const items = (ids || []).map((id) => AVATAR_BY_ID[id]).filter(Boolean)
+  if (!items.length) return null
+  return (
+    <div className="promo-overlay" onClick={onDismiss}>
+      <Confetti />
+      <div className="promo-card">
+        <div className="promo-sub">AVATAR UNLOCKED!</div>
+        <div className="unlock-avatars">
+          {items.map((a) => (
+            <div className="unlock-item" key={a.id}>
+              <Avatar id={a.id} size={72} />
+              <span className="unlock-label">{a.label}</span>
+            </div>
+          ))}
+        </div>
+        <div className="promo-msg">Equip it from your avatar menu 🎉</div>
         <button className="submit" onClick={onDismiss}>Nice!</button>
       </div>
     </div>
@@ -116,6 +144,8 @@ export default function Results({ result, onPlayAgain }) {
   const shownRating = useCountUp(oldRating, newRating)
   const [showPromo, setShowPromo] = useState(!!result.promoted)
   useEffect(() => { setShowPromo(!!result.promoted) }, [result])
+  const [showUnlocks, setShowUnlocks] = useState((result.newly_unlocked || []).length > 0)
+  useEffect(() => { setShowUnlocks((result.newly_unlocked || []).length > 0) }, [result])
   const bannerClass = tied ? 'tie' : won ? 'win' : 'loss'
   const bannerText = tied ? 'TIE GAME' : won ? 'YOU WIN' : 'YOU LOSE'
 
@@ -154,11 +184,11 @@ export default function Results({ result, onPlayAgain }) {
           <div className="matchup-row">
             <span className="m-pos">{m.position}</span>
             <span className="m-home">
-              {m.home_player} · <MatchScore base={m.home_score} delta={m.home_delta} />
+              {m.home_player} · <MatchScore base={m.home_score} delta={m.home_delta} statusDelta={m.home_status_delta} />
             </span>
             <span className="m-vs">vs</span>
             <span className="m-away">
-              <MatchScore base={m.away_score} delta={m.away_delta} /> · {m.away_player}
+              <MatchScore base={m.away_score} delta={m.away_delta} statusDelta={m.away_status_delta} /> · {m.away_player}
             </span>
           </div>
           {m.note && <div className="matchup-note">⚠ {m.note}</div>}
@@ -218,6 +248,10 @@ export default function Results({ result, onPlayAgain }) {
 
       {showPromo && (
         <PromotionOverlay tier={result.record.tier} onDismiss={() => setShowPromo(false)} />
+      )}
+
+      {!showPromo && showUnlocks && (
+        <AchievementOverlay ids={result.newly_unlocked} onDismiss={() => setShowUnlocks(false)} />
       )}
 
       {matchups(true)}

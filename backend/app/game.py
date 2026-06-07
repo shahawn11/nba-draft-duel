@@ -226,6 +226,7 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
                     "height_in": s.player.height_in,
                     "rating": round(s.total - team.status_deltas.get(s.player.name, 0.0), 1),
                     "delta": round(delta_by_pos.get(s.player.position, 0.0), 1),
+                    "status_delta": round(team.status_deltas.get(s.player.name, 0.0), 1),
                     "status": status.get(s.player.name),
                     "game": box.get(s.player.name, {}),
                 }
@@ -260,6 +261,10 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
                 "note": m.note,
                 "home_delta": round(m.home_delta, 1),
                 "away_delta": round(m.away_delta, 1),
+                "home_status": home_status.get(m.home_player),
+                "away_status": away_status.get(m.away_player),
+                "home_status_delta": round(result.home.status_deltas.get(m.home_player, 0.0), 1),
+                "away_status_delta": round(result.away.status_deltas.get(m.away_player, 0.0), 1),
             }
             for m in result.matchups
         ],
@@ -276,10 +281,11 @@ def _resolve(match: dict, state: dict) -> dict:
     outcome, result_payload = score_lineups(drafted, opponent, match["opponent_team"])
     # Offline mode is unranked: it does NOT change W/L or rating. Achievements are
     # cosmetic, so they still accrue (games played, hot/slump, 50pt, triple-double).
-    db.award_achievements(match["username"], outcome == "win",
-                          result_payload["your_team"]["players"])
+    rec, newly = db.award_achievements(match["username"], outcome == "win",
+                                       result_payload["your_team"]["players"])
     result_payload["match_id"] = match["id"]
-    result_payload["record"] = db.get_record(match["username"])
+    result_payload["record"] = rec
+    result_payload["newly_unlocked"] = newly
     result_payload["ranked"] = False
     result_payload["rating_change"] = 0
 

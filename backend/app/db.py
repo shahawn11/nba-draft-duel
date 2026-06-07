@@ -153,11 +153,11 @@ def set_avatar(username: str, avatar_id: str) -> dict:
     return get_record(username)
 
 
-def award_achievements(username: str, won: bool, players: list[dict]) -> dict:
+def award_achievements(username: str, won: bool, players: list[dict]) -> tuple[dict, list[str]]:
     """Record a finished match for `username` and unlock any newly-earned
     achievement avatars. `players` is the user's own scored lineup (each with
     `status` and a `game` box line). Cosmetic only -- never touches rating/W-L.
-    Returns the updated record."""
+    Returns (updated_record, newly_unlocked_ids)."""
     ensure_user(username)
     newly: set[str] = set()
     for p in players or []:
@@ -184,12 +184,14 @@ def award_achievements(username: str, won: bool, players: list[dict]) -> dict:
             newly.add("games25")
         if gw >= 100:
             newly.add("wins100")
-        earned |= (newly & rating.ACHIEVEMENT_IDS)
+        newly &= rating.ACHIEVEMENT_IDS
+        newly_unlocked = sorted(newly - earned)   # only those not already earned
+        earned |= newly
         c.execute(
             "UPDATE users SET achievements = ?, games_played = ?, games_won = ? WHERE username = ?",
             (",".join(sorted(earned)), gp, gw, username),
         )
-    return get_record(username)
+    return get_record(username), newly_unlocked
 
 
 def apply_result(username: str, outcome: str) -> dict:
