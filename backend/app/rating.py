@@ -49,6 +49,18 @@ ACHIEVEMENTS: list[dict] = [
 ACHIEVEMENT_IDS = {a["id"] for a in ACHIEVEMENTS}
 
 
+# Win streaks: a 🔥 shows at this many straight wins, and each win while on a
+# streak grants bonus rating: 3rd straight = +1, 4th = +2, 5th+ = +3.
+STREAK_MIN = 3
+
+
+def streak_bonus(win_streak: int) -> int:
+    """Extra rating granted for a win, given the streak count AFTER this win."""
+    if win_streak < STREAK_MIN:
+        return 0
+    return min(3, win_streak - 2)   # 3->1, 4->2, 5+->3
+
+
 def tier_for(rating: int) -> dict:
     cur = TIERS[0]
     for t in TIERS:

@@ -86,6 +86,7 @@ users = Table(
     Column("achievements", Text, nullable=False, default="", server_default=""),
     Column("games_played", Integer, nullable=False, default=0, server_default="0"),
     Column("games_won", Integer, nullable=False, default=0, server_default="0"),
+    Column("win_streak", Integer, nullable=False, default=0, server_default="0"),
 )
 
 matches = Table(
@@ -125,6 +126,7 @@ _USER_MIGRATIONS = {
     "achievements": "TEXT NOT NULL DEFAULT ''",
     "games_played": "INTEGER NOT NULL DEFAULT 0",
     "games_won": "INTEGER NOT NULL DEFAULT 0",
+    "win_streak": "INTEGER NOT NULL DEFAULT 0",
 }
 
 
@@ -187,12 +189,15 @@ def _record_dict(row) -> dict:
     earned = [a for a in (d.get("achievements") or "").split(",") if a]
     d["achievements"] = earned
     d["unlocked"] = rating.unlocked_avatar_ids(peak) + earned
+    d["win_streak"] = d.get("win_streak") or 0
+    d["on_streak"] = d["win_streak"] >= rating.STREAK_MIN
     d.pop("ties", None)
     return d
 
 
 _REC_COLS = (users.c.username, users.c.wins, users.c.losses, users.c.rating,
-             users.c.peak_rating, users.c.display_name, users.c.avatar, users.c.achievements)
+             users.c.peak_rating, users.c.display_name, users.c.avatar, users.c.achievements,
+             users.c.win_streak)
 
 
 def name_label(record: dict) -> str:
@@ -276,14 +281,21 @@ def apply_result(username: str, outcome: str) -> dict:
         return get_record(username)
     col = {"win": "wins", "loss": "losses"}[outcome]
     with _engine.begin() as c:
-        row = c.execute(select(users.c.rating, users.c.peak_rating)
+        row = c.execute(select(users.c.rating, users.c.peak_rating, users.c.win_streak)
                         .where(users.c.username == username)).first()
         cur = row[0] if row and row[0] is not None else rating.START_RATING
         peak = row[1] if row and row[1] is not None else cur
-        new_rating = rating.apply_outcome(cur, outcome)
+        streak = row[2] if row and row[2] is not None else 0
+        if outcome == "win":
+            streak += 1
+            new_rating = rating.apply_outcome(cur, "win") + rating.streak_bonus(streak)
+        else:
+            streak = 0
+            new_rating = rating.apply_outcome(cur, "loss")
         new_peak = max(peak, new_rating)
         c.execute(update(users).where(users.c.username == username).values(
-            **{col: users.c[col] + 1, "rating": new_rating, "peak_rating": new_peak}))
+            **{col: users.c[col] + 1, "rating": new_rating, "peak_rating": new_peak,
+               "win_streak": streak}))
     return get_record(username)
 
 
@@ -397,5 +409,5 @@ def transfer_stats(src: str, dst: str) -> None:
             wins=users.c.wins + s["wins"], losses=users.c.losses + s["losses"],
             ties=users.c.ties + s["ties"], rating=s["rating"], peak_rating=new_peak,
             avatar=s["avatar"] or "amateur", achievements=merged_ach,
-            games_played=gp, games_won=gw))
+            games_played=gp, games_won=gw, win_streak=s["win_streak"] or 0))
         c.execute(delete(users).where(users.c.username == src))

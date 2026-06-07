@@ -38,7 +38,7 @@ export default function Leaderboard({ onClose, highlight }) {
                 <td className="lb-name">
                   <span className="lb-player">
                     <Avatar id={r.avatar || 'amateur'} size={28} />
-                    {nameLabel(r)}
+                    {nameLabel(r)}{r.on_streak && <span title={`${r.win_streak}-game win streak`}> 🔥</span>}
                   </span>
                 </td>
                 <td><span className={`tier-badge ${TIER_CLASS[r.tier] || ''}`}>{r.tier}</span></td>

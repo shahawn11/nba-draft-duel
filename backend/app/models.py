@@ -119,6 +119,8 @@ class Record(BaseModel):
     avatar: str = "amateur"
     unlocked: list[str] = []
     achievements: list[str] = []
+    win_streak: int = 0
+    on_streak: bool = False
 
 
 class ResultOut(BaseModel):

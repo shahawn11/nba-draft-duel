@@ -164,6 +164,10 @@ slower, slipping costs more:
 Ties don't change rating. Tunable in `app/rating.py`. The header shows your tier
 badge + rating; the 🏆 Leaderboard ranks the top players.
 
+**Win streaks:** 3+ straight ranked wins shows a 🔥 next to your name (player
+card, match intro, live banner, leaderboard) and grants **bonus rating per win**
+— +1 at a 3-game streak, +2 at 4, +3 at 5 and beyond. A loss resets the streak.
+
 ## Scoring model
 
 Per player:

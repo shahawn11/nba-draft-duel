@@ -14,7 +14,7 @@ function Fighter({ side, name, record }) {
   return (
     <div className={`fighter ${side}`}>
       <Avatar id={(record && record.avatar) || 'amateur'} size={56} />
-      <div className="fighter-name">{label}</div>
+      <div className="fighter-name">{label}{record && record.on_streak && <span title={`${record.win_streak}-game win streak`}> 🔥</span>}</div>
       {record && (
         <>
           <span className={`tier-badge ${tierCls(record.tier)}`}>{record.tier}</span>
