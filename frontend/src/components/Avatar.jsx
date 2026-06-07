@@ -102,7 +102,7 @@ function Emblem({ id }) {
           <path d="M34 48 H66 L62 72 Q50 76 38 72 Z" fill="#c0c6cf" stroke="#5b6270" />
           <path d="M34 48 Q50 54 66 48" fill="none" stroke="#5b6270" strokeWidth="2.4" />
           <text x="50" y="69" textAnchor="middle" fontSize="13" fontWeight="800"
-                fill="#2a2f38" stroke="none" fontFamily="system-ui, sans-serif">50</text>
+                fill="#ff2d4b" stroke="none" fontFamily="system-ui, sans-serif">50</text>
         </g>
       )
     case 'tripledouble': // three stacked stat bars
@@ -111,9 +111,9 @@ function Emblem({ id }) {
           <rect x="30" y="36" width="40" height="11" rx="3" fill="#37d6b2" />
           <rect x="30" y="49" width="40" height="11" rx="3" fill="#2bb39a" />
           <rect x="30" y="62" width="40" height="11" rx="3" fill="#1f9080" />
-          <text x="62" y="45" textAnchor="middle" fontSize="9" fontWeight="800" fill="#08332b" stroke="none">10</text>
-          <text x="62" y="58" textAnchor="middle" fontSize="9" fontWeight="800" fill="#08332b" stroke="none">10</text>
-          <text x="62" y="71" textAnchor="middle" fontSize="9" fontWeight="800" fill="#08332b" stroke="none">10</text>
+          <text x="62" y="45" textAnchor="middle" fontSize="9" fontWeight="800" fill="#ff2d4b" stroke="none">10</text>
+          <text x="62" y="58" textAnchor="middle" fontSize="9" fontWeight="800" fill="#ff2d4b" stroke="none">10</text>
+          <text x="62" y="71" textAnchor="middle" fontSize="9" fontWeight="800" fill="#ff2d4b" stroke="none">10</text>
         </g>
       )
     case 'games25': // game clock with "25"

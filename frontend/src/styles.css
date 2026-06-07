@@ -273,8 +273,9 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   .matchup-row { grid-template-columns: 26px 1fr; gap: 2px 8px; }
   .matchup .m-vs { display: none; }
   .matchup .m-pos { grid-row: 1 / span 2; align-self: center; }
-  .matchup .m-home { grid-column: 2; }
-  .matchup .m-away { grid-column: 2; text-align: left; color: var(--muted); font-size: 0.85rem; }
+  .matchup .m-home, .matchup .m-away { grid-column: 2; min-width: 0; overflow-wrap: anywhere; }
+  .matchup .m-away { text-align: left; color: var(--muted); font-size: 0.85rem; }
+  .matchup .m-away::before { content: "vs "; color: var(--muted); font-weight: 700; }
 }
 
 /* ---- sequential draft ---- */
@@ -835,9 +836,9 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 }
 .identity-card:hover { background: rgba(255,255,255,0.08); border-color: var(--accent); }
 .identity-card:active { transform: scale(0.98); }
-.identity-card .id-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.25; }
+.identity-card .id-text { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; line-height: 1.2; }
 .identity-card .id-name { font-weight: 700; font-size: 0.92rem; }
-.identity-card .id-stats { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; }
+.identity-card .id-stats { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
 .identity-card .rating-num { color: var(--accent); }
 .identity-card .wl { color: var(--muted); }
 .identity-card .wl .w { color: var(--win); }
