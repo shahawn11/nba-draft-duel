@@ -18,6 +18,7 @@ import time
 from . import db, game
 from .models import player_from_dict
 from .positions import SLOTS
+from . import rating
 
 ROUND_SECONDS = 10
 NUM_ROUNDS = len(SLOTS)
@@ -163,6 +164,11 @@ class LiveGame:
         pa["ranked"] = pb["ranked"] = True
         pa["rating_change"] = pa["record"]["rating"] - a_old
         pb["rating_change"] = pb["record"]["rating"] - b_old
+        a_prev, b_prev = rating.tier_name(a_old), rating.tier_name(b_old)
+        pa["previous_tier"] = a_prev
+        pb["previous_tier"] = b_prev
+        pa["promoted"] = pa["rating_change"] > 0 and pa["record"]["tier"] != a_prev
+        pb["promoted"] = pb["rating_change"] > 0 and pb["record"]["tier"] != b_prev
         pa["mode"] = pb["mode"] = "live"
         # Await the sends so results arrive before the sockets close.
         await self.a.send({"type": "result", "result": pa})

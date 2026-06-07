@@ -555,3 +555,52 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .rating-change .down { color: var(--loss); }
 .rating-change.unranked { color: var(--muted); }
 .opp-rec { color: var(--muted); font-size: 0.85rem; }
+
+/* ---- promotion celebration + rating tick ---- */
+.rating-now { color: var(--accent); }
+
+.promo-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 11, 16, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+  overflow: hidden;
+  animation: fadeIn 0.2s ease both;
+}
+.promo-card {
+  position: relative;
+  z-index: 2;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 16px;
+  padding: 28px 32px;
+  text-align: center;
+  animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.promo-sub { color: var(--muted); font-weight: 800; letter-spacing: 3px; font-size: 0.8rem; }
+.promo-tier { display: inline-block; font-size: 1.4rem !important; padding: 6px 18px !important; margin: 12px 0; }
+.promo-msg { margin-bottom: 16px; }
+
+.confetti { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.confetti span {
+  position: absolute;
+  top: -12px;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation-name: confettiFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(-10vh) rotate(0deg); }
+  100% { transform: translateY(110vh) rotate(720deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .confetti { display: none; }
+  .promo-card { animation: none; }
+}
