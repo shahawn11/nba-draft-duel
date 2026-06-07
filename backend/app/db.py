@@ -23,7 +23,10 @@ CREATE TABLE IF NOT EXISTS users (
     ties     INTEGER NOT NULL DEFAULT 0,
     rating   INTEGER NOT NULL DEFAULT 1000,
     avatar       TEXT NOT NULL DEFAULT 'amateur',
-    peak_rating  INTEGER NOT NULL DEFAULT 1000
+    peak_rating  INTEGER NOT NULL DEFAULT 1000,
+    achievements TEXT NOT NULL DEFAULT '',
+    games_played INTEGER NOT NULL DEFAULT 0,
+    games_won    INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS matches (
     id             TEXT PRIMARY KEY,
@@ -77,6 +80,12 @@ def init_db() -> None:
             # keep any rank avatars their rating already qualifies for.
             c.execute(f"ALTER TABLE users ADD COLUMN peak_rating INTEGER NOT NULL DEFAULT {rating.START_RATING}")
             c.execute("UPDATE users SET peak_rating = rating WHERE rating > peak_rating")
+        if "achievements" not in cols:
+            c.execute("ALTER TABLE users ADD COLUMN achievements TEXT NOT NULL DEFAULT ''")
+        if "games_played" not in cols:
+            c.execute("ALTER TABLE users ADD COLUMN games_played INTEGER NOT NULL DEFAULT 0")
+        if "games_won" not in cols:
+            c.execute("ALTER TABLE users ADD COLUMN games_won INTEGER NOT NULL DEFAULT 0")
 
 
 # ---- users / records -------------------------------------------------------
@@ -109,7 +118,9 @@ def _record_dict(row) -> dict:
     d["display_name"] = d.get("display_name") or d.get("username")
     # Avatars: default to the always-unlocked Amateur brown shirt.
     d["avatar"] = d.get("avatar") or "amateur"
-    d["unlocked"] = rating.unlocked_avatar_ids(peak)
+    earned = [a for a in (d.get("achievements") or "").split(",") if a]
+    d["achievements"] = earned
+    d["unlocked"] = rating.unlocked_avatar_ids(peak) + earned
     # Ties are no longer tracked in records (OT resolves all games).
     d.pop("ties", None)
     return d
@@ -118,14 +129,15 @@ def _record_dict(row) -> dict:
 def get_record(username: str) -> dict:
     with _conn() as c:
         row = c.execute(
-            "SELECT username, wins, losses, rating, peak_rating, display_name, avatar "
+            "SELECT username, wins, losses, rating, peak_rating, display_name, avatar, achievements "
             "FROM users WHERE username = ?",
             (username,),
         ).fetchone()
     if not row:
         return _record_dict({"username": username, "wins": 0, "losses": 0,
                              "rating": rating.START_RATING,
-                             "peak_rating": rating.START_RATING, "avatar": "amateur"})
+                             "peak_rating": rating.START_RATING, "avatar": "amateur",
+                             "achievements": ""})
     return _record_dict(row)
 
 
@@ -138,6 +150,45 @@ def set_avatar(username: str, avatar_id: str) -> dict:
         raise ValueError("locked")
     with _conn() as c:
         c.execute("UPDATE users SET avatar = ? WHERE username = ?", (avatar_id, username))
+    return get_record(username)
+
+
+def award_achievements(username: str, won: bool, players: list[dict]) -> dict:
+    """Record a finished match for `username` and unlock any newly-earned
+    achievement avatars. `players` is the user's own scored lineup (each with
+    `status` and a `game` box line). Cosmetic only -- never touches rating/W-L.
+    Returns the updated record."""
+    ensure_user(username)
+    newly: set[str] = set()
+    for p in players or []:
+        if p.get("status") == "hot":
+            newly.add("hot")
+        elif p.get("status") == "slump":
+            newly.add("slump")
+        g = p.get("game") or {}
+        if (g.get("pts") or 0) >= 50:
+            newly.add("fifty")
+        big = sum(1 for k in ("pts", "reb", "ast") if (g.get(k) or 0) >= 10)
+        if big >= 3:
+            newly.add("tripledouble")
+
+    with _conn() as c:
+        row = c.execute(
+            "SELECT achievements, games_played, games_won FROM users WHERE username = ?",
+            (username,),
+        ).fetchone()
+        earned = {a for a in ((row["achievements"] if row else "") or "").split(",") if a}
+        gp = (row["games_played"] if row else 0) + 1
+        gw = (row["games_won"] if row else 0) + (1 if won else 0)
+        if gp >= 25:
+            newly.add("games25")
+        if gw >= 100:
+            newly.add("wins100")
+        earned |= (newly & rating.ACHIEVEMENT_IDS)
+        c.execute(
+            "UPDATE users SET achievements = ?, games_played = ?, games_won = ? WHERE username = ?",
+            (",".join(sorted(earned)), gp, gw, username),
+        )
     return get_record(username)
 
 
@@ -164,7 +215,7 @@ def apply_result(username: str, outcome: str) -> dict:
 def leaderboard(limit: int = 20) -> list[dict]:
     with _conn() as c:
         rows = c.execute(
-            "SELECT username, wins, losses, rating, peak_rating, display_name, avatar "
+            "SELECT username, wins, losses, rating, peak_rating, display_name, avatar, achievements "
             "FROM users "
             "WHERE (wins + losses) > 0 "
             "ORDER BY rating DESC, wins DESC, username ASC LIMIT ?",
@@ -279,16 +330,25 @@ def transfer_stats(src: str, dst: str) -> None:
     if not src or src == dst:
         return
     with _conn() as c:
-        s = c.execute("SELECT wins, losses, ties, rating, peak_rating, avatar FROM users WHERE username = ?", (src,)).fetchone()
+        s = c.execute("SELECT wins, losses, ties, rating, peak_rating, avatar, "
+                      "achievements, games_played, games_won FROM users WHERE username = ?", (src,)).fetchone()
         if not s:
             return
         c.execute("INSERT OR IGNORE INTO users(username) VALUES (?)", (dst,))
-        d = c.execute("SELECT peak_rating FROM users WHERE username = ?", (dst,)).fetchone()
+        d = c.execute("SELECT peak_rating, achievements, games_played, games_won "
+                      "FROM users WHERE username = ?", (dst,)).fetchone()
         dst_peak = d["peak_rating"] if d and d["peak_rating"] is not None else rating.START_RATING
         new_peak = max(dst_peak, s["peak_rating"] or s["rating"], s["rating"])
+        src_ach = {a for a in (s["achievements"] or "").split(",") if a}
+        dst_ach = {a for a in ((d["achievements"] if d else "") or "").split(",") if a}
+        merged_ach = ",".join(sorted(src_ach | dst_ach))
+        gp = (d["games_played"] if d else 0) + (s["games_played"] or 0)
+        gw = (d["games_won"] if d else 0) + (s["games_won"] or 0)
         c.execute(
             "UPDATE users SET wins = wins + ?, losses = losses + ?, ties = ties + ?, "
-            "rating = ?, peak_rating = ?, avatar = ? WHERE username = ?",
-            (s["wins"], s["losses"], s["ties"], s["rating"], new_peak, s["avatar"] or "amateur", dst),
+            "rating = ?, peak_rating = ?, avatar = ?, achievements = ?, "
+            "games_played = ?, games_won = ? WHERE username = ?",
+            (s["wins"], s["losses"], s["ties"], s["rating"], new_peak,
+             s["avatar"] or "amateur", merged_ach, gp, gw, dst),
         )
         c.execute("DELETE FROM users WHERE username = ?", (src,))

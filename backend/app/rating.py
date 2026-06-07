@@ -36,6 +36,19 @@ def unlocked_avatar_ids(peak_rating: int) -> list[str]:
     return [t["id"] for t in TIERS if peak_rating >= t["min"]]
 
 
+# Achievement avatars — unlocked by accomplishments rather than rating. Each id
+# is also the avatar's emblem key on the frontend.
+ACHIEVEMENTS: list[dict] = [
+    {"id": "games25", "name": "Veteran Presence", "how": "Play 25 games"},
+    {"id": "wins100", "name": "Centurion", "how": "Win 100 games"},
+    {"id": "hot", "name": "Heat Check", "how": "Have a player catch fire (Hot)"},
+    {"id": "slump", "name": "Cold Snap", "how": "Have a player go cold (Slump)"},
+    {"id": "fifty", "name": "Bucket Getter", "how": "Have a player score 50"},
+    {"id": "tripledouble", "name": "Stat Sheet Stuffer", "how": "Have a player record a triple-double"},
+]
+ACHIEVEMENT_IDS = {a["id"] for a in ACHIEVEMENTS}
+
+
 def tier_for(rating: int) -> dict:
     cur = TIERS[0]
     for t in TIERS:

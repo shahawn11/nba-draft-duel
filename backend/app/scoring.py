@@ -46,9 +46,9 @@ GAME_MIN, GAME_MAX = 80, 150
 # a center should rebound -- and players short of it are penalized while strong
 # fits earn a small bonus. (attr, expected, weight, good_label, bad_note)
 SLOT_EXPECTATION: dict[str, dict] = {
-    "PG": {"primary": ("apg", 5.0, 0.6), "good": "floor general", "bad": "not a true PG (low assists)"},
-    "SG": {"primary": ("ppg", 16.0, 0.2), "good": "scoring guard", "bad": "pass-first for an SG (low scoring)"},
-    "SF": {"primary": ("ppg", 14.0, 0.2), "good": "scoring wing", "bad": "low-scoring for an SF"},
+    "PG": {"primary": ("apg", 5.0, 0.6), "good": "floor general", "bad": "not a true PG"},
+    "SG": {"primary": ("ppg", 16.0, 0.2), "good": "scoring guard", "bad": "pass-first SG"},
+    "SF": {"primary": ("ppg", 14.0, 0.2), "good": "scoring wing", "bad": "secondary scorer at SF"},
     # PF/C size is judged by HEIGHT (a tall big isn't "undersized" even with
     # modest rebounds). Falls back to rebounds only when height is unknown.
     "PF": {"primary": ("height_in", 80.0, 0.35), "fallback": ("rpg", 6.0, 0.5),

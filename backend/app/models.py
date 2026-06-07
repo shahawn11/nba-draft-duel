@@ -118,6 +118,7 @@ class Record(BaseModel):
     display_name: str | None = None
     avatar: str = "amateur"
     unlocked: list[str] = []
+    achievements: list[str] = []
 
 
 class ResultOut(BaseModel):

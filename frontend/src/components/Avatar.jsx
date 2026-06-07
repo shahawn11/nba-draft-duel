@@ -11,7 +11,19 @@ export const AVATARS = [
   { id: 'goat', tier: 'GOAT', label: 'G.O.A.T.', min: 50000, ring: '#d4af37' },
 ]
 
-export const AVATAR_BY_ID = Object.fromEntries(AVATARS.map((a) => [a.id, a]))
+// Achievement avatars — unlocked by accomplishments, not rating.
+export const ACHIEVEMENT_AVATARS = [
+  { id: 'hot', label: 'Heat Check', how: 'Have a player catch fire (Hot)', ring: '#e8473b' },
+  { id: 'slump', label: 'Cold Snap', how: 'Have a player go cold (Slump)', ring: '#4fc3ff' },
+  { id: 'fifty', label: 'Bucket Getter', how: 'Have a player score 50', ring: '#ffb01f' },
+  { id: 'tripledouble', label: 'Stat Stuffer', how: 'Have a player record a triple-double', ring: '#2bb39a' },
+  { id: 'games25', label: 'Regular', how: 'Play 25 games', ring: '#8aa0c0' },
+  { id: 'wins100', label: 'Centurion', how: 'Win 100 games', ring: '#d04a6a' },
+]
+
+export const AVATAR_BY_ID = Object.fromEntries(
+  [...AVATARS, ...ACHIEVEMENT_AVATARS].map((a) => [a.id, a]),
+)
 
 // Each emblem is drawn inside a 100x100 viewBox, centered ~ (50,52).
 function Emblem({ id }) {
@@ -65,6 +77,58 @@ function Emblem({ id }) {
           <circle cx="56" cy="52" r="2.6" fill="#333" stroke="none" />
           <path d="M46 62 Q50 65 54 62" fill="none" />
           <path d="M44 66 Q42 72 46 72 M56 66 Q58 72 54 72" fill="#eaeaea" />
+        </g>
+      )
+    case 'hot': // flame
+      return (
+        <g stroke="#a8300f" strokeWidth="2.6" strokeLinejoin="round">
+          <path d="M50 28 Q40 40 44 50 Q40 48 38 44 Q32 56 38 66 Q44 76 56 74 Q70 70 66 54 Q64 46 58 42 Q60 36 50 28 Z" fill="#ff7a1a" />
+          <path d="M50 48 Q44 56 48 64 Q52 70 58 64 Q62 58 56 50 Q54 54 50 48 Z" fill="#ffd23b" stroke="none" />
+        </g>
+      )
+    case 'slump': // ice cube
+      return (
+        <g stroke="#2a86b8" strokeWidth="2.6" strokeLinejoin="round">
+          <path d="M50 30 L70 40 L70 62 L50 72 L30 62 L30 40 Z" fill="#9fe0ff" />
+          <path d="M50 30 L50 72 M30 40 L50 50 L70 40 M50 50 L50 72" fill="none" stroke="#5bb8e6" strokeWidth="2" />
+          <path d="M37 44 L41 41 M60 56 L64 53" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
+        </g>
+      )
+    case 'fifty': // basketball with "50"
+      return (
+        <g>
+          <circle cx="50" cy="52" r="21" fill="#e8743b" stroke="#7a3a16" strokeWidth="3" />
+          <text x="50" y="59" textAnchor="middle" fontSize="20" fontWeight="800"
+                fill="#2a1400" fontFamily="system-ui, sans-serif">50</text>
+        </g>
+      )
+    case 'tripledouble': // three stacked stat bars
+      return (
+        <g stroke="#15705f" strokeWidth="2.4" strokeLinejoin="round">
+          <rect x="30" y="36" width="40" height="11" rx="3" fill="#37d6b2" />
+          <rect x="30" y="49" width="40" height="11" rx="3" fill="#2bb39a" />
+          <rect x="30" y="62" width="40" height="11" rx="3" fill="#1f9080" />
+          <text x="62" y="45" textAnchor="middle" fontSize="9" fontWeight="800" fill="#08332b" stroke="none">10</text>
+          <text x="62" y="58" textAnchor="middle" fontSize="9" fontWeight="800" fill="#08332b" stroke="none">10</text>
+          <text x="62" y="71" textAnchor="middle" fontSize="9" fontWeight="800" fill="#08332b" stroke="none">10</text>
+        </g>
+      )
+    case 'games25': // game clock with "25"
+      return (
+        <g stroke="#5b6f8f" strokeWidth="3" strokeLinejoin="round">
+          <circle cx="50" cy="52" r="20" fill="#1c2330" stroke="#8aa0c0" />
+          <text x="50" y="59" textAnchor="middle" fontSize="18" fontWeight="800"
+                fill="#cfe0ff" stroke="none" fontFamily="system-ui, sans-serif">25</text>
+          <rect x="44" y="28" width="12" height="5" rx="2" fill="#8aa0c0" stroke="none" />
+        </g>
+      )
+    case 'wins100': // medal with "100"
+      return (
+        <g stroke="#9a2d44" strokeWidth="2.6" strokeLinejoin="round">
+          <path d="M40 30 L46 50 M60 30 L54 50" stroke="#d04a6a" strokeWidth="5" strokeLinecap="round" />
+          <circle cx="50" cy="58" r="16" fill="#ffce54" stroke="#b88311" />
+          <text x="50" y="63" textAnchor="middle" fontSize="12" fontWeight="800"
+                fill="#5a3a00" stroke="none" fontFamily="system-ui, sans-serif">100</text>
         </g>
       )
     default:

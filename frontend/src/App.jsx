@@ -120,7 +120,7 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <h1>🏀 NBA Draft Duel</h1>
+        <h1>🏀 Draft Duel</h1>
         <div className="header-right">
           <button className="lb-toggle" onClick={() => { toggleMuted(); setMuted(isMuted()) }} title={muted ? 'Unmute' : 'Mute'}>
             {muted ? '🔇' : '🔊'}

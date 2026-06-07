@@ -167,6 +167,11 @@ class LiveGame:
         b_out = _INVERSE[a_out]
         pa["record"] = db.apply_result(self.a.username, a_out)
         pb["record"] = db.apply_result(self.b.username, b_out)
+        # Cosmetic achievement avatars (own lineup): hot/slump/50pt/triple-double + game counts.
+        db.award_achievements(self.a.username, a_out == "win", pa["your_team"]["players"])
+        db.award_achievements(self.b.username, b_out == "win", pb["your_team"]["players"])
+        pa["record"] = db.get_record(self.a.username)
+        pb["record"] = db.get_record(self.b.username)
         pa["ranked"] = pb["ranked"] = True
         pa["rating_change"] = pa["record"]["rating"] - a_old
         pb["rating_change"] = pb["record"]["rating"] - b_old
