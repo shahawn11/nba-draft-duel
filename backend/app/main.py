@@ -16,7 +16,8 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException, WebSocket, Header
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import db, game, live, auth, moderation
+from . import db, game, live, auth, moderation, config
+from .ratelimit import RateLimitMiddleware
 from .models import (
     AuthRequest,
     AvatarRequest,
@@ -31,10 +32,13 @@ app = FastAPI(title="5v5 Duel", version="0.2.0")
 # usage and any ASGI server, not just the startup event).
 db.init_db()
 
-# Frontend (Vite dev server) will call this cross-origin.
+# Per-IP rate limiting (Redis-backed in prod; in-memory fallback locally).
+app.add_middleware(RateLimitMiddleware)
+
+# Allowed origins come from config (env-driven for prod domains).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=config.ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
