@@ -239,6 +239,11 @@ export default function Results({ result, onPlayAgain }) {
             <b className={result.rating_change >= 0 ? 'up' : 'down'}>
               {result.rating_change >= 0 ? '+' : ''}{result.rating_change} rating
             </b>
+            {result.streak_bonus > 0 && (
+              <span className="streak-bonus" title={`${result.win_streak}-game win streak bonus`}>
+                {' '}(incl. <b>+{result.streak_bonus}</b> 🔥 streak)
+              </span>
+            )}
             {result.record && <> → <b className="rating-now">{shownRating}</b> ({result.record.tier})</>}
           </span>
         ) : (

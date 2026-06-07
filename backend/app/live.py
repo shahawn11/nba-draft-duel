@@ -240,13 +240,17 @@ class LiveGame:
             payload["promoted"] = False
             return
         db.apply_result(p.username, outcome)
-        rec, newly = db.award_achievements(p.username, outcome == "win", payload["your_team"]["players"])
+        _, newly = db.award_achievements(p.username, outcome == "win", payload["your_team"]["players"])
+        db.record_best_team(p.username, payload["your_team"]["players"])
+        rec = db.get_record(p.username)
         payload["record"] = rec
         payload["newly_unlocked"] = newly
         payload["ranked"] = True
         payload["rating_change"] = rec["rating"] - old_rating
         payload["previous_tier"] = prev_tier
         payload["promoted"] = payload["rating_change"] > 0 and rec["tier"] != prev_tier
+        payload["win_streak"] = rec["win_streak"]
+        payload["streak_bonus"] = rating.streak_bonus(rec["win_streak"]) if outcome == "win" else 0
 
     async def _handle_left(self, left: Player) -> None:
         other = self.b if left is self.a else self.a

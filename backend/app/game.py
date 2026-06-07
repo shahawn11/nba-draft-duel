@@ -283,8 +283,9 @@ def _resolve(match: dict, state: dict) -> dict:
     # cosmetic, so they still accrue (games played, hot/slump, 50pt, triple-double).
     rec, newly = db.award_achievements(match["username"], outcome == "win",
                                        result_payload["your_team"]["players"])
+    db.record_best_team(match["username"], result_payload["your_team"]["players"])
     result_payload["match_id"] = match["id"]
-    result_payload["record"] = rec
+    result_payload["record"] = db.get_record(match["username"])
     result_payload["newly_unlocked"] = newly
     result_payload["ranked"] = False
     result_payload["rating_change"] = 0

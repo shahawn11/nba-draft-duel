@@ -796,6 +796,21 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .unlock-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .unlock-label { font-weight: 800; font-size: 0.85rem; }
 
+/* ---- Win-streak bonus + best stats ---- */
+.streak-bonus { color: var(--accent); font-size: 0.9rem; }
+.best-stats {
+  margin: 20px auto 0; max-width: 360px; text-align: left;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--line);
+  border-radius: 12px; padding: 14px 16px;
+}
+.best-streak { font-weight: 700; margin-bottom: 10px; }
+.best-team-head { font-weight: 800; margin-bottom: 6px; }
+.best-team-head span { color: var(--muted); font-weight: 400; font-size: 0.82rem; }
+.best-team ul { list-style: none; margin: 0; padding: 0; }
+.best-team li { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 2px 0; }
+.best-team .bt-slot { display: inline-block; min-width: 28px; color: var(--accent); font-weight: 700; }
+.best-team li b { margin-left: auto; color: var(--text); }
+
 /* ---- Hot/Slump matchup chip ---- */
 .status-chip {
   display: inline-block;

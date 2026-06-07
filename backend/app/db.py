@@ -87,6 +87,9 @@ users = Table(
     Column("games_played", Integer, nullable=False, default=0, server_default="0"),
     Column("games_won", Integer, nullable=False, default=0, server_default="0"),
     Column("win_streak", Integer, nullable=False, default=0, server_default="0"),
+    Column("best_streak", Integer, nullable=False, default=0, server_default="0"),
+    Column("best_team_strength", Float, nullable=False, default=0, server_default="0"),
+    Column("best_team_json", Text, nullable=False, default="", server_default=""),
 )
 
 matches = Table(
@@ -127,6 +130,9 @@ _USER_MIGRATIONS = {
     "games_played": "INTEGER NOT NULL DEFAULT 0",
     "games_won": "INTEGER NOT NULL DEFAULT 0",
     "win_streak": "INTEGER NOT NULL DEFAULT 0",
+    "best_streak": "INTEGER NOT NULL DEFAULT 0",
+    "best_team_strength": "REAL NOT NULL DEFAULT 0",
+    "best_team_json": "TEXT NOT NULL DEFAULT ''",
 }
 
 
@@ -191,13 +197,20 @@ def _record_dict(row) -> dict:
     d["unlocked"] = rating.unlocked_avatar_ids(peak) + earned
     d["win_streak"] = d.get("win_streak") or 0
     d["on_streak"] = d["win_streak"] >= rating.STREAK_MIN
+    d["best_streak"] = max(d.get("best_streak") or 0, d["win_streak"])
+    d["best_team_strength"] = round(d.get("best_team_strength") or 0, 1)
+    try:
+        d["best_team"] = json.loads(d.get("best_team_json") or "null")
+    except (ValueError, TypeError):
+        d["best_team"] = None
+    d.pop("best_team_json", None)
     d.pop("ties", None)
     return d
 
 
 _REC_COLS = (users.c.username, users.c.wins, users.c.losses, users.c.rating,
              users.c.peak_rating, users.c.display_name, users.c.avatar, users.c.achievements,
-             users.c.win_streak)
+             users.c.win_streak, users.c.best_streak, users.c.best_team_strength, users.c.best_team_json)
 
 
 def name_label(record: dict) -> str:
@@ -274,6 +287,24 @@ def award_achievements(username: str, won: bool, players: list[dict]) -> tuple[d
     return get_record(username), newly_unlocked
 
 
+def record_best_team(username: str, players: list[dict]) -> None:
+    """If this drafted five is the user's strongest ever (by summed rating),
+    store it. Counts in any mode (it's about the draft, not ranking)."""
+    if not players:
+        return
+    strength = round(sum((p.get("rating") or 0) + (p.get("delta") or 0) for p in players), 1)
+    lineup = [{"slot": p.get("position"), "name": p.get("name"),
+               "rating": round((p.get("rating") or 0) + (p.get("delta") or 0), 1),
+               "decade": p.get("decade"), "team": p.get("team")} for p in players]
+    ensure_user(username)
+    with _engine.begin() as c:
+        row = c.execute(select(users.c.best_team_strength).where(users.c.username == username)).first()
+        prev = (row[0] if row and row[0] is not None else 0)
+        if strength > prev:
+            c.execute(update(users).where(users.c.username == username).values(
+                best_team_strength=strength, best_team_json=json.dumps(lineup)))
+
+
 def apply_result(username: str, outcome: str) -> dict:
     """outcome in {'win','loss'} updates W/L + rating (+peak). 'tie' is a no-op."""
     ensure_user(username)
@@ -281,11 +312,13 @@ def apply_result(username: str, outcome: str) -> dict:
         return get_record(username)
     col = {"win": "wins", "loss": "losses"}[outcome]
     with _engine.begin() as c:
-        row = c.execute(select(users.c.rating, users.c.peak_rating, users.c.win_streak)
+        row = c.execute(select(users.c.rating, users.c.peak_rating, users.c.win_streak,
+                               users.c.best_streak)
                         .where(users.c.username == username)).first()
         cur = row[0] if row and row[0] is not None else rating.START_RATING
         peak = row[1] if row and row[1] is not None else cur
         streak = row[2] if row and row[2] is not None else 0
+        best_streak = row[3] if row and row[3] is not None else 0
         if outcome == "win":
             streak += 1
             new_rating = rating.apply_outcome(cur, "win") + rating.streak_bonus(streak)
@@ -295,7 +328,7 @@ def apply_result(username: str, outcome: str) -> dict:
         new_peak = max(peak, new_rating)
         c.execute(update(users).where(users.c.username == username).values(
             **{col: users.c[col] + 1, "rating": new_rating, "peak_rating": new_peak,
-               "win_streak": streak}))
+               "win_streak": streak, "best_streak": max(best_streak, streak)}))
     return get_record(username)
 
 
@@ -396,7 +429,8 @@ def transfer_stats(src: str, dst: str) -> None:
         if not c.execute(select(users.c.username).where(users.c.username == dst)).first():
             c.execute(insert(users).values(username=dst))
         d = c.execute(select(users.c.peak_rating, users.c.achievements,
-                             users.c.games_played, users.c.games_won)
+                             users.c.games_played, users.c.games_won,
+                             users.c.best_streak, users.c.best_team_strength, users.c.best_team_json)
                       .where(users.c.username == dst)).first()
         dst_peak = d[0] if d and d[0] is not None else rating.START_RATING
         new_peak = max(dst_peak, s["peak_rating"] or s["rating"], s["rating"])
@@ -405,9 +439,17 @@ def transfer_stats(src: str, dst: str) -> None:
         merged_ach = ",".join(sorted(src_ach | dst_ach))
         gp = (d[2] if d else 0) + (s["games_played"] or 0)
         gw = (d[3] if d else 0) + (s["games_won"] or 0)
+        best_streak = max((d[4] if d else 0) or 0, s["best_streak"] or 0)
+        # keep whichever best team is stronger
+        if (s["best_team_strength"] or 0) >= ((d[5] if d else 0) or 0):
+            best_team_strength, best_team_json = s["best_team_strength"] or 0, s["best_team_json"] or ""
+        else:
+            best_team_strength, best_team_json = d[5], d[6]
         c.execute(update(users).where(users.c.username == dst).values(
             wins=users.c.wins + s["wins"], losses=users.c.losses + s["losses"],
             ties=users.c.ties + s["ties"], rating=s["rating"], peak_rating=new_peak,
             avatar=s["avatar"] or "amateur", achievements=merged_ach,
-            games_played=gp, games_won=gw, win_streak=s["win_streak"] or 0))
+            games_played=gp, games_won=gw, win_streak=s["win_streak"] or 0,
+            best_streak=best_streak, best_team_strength=best_team_strength,
+            best_team_json=best_team_json))
         c.execute(delete(users).where(users.c.username == src))

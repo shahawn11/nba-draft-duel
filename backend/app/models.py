@@ -121,6 +121,9 @@ class Record(BaseModel):
     achievements: list[str] = []
     win_streak: int = 0
     on_streak: bool = False
+    best_streak: int = 0
+    best_team_strength: float = 0
+    best_team: list | None = None
 
 
 class ResultOut(BaseModel):

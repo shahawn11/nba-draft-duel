@@ -234,6 +234,24 @@ export default function App() {
           <button className="submit" disabled={busy} onClick={() => startMatch(mode)}>
             {busy ? 'Loading…' : 'Start match'}
           </button>
+
+          {record && (record.best_team || record.best_streak > 0) && (
+            <div className="best-stats">
+              {record.best_streak > 0 && (
+                <div className="best-streak">🔥 Best win streak: <b>{record.best_streak}</b></div>
+              )}
+              {record.best_team && record.best_team.length > 0 && (
+                <div className="best-team">
+                  <div className="best-team-head">🏅 Your best five <span>(strength {record.best_team_strength})</span></div>
+                  <ul>
+                    {record.best_team.map((p, i) => (
+                      <li key={i}><span className="bt-slot">{p.slot}</span> {p.name} <b>{p.rating}</b></li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
