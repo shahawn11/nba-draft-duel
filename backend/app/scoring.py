@@ -53,10 +53,19 @@ SLOT_EXPECTATION: dict[str, tuple] = {
 FIT_BONUS_SCALE = 0.3       # fraction of the surplus turned into a bonus
 MAX_FIT_BONUS = 2.0         # cap on per-player fit bonus
 MAX_FIT_PENALTY = 7.0       # cap on per-player fit penalty
-# Size/physical mismatch at a matchup, proxied by rebounding (we have no height).
-SIZE_MISMATCH_WEIGHT = 0.8      # rating points per rebound of size gap
-SIZE_MISMATCH_THRESHOLD = 4.0   # rebound gap that counts as a notable mismatch
+# Size/physical mismatch at a matchup. Uses real height (inches) when both
+# players have it, else falls back to a rebounding proxy.
+HEIGHT_MISMATCH_WEIGHT = 0.7    # rating points per inch of height gap
+HEIGHT_MISMATCH_THRESHOLD = 4.0 # inches gap that counts as a notable mismatch
+SIZE_MISMATCH_WEIGHT = 0.8      # rating points per rebound of size gap (fallback)
+SIZE_MISMATCH_THRESHOLD = 4.0   # rebound gap that counts (fallback)
 MAX_SIZE_MISMATCH = 5.0         # cap on the per-matchup nudge
+
+
+def format_height(inches: float) -> str:
+    if not inches:
+        return "?"
+    return f"{int(inches) // 12}'{int(inches) % 12}\""
 
 
 @dataclass(frozen=True)
@@ -74,6 +83,7 @@ class PlayerStats:
     team: str = ""
     season: str = ""
     decade: str = ""
+    height_in: float = 0.0   # height in inches (0 = unknown)
     # Slots this player may be drafted into (PG/SG/SF/PF/C). Empty => single
     # slot equal to `position`. Genuine combos list multiple.
     eligible_positions: tuple[str, ...] = ()
@@ -224,15 +234,23 @@ def compute_matchups(home: TeamScore, away: TeamScore) -> list[MatchupResult]:
         h_base = h.total if h else 0.0
         a_base = a.total if a else 0.0
 
-        # Size/physical mismatch proxied by rebounding gap at this slot.
-        h_rpg = h.player.rpg if h else 0.0
-        a_rpg = a.player.rpg if a else 0.0
-        gap = h_rpg - a_rpg
-        size_adj = max(-MAX_SIZE_MISMATCH, min(MAX_SIZE_MISMATCH, gap * SIZE_MISMATCH_WEIGHT))
+        # Size/physical mismatch: prefer real height, fall back to rebounding.
         note = ""
-        if h and a and abs(gap) >= SIZE_MISMATCH_THRESHOLD:
-            big, small = (h, a) if gap > 0 else (a, h)
-            note = f"{big.player.name} has a size edge over {small.player.name}"
+        size_adj = 0.0
+        if h and a:
+            if h.player.height_in and a.player.height_in:
+                gap = h.player.height_in - a.player.height_in  # inches
+                size_adj = max(-MAX_SIZE_MISMATCH, min(MAX_SIZE_MISMATCH, gap * HEIGHT_MISMATCH_WEIGHT))
+                if abs(gap) >= HEIGHT_MISMATCH_THRESHOLD:
+                    big, small = (h, a) if gap > 0 else (a, h)
+                    note = (f"{big.player.name} ({format_height(big.player.height_in)}) "
+                            f"towers over {small.player.name} ({format_height(small.player.height_in)})")
+            else:
+                gap = h.player.rpg - a.player.rpg  # rebound proxy
+                size_adj = max(-MAX_SIZE_MISMATCH, min(MAX_SIZE_MISMATCH, gap * SIZE_MISMATCH_WEIGHT))
+                if abs(gap) >= SIZE_MISMATCH_THRESHOLD:
+                    big, small = (h, a) if gap > 0 else (a, h)
+                    note = f"{big.player.name} has a size edge over {small.player.name}"
 
         h_score = h_base + max(0.0, size_adj)
         a_score = a_base + max(0.0, -size_adj)

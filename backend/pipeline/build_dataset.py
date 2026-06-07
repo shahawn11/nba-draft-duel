@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS players (
     bpm  REAL,                           -- impact estimate from PIE (see header)
     pie  REAL,                           -- raw PIE, kept for transparency
     eligible TEXT,                       -- comma-joined slots the player may fill
+    height_in REAL,                      -- player height in inches
     gp   INTEGER, mpg REAL,
     UNIQUE(name, season, team)
 );
@@ -88,9 +89,21 @@ CREATE INDEX IF NOT EXISTS idx_decade_team ON players(decade, team);
 CREATE TABLE IF NOT EXISTS position_cache (
     player_id   INTEGER PRIMARY KEY,
     position    TEXT NOT NULL,
-    raw         TEXT
+    raw         TEXT,
+    height_in   REAL
 );
 """
+
+
+def parse_height(raw: str | None) -> float:
+    """Parse a stats.nba.com height string like '6-6' into inches (78)."""
+    if not raw or "-" not in str(raw):
+        return 0.0
+    try:
+        ft, inch = str(raw).split("-", 1)
+        return float(int(ft) * 12 + int(inch))
+    except (ValueError, TypeError):
+        return 0.0
 
 
 # ---- Pure helpers (unit-testable, no network) ------------------------------
@@ -139,40 +152,42 @@ def init_db(path: Path) -> sqlite3.Connection:
     return conn
 
 
-def _cached_position(conn: sqlite3.Connection, player_id: int) -> tuple[str, str] | None:
+def _cached_position(conn: sqlite3.Connection, player_id: int) -> tuple[str, str, float] | None:
     row = conn.execute(
-        "SELECT position, raw FROM position_cache WHERE player_id = ?", (player_id,)
+        "SELECT position, raw, height_in FROM position_cache WHERE player_id = ?", (player_id,)
     ).fetchone()
-    return (row[0], row[1]) if row else None
+    return (row[0], row[1], row[2] or 0.0) if row else None
 
 
-def _cache_position(conn: sqlite3.Connection, player_id: int, position: str, raw: str) -> None:
+def _cache_position(conn: sqlite3.Connection, player_id: int, position: str,
+                    raw: str, height_in: float) -> None:
     conn.execute(
-        "INSERT OR REPLACE INTO position_cache(player_id, position, raw) VALUES (?,?,?)",
-        (player_id, position, raw),
+        "INSERT OR REPLACE INTO position_cache(player_id, position, raw, height_in) VALUES (?,?,?,?)",
+        (player_id, position, raw, height_in),
     )
 
 
 # ---- Network build ----------------------------------------------------------
-def resolve_position(conn, player_id, apg, rpg, sleep, _info_endpoint) -> tuple[str, str]:
-    """Return (position, eligible_csv). From cache, else CommonPlayerInfo."""
+def resolve_position(conn, player_id, apg, rpg, sleep, _info_endpoint) -> tuple[str, str, float]:
+    """Return (position, eligible_csv, height_in). From cache, else CommonPlayerInfo."""
     from app.positions import eligible_from_raw
 
     cached = _cached_position(conn, player_id)
     if cached:
-        pos, raw = cached
-        return pos, ",".join(eligible_from_raw(raw, pos))
-    raw = ""
+        pos, raw, height = cached
+        return pos, ",".join(eligible_from_raw(raw, pos)), height
+    raw, height = "", 0.0
     try:
         info = _info_endpoint(player_id=player_id).get_data_frames()[0]
         raw = str(info.get("POSITION", [""])[0] or "")
+        height = parse_height(info.get("HEIGHT", [""])[0])
     except Exception as e:
-        print(f"      position lookup failed for {player_id}: {e}")
+        print(f"      info lookup failed for {player_id}: {e}")
     pos = map_position(raw, apg, rpg)
-    _cache_position(conn, player_id, pos, raw)
+    _cache_position(conn, player_id, pos, raw, height)
     conn.commit()
     time.sleep(sleep)
-    return pos, ",".join(eligible_from_raw(raw, pos))
+    return pos, ",".join(eligible_from_raw(raw, pos)), height
 
 
 def build(since: int, out: Path, sleep: float = 0.6, limit: int | None = None,
@@ -224,7 +239,7 @@ def build(since: int, out: Path, sleep: float = 0.6, limit: int | None = None,
         for _, r in base.iterrows():
             pid = int(r["PLAYER_ID"])
             apg, rpg = float(r.get("AST", 0) or 0), float(r.get("REB", 0) or 0)
-            position, eligible = resolve_position(
+            position, eligible, height_in = resolve_position(
                 conn, pid, apg, rpg, sleep, commonplayerinfo.CommonPlayerInfo
             )
             pie = pie_by_id.get(pid)
@@ -233,15 +248,15 @@ def build(since: int, out: Path, sleep: float = 0.6, limit: int | None = None,
                 cur.execute(
                     """INSERT OR IGNORE INTO players
                        (player_id, name, position, team, season, decade,
-                        ppg, rpg, apg, spg, bpg, bpm, pie, eligible, gp, mpg)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        ppg, rpg, apg, spg, bpg, bpm, pie, eligible, height_in, gp, mpg)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (
                         pid, r.get("PLAYER_NAME"), position,
                         full_team_name(r.get("TEAM_ABBREVIATION", "")),
                         season, decade,
                         float(r.get("PTS", 0) or 0), rpg, apg,
                         float(r.get("STL", 0) or 0), float(r.get("BLK", 0) or 0),
-                        pie_to_bpm(pie), pie, eligible,
+                        pie_to_bpm(pie), pie, eligible, height_in,
                         int(r.get("GP", 0) or 0), float(r.get("MIN", 0) or 0),
                     ),
                 )

@@ -11,6 +11,7 @@ function Lineup({ title, team, highlight }) {
             <div className="sp-head">
               <span className="pos-badge">{p.position}</span>
               <span className="sp-name">{p.name}</span>
+              {p.height_in ? <span className="sp-ht">{Math.floor(p.height_in / 12)}'{p.height_in % 12}"</span> : null}
               <span className="sp-rating" title="player rating">{p.rating}</span>
             </div>
             <div className="sp-stats">

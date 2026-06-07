@@ -16,10 +16,64 @@ from __future__ import annotations
 from .scoring import PlayerStats
 
 
+# Real heights (inches) for curated legends. Anything missing falls back to a
+# position-typical default. (DB-era players carry exact heights from the pull.)
+_POS_DEFAULT_H = {"PG": 74, "SG": 77, "SF": 79, "PF": 81, "C": 84}
+_HEIGHTS: dict[str, int] = {
+    # 1960s Celtics
+    "Bill Russell": 82, "Bob Cousy": 73, "John Havlicek": 77, "Sam Jones": 76,
+    "Tom Heinsohn": 79, "Bill Sharman": 73, "K.C. Jones": 73, "Frank Ramsey": 75,
+    "Tom Sanders": 78, "Don Nelson": 78,
+    # 1960s Lakers / 76ers / Royals
+    "Wilt Chamberlain": 85, "Jerry West": 74, "Elgin Baylor": 77, "Gail Goodrich": 73,
+    "Dick Barnett": 76, "Rudy LaRusso": 80, "Happy Hairston": 79, "Jim McMillian": 77,
+    "LeRoy Ellis": 82, "Mel Counts": 84, "Billy Cunningham": 78, "Hal Greer": 74,
+    "Chet Walker": 78, "Luke Jackson": 78, "Wali Jones": 74, "Larry Costello": 73,
+    "Dave Gambee": 79, "Matt Guokas": 78, "Bill Melchionni": 74, "Oscar Robertson": 77,
+    "Jerry Lucas": 80, "Jack Twyman": 78, "Bob Boozer": 80, "Wayne Embry": 80,
+    "Adrian Smith": 73, "Arlen Bockhorn": 76, "Connie Dierking": 81, "Tom Hawkins": 77,
+    "Tom Van Arsdale": 77,
+    # 1970s Knicks / Bucks / Celtics / Lakers / Blazers
+    "Walt Frazier": 76, "Willis Reed": 81, "Earl Monroe": 75, "Dave DeBusschere": 78,
+    "Bill Bradley": 77, "Cazzie Russell": 77, "Phil Jackson": 80, "Dean Meminger": 75,
+    "Kareem Abdul-Jabbar": 86, "Bob Dandridge": 78, "Jon McGlocklin": 77,
+    "Lucius Allen": 74, "Greg Smith": 79, "Curtis Perry": 80, "Dick Cunningham": 81,
+    "Dave Cowens": 81, "Jo Jo White": 75, "Paul Silas": 79, "Charlie Scott": 77,
+    "Paul Westphal": 76, "Don Chaney": 77, "Steve Kuberski": 80, "Dave Bing": 75,
+    "Keith Erickson": 77, "Flynn Robinson": 73, "Pat Riley": 76, "Jim Cleamons": 75,
+    "Bill Walton": 83, "Maurice Lucas": 81, "Lionel Hollins": 75, "Bob Gross": 78,
+    "Dave Twardzik": 72, "Lloyd Neal": 78, "Johnny Davis": 74, "Larry Steele": 77,
+    "Herm Gilliam": 75, "Corky Calhoun": 78,
+    # 1980s Lakers / Celtics / Pistons / 76ers / Rockets
+    "Magic Johnson": 81, "James Worthy": 81, "Byron Scott": 76, "Norm Nixon": 74,
+    "Jamaal Wilkes": 78, "Michael Cooper": 79, "A.C. Green": 81, "Bob McAdoo": 81,
+    "Kurt Rambis": 80, "Larry Bird": 81, "Kevin McHale": 82, "Robert Parish": 85,
+    "Dennis Johnson": 76, "Danny Ainge": 76, "Cedric Maxwell": 80, "Tiny Archibald": 73,
+    "Gerald Henderson": 74, "Scott Wedman": 79, "Isiah Thomas": 73, "Joe Dumars": 75,
+    "Adrian Dantley": 77, "Bill Laimbeer": 83, "Dennis Rodman": 79, "Mark Aguirre": 78,
+    "Vinnie Johnson": 74, "Rick Mahorn": 82, "James Edwards": 84, "John Salley": 83,
+    "Julius Erving": 78, "Charles Barkley": 78, "Moses Malone": 82, "Andrew Toney": 75,
+    "Maurice Cheeks": 73, "Bobby Jones": 81, "Darryl Dawkins": 83, "Clint Richardson": 75,
+    "Steve Mix": 79, "Clemon Johnson": 82, "Hakeem Olajuwon": 84, "Ralph Sampson": 88,
+    "Rodney McCray": 79, "Lewis Lloyd": 78, "Robert Reid": 80, "John Lucas": 75,
+    "Allen Leavell": 73, "Mitchell Wiggins": 76, "Jim Petersen": 82, "Caldwell Jones": 83,
+    # 1990s Bulls / 2000s Spurs / 2010s GSW (curated; usually DB-overridden)
+    "Michael Jordan": 78, "Scottie Pippen": 80, "Toni Kukoc": 82, "Horace Grant": 82,
+    "B.J. Armstrong": 74, "Ron Harper": 78, "Steve Kerr": 75, "Luc Longley": 86,
+    "John Paxson": 74, "Tim Duncan": 83, "Tony Parker": 74, "Manu Ginobili": 78,
+    "David Robinson": 85, "Bruce Bowen": 79, "Michael Finley": 79, "Robert Horry": 82,
+    "Stephen Jackson": 80, "Brent Barry": 79, "Rasho Nesterovic": 84, "Stephen Curry": 74,
+    "Kevin Durant": 82, "Klay Thompson": 78, "Draymond Green": 78, "Andre Iguodala": 78,
+    "David Lee": 81, "Harrison Barnes": 80, "Shaun Livingston": 79, "Andrew Bogut": 84,
+    "Festus Ezeli": 83,
+}
+
+
 def _p(name, pos, ppg, rpg, apg, spg, bpg, bpm, team, decade, elig=()):
     return PlayerStats(
         name=name, position=pos, ppg=ppg, rpg=rpg, apg=apg, spg=spg, bpg=bpg,
         bpm=bpm, team=team, season=decade, decade=decade, eligible_positions=elig,
+        height_in=_HEIGHTS.get(name, _POS_DEFAULT_H.get(pos, 78)),
     )
 
 

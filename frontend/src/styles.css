@@ -391,3 +391,12 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   font-size: 1.05rem;
   padding: 12px 14px !important;
 }
+
+/* ---- height labels ---- */
+.cand-height {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 700;
+  margin-left: auto;
+}
+.sp-ht { font-size: 0.78rem; color: var(--muted); font-weight: 700; }

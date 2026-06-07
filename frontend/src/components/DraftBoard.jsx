@@ -41,6 +41,7 @@ function Candidate({ p, index, onSelect, busy }) {
             <span key={pos} className="pos-badge">{pos}</span>
           ))}
         </span>
+        {p.height_in ? <span className="cand-height">{Math.floor(p.height_in / 12)}'{p.height_in % 12}"</span> : null}
         {!eligible && (
           <span className="locked">{p.taken ? '✓ already drafted' : 'no open slot'}</span>
         )}

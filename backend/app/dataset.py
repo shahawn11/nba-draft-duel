@@ -35,9 +35,11 @@ def _load_from_db(path: Path) -> dict[str, list[PlayerStats]]:
             return {}
         has_elig = "eligible" in cols
         has_gp = "gp" in cols
+        has_height = "height_in" in cols
         sel = "decade, team, name, position, ppg, rpg, apg, spg, bpg, bpm"
         sel += ", eligible" if has_elig else ""
         sel += ", gp" if has_gp else ""
+        sel += ", height_in" if has_height else ""
         rows = conn.execute(f"SELECT {sel} FROM players").fetchall()
     except sqlite3.OperationalError:
         return {}
@@ -56,6 +58,7 @@ def _load_from_db(path: Path) -> dict[str, list[PlayerStats]]:
                 "w": 0.0, "ppg": 0.0, "rpg": 0.0, "apg": 0.0, "spg": 0.0,
                 "bpg": 0.0, "bpm": 0.0, "position": r["position"],
                 "eligible": (r["eligible"] if has_elig else "") or "",
+                "height_in": (r["height_in"] if has_height else 0.0) or 0.0,
             }
             agg[key][r["name"]] = a
         a["w"] += w
@@ -76,6 +79,7 @@ def _load_from_db(path: Path) -> dict[str, list[PlayerStats]]:
                 apg=round(a["apg"] / w, 1), spg=round(a["spg"] / w, 1),
                 bpg=round(a["bpg"] / w, 1), bpm=round(a["bpm"] / w, 2),
                 team=team, season=decade, decade=decade,
+                height_in=a["height_in"],
                 eligible_positions=elig,
             ))
         # "Top 10" = most notable players: scoring-led with a light impact nudge.
@@ -124,8 +128,10 @@ def _load_current_starters(path: Path) -> dict[str, list[PlayerStats]]:
         if not season:
             return {}
         has_elig = "eligible" in cols
+        has_height = "height_in" in cols
         sel = "team, name, position, ppg, rpg, apg, spg, bpg, bpm, mpg"
         sel += ", eligible" if has_elig else ""
+        sel += ", height_in" if has_height else ""
         rows = conn.execute(f"SELECT {sel} FROM players WHERE season = ?", (season,)).fetchall()
     except sqlite3.OperationalError:
         return {}
@@ -152,7 +158,9 @@ def _load_current_starters(path: Path) -> dict[str, list[PlayerStats]]:
                         name=r["name"], position=slot,
                         ppg=r["ppg"] or 0, rpg=r["rpg"] or 0, apg=r["apg"] or 0,
                         spg=r["spg"] or 0, bpg=r["bpg"] or 0, bpm=r["bpm"] or 0,
-                        team=team, season=season, eligible_positions=elig,
+                        team=team, season=season,
+                        height_in=(r["height_in"] if has_height else 0.0) or 0.0,
+                        eligible_positions=elig,
                     )
                     used.add(r["name"])
                     break
@@ -169,6 +177,7 @@ def _load_current_starters(path: Path) -> dict[str, list[PlayerStats]]:
                     ppg=r["ppg"] or 0, rpg=r["rpg"] or 0, apg=r["apg"] or 0,
                     spg=r["spg"] or 0, bpg=r["bpg"] or 0, bpm=r["bpm"] or 0,
                     team=team, season=season,
+                    height_in=(r["height_in"] if has_height else 0.0) or 0.0,
                     eligible_positions=(slot,),
                 )
                 used.add(r["name"])

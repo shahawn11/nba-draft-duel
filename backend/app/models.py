@@ -20,6 +20,7 @@ def player_to_dict(p: PlayerStats) -> dict:
         "spg": p.spg,
         "bpg": p.bpg,
         "bpm": p.bpm,
+        "height_in": p.height_in,
         "eligible_positions": list(p.eligible()),
     }
 
@@ -37,6 +38,7 @@ def player_from_dict(d: dict) -> PlayerStats:
         spg=d.get("spg", 0.0),
         bpg=d.get("bpg", 0.0),
         bpm=d.get("bpm", 0.0),
+        height_in=d.get("height_in", 0.0),
         eligible_positions=tuple(d.get("eligible_positions", []) or []),
     )
 

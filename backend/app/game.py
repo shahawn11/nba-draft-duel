@@ -212,6 +212,7 @@ def _resolve(match: dict, state: dict) -> dict:
                     "position": s.player.position,
                     "team": s.player.team,
                     "decade": s.player.decade,
+                    "height_in": s.player.height_in,
                     "rating": round(s.total, 1),
                     "game": box.get(s.player.name, {}),
                 }
