@@ -66,8 +66,8 @@ class NewMatchRequest(BaseModel):
 
 
 class AuthRequest(BaseModel):
-    username: str = Field(min_length=2, max_length=24)
-    password: str = Field(min_length=4, max_length=128)
+    username: str = Field(min_length=1, max_length=40)
+    password: str = Field(min_length=1, max_length=200)
     guest_id: str | None = None   # signup: transfer this guest's stats
 
 

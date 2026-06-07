@@ -195,12 +195,17 @@ def resolve_match(match_id: str, state_json: dict, result_json: dict) -> None:
 # ---- accounts / sessions ---------------------------------------------------
 def account_exists(username: str) -> bool:
     with _conn() as c:
-        return c.execute("SELECT 1 FROM accounts WHERE username = ?", (username,)).fetchone() is not None
+        return c.execute(
+            "SELECT 1 FROM accounts WHERE lower(username) = lower(?)", (username,)
+        ).fetchone() is not None
 
 
 def get_account(username: str) -> dict | None:
     with _conn() as c:
-        row = c.execute("SELECT username, pw_hash, salt FROM accounts WHERE username = ?", (username,)).fetchone()
+        row = c.execute(
+            "SELECT username, pw_hash, salt FROM accounts WHERE lower(username) = lower(?)",
+            (username,),
+        ).fetchone()
     return dict(row) if row else None
 
 

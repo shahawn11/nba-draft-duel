@@ -16,7 +16,7 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException, WebSocket, Header
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import db, game, live, auth
+from . import db, game, live, auth, moderation
 from .models import (
     AuthRequest,
     NewMatchRequest,
@@ -78,6 +78,9 @@ def create_match(req: NewMatchRequest, authorization: str | None = Header(defaul
     """Start an offline match -> returns the first draft step (opponent hidden)."""
     _authorize_identity(req.username, _bearer(authorization))
     if req.display_name and not db.account_exists(req.username):
+        err = moderation.validate_display_name(req.display_name)
+        if err:
+            raise HTTPException(status_code=400, detail=err)
         db.set_display_name(req.username, req.display_name)
     return game.new_match(req.username)
 
@@ -116,8 +119,9 @@ def leaderboard(limit: int = 20) -> dict:
 @app.post("/auth/signup")
 def signup(req: AuthRequest) -> dict:
     uname = req.username.strip()
-    if uname.lower().startswith("guest_"):
-        raise HTTPException(status_code=400, detail="username can't start with 'guest_'")
+    err = moderation.validate_username(uname) or moderation.validate_password(req.password)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
     if db.account_exists(uname):
         raise HTTPException(status_code=409, detail="username already taken")
     pw_hash, salt = auth.hash_password(req.password)
@@ -125,6 +129,7 @@ def signup(req: AuthRequest) -> dict:
     db.ensure_user(uname)
     if req.guest_id:
         db.transfer_stats(req.guest_id, uname)  # keep current guest stats
+    db.set_display_name(uname, uname)  # the username is now their official name
     token = auth.new_token()
     db.create_session(uname, token)
     return {"token": token, "username": uname, "record": db.get_record(uname)}
@@ -167,6 +172,6 @@ async def ws_pvp(ws: WebSocket) -> None:
         await ws.close()
         return
     display_name = ws.query_params.get("display_name")
-    if display_name and not db.account_exists(username):
+    if display_name and not db.account_exists(username) and not moderation.validate_display_name(display_name):
         db.set_display_name(username, display_name)
     await live.manager.handle(ws, username)

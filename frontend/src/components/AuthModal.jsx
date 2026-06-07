@@ -5,11 +5,24 @@ export default function AuthModal({ guestId, onClose, onAuth }) {
   const [tab, setTab] = useState('login') // login | signup
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
+  function clientCheck() {
+    if (tab !== 'signup') return null
+    if (password.length < 8) return 'Password must be at least 8 characters.'
+    if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+      return 'Password must include at least one letter and one number.'
+    }
+    if (password !== confirm) return 'Passwords do not match.'
+    return null
+  }
+
   async function submit(e) {
     e.preventDefault()
+    const ce = clientCheck()
+    if (ce) { setError(ce); return }
     setError('')
     setBusy(true)
     try {
@@ -32,7 +45,7 @@ export default function AuthModal({ guestId, onClose, onAuth }) {
           <button className={tab === 'signup' ? 'active' : ''} onClick={() => setTab('signup')} type="button">Sign up</button>
         </div>
         {tab === 'signup' && (
-          <p className="hint">Your current guest record &amp; rating will carry over.</p>
+          <p className="hint">Your current guest record &amp; rating will carry over. Username: 3–20 letters/numbers/underscore. Password: 8+ chars with a letter and a number.</p>
         )}
         {error && <div className="error">{error}</div>}
         <form onSubmit={submit} className="auth-form">
@@ -48,6 +61,14 @@ export default function AuthModal({ guestId, onClose, onAuth }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          {tab === 'signup' && (
+            <input
+              type="password"
+              placeholder="confirm password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+          )}
           <div className="modal-actions">
             <button type="button" className="btn-cancel" onClick={onClose} disabled={busy}>Cancel</button>
             <button type="submit" className="btn-confirm" disabled={busy || !username.trim() || !password}>
