@@ -239,6 +239,7 @@ def _resolve(match: dict, state: dict) -> dict:
                 "home_score": round(m.home_score, 2),
                 "away_score": round(m.away_score, 2),
                 "winner": m.winner,
+                "note": m.note,
             }
             for m in result.matchups
         ],

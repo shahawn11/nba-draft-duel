@@ -45,12 +45,18 @@ GAME_MIN, GAME_MAX = 80, 150
 # fits earn a small bonus. (attr, expected, weight, good_label, bad_note)
 SLOT_EXPECTATION: dict[str, tuple] = {
     "PG": ("apg", 5.0, 1.3, "floor general", "not a true PG (low assists)"),
-    "PF": ("rpg", 6.0, 0.7, "strong PF", "light on the glass (low rebounds)"),
+    "SG": ("ppg", 16.0, 0.4, "scoring guard", "pass-first for an SG (low scoring)"),
+    "SF": ("ppg", 14.0, 0.4, "scoring wing", "low-scoring for an SF"),
+    "PF": ("rpg", 6.0, 0.7, "strong PF", "undersized PF (low rebounds)"),
     "C": ("rpg", 9.0, 0.9, "anchor at C", "undersized at C (low rebounds)"),
 }
 FIT_BONUS_SCALE = 0.3       # fraction of the surplus turned into a bonus
 MAX_FIT_BONUS = 2.0         # cap on per-player fit bonus
 MAX_FIT_PENALTY = 7.0       # cap on per-player fit penalty
+# Size/physical mismatch at a matchup, proxied by rebounding (we have no height).
+SIZE_MISMATCH_WEIGHT = 0.8      # rating points per rebound of size gap
+SIZE_MISMATCH_THRESHOLD = 4.0   # rebound gap that counts as a notable mismatch
+MAX_SIZE_MISMATCH = 5.0         # cap on the per-matchup nudge
 
 
 @dataclass(frozen=True)
@@ -102,6 +108,7 @@ class MatchupResult:
     home_score: float
     away_score: float
     winner: Literal["home", "away", "tie"]
+    note: str = ""
 
 
 @dataclass
@@ -214,8 +221,22 @@ def compute_matchups(home: TeamScore, away: TeamScore) -> list[MatchupResult]:
     for pos in CANONICAL_POSITIONS:
         h = home_map.get(pos)
         a = away_map.get(pos)
-        h_score = h.total if h else 0.0
-        a_score = a.total if a else 0.0
+        h_base = h.total if h else 0.0
+        a_base = a.total if a else 0.0
+
+        # Size/physical mismatch proxied by rebounding gap at this slot.
+        h_rpg = h.player.rpg if h else 0.0
+        a_rpg = a.player.rpg if a else 0.0
+        gap = h_rpg - a_rpg
+        size_adj = max(-MAX_SIZE_MISMATCH, min(MAX_SIZE_MISMATCH, gap * SIZE_MISMATCH_WEIGHT))
+        note = ""
+        if h and a and abs(gap) >= SIZE_MISMATCH_THRESHOLD:
+            big, small = (h, a) if gap > 0 else (a, h)
+            note = f"{big.player.name} has a size edge over {small.player.name}"
+
+        h_score = h_base + max(0.0, size_adj)
+        a_score = a_base + max(0.0, -size_adj)
+
         if abs(h_score - a_score) < 1e-6:
             winner = "tie"
         elif h_score > a_score:
@@ -230,6 +251,7 @@ def compute_matchups(home: TeamScore, away: TeamScore) -> list[MatchupResult]:
                 home_score=h_score,
                 away_score=a_score,
                 winner=winner,
+                note=note,
             )
         )
     return results
