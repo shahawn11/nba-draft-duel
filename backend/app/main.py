@@ -45,7 +45,11 @@ def _startup() -> None:
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "pool_source": game.dataset.source()}
+    return {
+        "status": "ok",
+        "pool_source": game.dataset.source(),
+        "opponent_season": game.dataset.current_season(),
+    }
 
 
 @app.get("/teams")
