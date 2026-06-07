@@ -33,6 +33,10 @@ ALLOWED_ORIGINS = _csv(
     "http://localhost:5173,http://127.0.0.1:5173",
 )
 
+# Optional regex for origins (e.g. Cloudflare Pages preview subdomains that get
+# a new hash each deploy). Example: https://([a-z0-9-]+\.)?5v5-duel\.pages\.dev
+ALLOWED_ORIGIN_REGEX = os.environ.get("ALLOWED_ORIGIN_REGEX") or None
+
 # --- Redis (sessions / rate limiting / matchmaking later) ---------------
 # When unset, rate limiting falls back to an in-process limiter (single box).
 REDIS_URL = os.environ.get("REDIS_URL") or None
