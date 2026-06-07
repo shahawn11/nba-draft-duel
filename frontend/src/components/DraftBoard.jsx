@@ -2,6 +2,7 @@
 // Interaction: click a player card -> a modal shows the open slots that player
 // can fill -> click a slot to draft them there. Ineligible players are locked.
 import { useState, useEffect } from 'react'
+import { startMusic, stopMusic } from '../music.js'
 
 const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
 
@@ -107,6 +108,10 @@ function SlotModal({ player, onDraft, onCancel, busy }) {
 
 export default function DraftBoard({ view, onPick, busy, deadline, waiting, opponentPicks }) {
   const [selected, setSelected] = useState(null)
+  useEffect(() => {
+    startMusic()
+    return () => stopMusic()
+  }, [])
   const step = view.current_step
   const lastSlot = view.filled.length ? view.filled[view.filled.length - 1].slot : null
   const stepKey = `${step.decade}-${step.team}-${view.picks_made}`
