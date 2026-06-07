@@ -84,11 +84,8 @@ function Lineup({ title, team, highlight }) {
               {p.status === 'hot' && <span className="status-badge hot" title="Hot — rating +10">🔥 Hot</span>}
               {p.status === 'slump' && <span className="status-badge slump" title="Slump — rating −10">🥶 Slump</span>}
               {p.height_in ? <span className="sp-ht">{Math.floor(p.height_in / 12)}'{p.height_in % 12}"</span> : null}
-              <span className="sp-rating" title="final rating (base + matchup adjustments)">
-                <MatchScore base={p.rating} delta={p.delta || 0} />
-              </span>
+              <span className="sp-rating" title="final rating">{(p.rating + (p.delta || 0)).toFixed(1)}</span>
             </div>
-            {p.delta ? <div className="sp-base">base {p.rating.toFixed(1)}</div> : null}
             <div className="sp-stats">
               <b>{p.game?.pts ?? 0}</b> pts · <b>{p.game?.reb ?? 0}</b> reb · <b>{p.game?.ast ?? 0}</b> ast
               {' · '}{p.game?.stl ?? 0} stl · {p.game?.blk ?? 0} blk
