@@ -19,11 +19,17 @@ Position = Literal["PG", "SG", "SF", "PF", "C"]
 CANONICAL_POSITIONS: tuple[Position, ...] = ("PG", "SG", "SF", "PF", "C")
 
 # ---- Tunable weights -------------------------------------------------------
-# Box-score composite weights (fantasy-ish, rewards two-way production).
-W_PTS, W_REB, W_AST, W_STL, W_BLK = 1.0, 1.2, 1.5, 3.0, 3.0
-# Blend between raw production and advanced impact metric.
-PRODUCTION_WEIGHT = 0.65
-ADVANCED_WEIGHT = 0.35
+# Box-score composite. Steals & blocks are intentionally NOT scored here: they
+# weren't tracked before 1973-74, so counting them would unfairly penalize
+# pre-1974 players (their values are 0). Defense is instead represented by the
+# era-neutral impact metric below (PIE-derived for modern players, hand-set for
+# curated legends). Steals/blocks are still shown on the draft cards & box score.
+W_PTS, W_REB, W_AST = 1.0, 1.2, 1.5
+W_STL, W_BLK = 0.0, 0.0   # excluded from rating (see note above)
+# Blend between raw production and the advanced (defensive-inclusive) impact
+# metric. Impact is weighted a bit higher now that defense isn't in production.
+PRODUCTION_WEIGHT = 0.60
+ADVANCED_WEIGHT = 0.40
 # Final blend between cumulative team total and head-to-head matchup wins.
 TEAM_TOTAL_WEIGHT = 0.70
 MATCHUP_WEIGHT = 0.30
