@@ -166,6 +166,14 @@ Each player's **box score is simulated for that game** (points allocated by
 scoring ability and summed to the team total; rebounds/assists/steals/blocks via
 Poisson around their averages). All weights live at the top of `app/scoring.py`.
 
+**Hot / Slump:** rolled once per team — a **2%** chance a random player is 🔥 Hot
+(rating +10, boosted box line) and **1%** they're 🥶 in a Slump (rating −10,
+reduced line).
+
+**No ties:** a tied regulation score goes to **overtime** (the stronger lineup
+usually prevails, with a little randomness). The result reveal shows the tied
+regulation score, a countdown, then the OT outcome.
+
 ## Data pipeline
 
 `pipeline/build_dataset.py` pulls from stats.nba.com via `nba_api`:

@@ -81,6 +81,8 @@ function Lineup({ title, team, highlight }) {
             <div className="sp-head">
               <span className="pos-badge">{p.position}</span>
               <span className="sp-name">{p.name}</span>
+              {p.status === 'hot' && <span className="status-badge hot" title="Hot — rating +10">🔥 Hot</span>}
+              {p.status === 'slump' && <span className="status-badge slump" title="Slump — rating −10">🥶 Slump</span>}
               {p.height_in ? <span className="sp-ht">{Math.floor(p.height_in / 12)}'{p.height_in % 12}"</span> : null}
               <span className="sp-rating" title="player rating">{p.rating}</span>
             </div>
@@ -124,8 +126,13 @@ export default function Results({ result, onPlayAgain }) {
   const [phase, setPhase] = useState(reduceMotion ? 'full' : 'reveal')
   const [count, setCount] = useState(3)
   useEffect(() => {
-    if (phase !== 'reveal') return
-    if (count <= 0) { playTick(true); setPhase('full'); return }
+    if (phase !== 'reveal' && phase !== 'ot') return
+    if (count <= 0) {
+      playTick(true)
+      if (phase === 'reveal' && result.overtime) { setPhase('ot'); setCount(3) }
+      else setPhase('full')
+      return
+    }
     playTick(false)
     const id = setTimeout(() => setCount((c) => c - 1), 1000)
     return () => clearTimeout(id)
@@ -166,7 +173,23 @@ export default function Results({ result, onPlayAgain }) {
         <h2 className="reveal-title">Positional Matchups</h2>
         {matchups(false)}
         <div className="reveal-countdown">
-          Final score in <b key={count} className="count-num">{count}</b>…
+          {result.overtime ? 'Regulation score in ' : 'Final score in '}
+          <b key={count} className="count-num">{count}</b>…
+        </div>
+      </div>
+    )
+  }
+
+  if (phase === 'ot') {
+    return (
+      <div className="results">
+        <div className="banner tie">
+          <span className="banner-text">TIED</span>
+          <span className="final-score">{result.regulation} – {result.regulation}</span>
+          <span className="vs-team">end of regulation · OVERTIME</span>
+        </div>
+        <div className="reveal-countdown">
+          Overtime result in <b key={count} className="count-num">{count}</b>…
         </div>
       </div>
     )
@@ -178,6 +201,7 @@ export default function Results({ result, onPlayAgain }) {
         <span className="banner-text">{bannerText}</span>
         <span className="final-score">
           {Math.round(result.your_final)} – {Math.round(result.opponent_final)}
+          {result.overtime && <span className="ot-tag"> (OT)</span>}
         </span>
         <span className="vs-team">vs {result.opponent_team}</span>
         {result.ranked ? (

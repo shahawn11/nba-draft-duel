@@ -65,6 +65,13 @@ HEIGHT_MISMATCH_THRESHOLD = 4.0 # inches gap that counts as a notable mismatch
 SIZE_MISMATCH_WEIGHT = 0.5      # rating points per rebound of size gap (fallback)
 SIZE_MISMATCH_THRESHOLD = 4.0   # rebound gap that counts (fallback)
 MAX_SIZE_MISMATCH = 4.0         # cap on the per-matchup nudge
+# Hot / Slump: rolled once per team -- a random player runs hot or cold.
+HOT_CHANCE = 0.02
+SLUMP_CHANCE = 0.01
+HOT_RATING = 10.0
+SLUMP_RATING = -10.0
+HOT_STAT_MULT = 1.5             # box-score boost when hot
+SLUMP_STAT_MULT = 0.55          # box-score reduction when slumping
 
 
 def format_height(inches: float) -> str:
@@ -151,6 +158,10 @@ class DuelResult:
     matchups: list[MatchupResult]
     home_matchup_wins: int
     away_matchup_wins: int
+    overtime: bool = False
+    regulation: int | None = None          # tied regulation points (if OT)
+    home_status: dict = field(default_factory=dict)  # {player_name: 'hot'|'slump'}
+    away_status: dict = field(default_factory=dict)
 
     def summary(self) -> str:
         if self.winner == "tie":
@@ -230,8 +241,27 @@ def evaluate_fit(players: list[PlayerStats]) -> tuple[float, list[str], dict]:
     return adjustment, notes, deltas
 
 
-def score_team(players: list[PlayerStats]) -> TeamScore:
+def roll_status(players: list[PlayerStats], rng) -> dict:
+    """Per team: 2% chance a random player is hot, 1% a random player slumps."""
+    if not players:
+        return {}
+    r = rng.random()
+    if r < HOT_CHANCE:
+        return {rng.choice(players).name: "hot"}
+    if r < HOT_CHANCE + SLUMP_CHANCE:
+        return {rng.choice(players).name: "slump"}
+    return {}
+
+
+def score_team(players: list[PlayerStats], status: dict | None = None) -> TeamScore:
+    status = status or {}
     scores = [score_player(p) for p in players]
+    for s in scores:
+        st = status.get(s.player.name)
+        if st == "hot":
+            s.total = min(100.0, s.total + HOT_RATING)
+        elif st == "slump":
+            s.total = max(0.0, s.total + SLUMP_RATING)
     base_total = sum(s.total for s in scores)
     fit_adj, fit_notes, fit_deltas = evaluate_fit(players)
     return TeamScore(
@@ -320,40 +350,47 @@ def _project_points(strength: float, avg: float) -> int:
     return int(round(max(float(GAME_MIN), min(float(GAME_MAX), pts))))
 
 
-def duel(home_players: list[PlayerStats], away_players: list[PlayerStats]) -> DuelResult:
-    home = score_team(home_players)
-    away = score_team(away_players)
+def duel(home_players: list[PlayerStats], away_players: list[PlayerStats],
+         home_status: dict | None = None, away_status: dict | None = None,
+         rng=None) -> DuelResult:
+    import random as _random
+    rng = rng or _random.Random()
+    home_status = home_status or {}
+    away_status = away_status or {}
+    home = score_team(home_players, home_status)
+    away = score_team(away_players, away_status)
     matchups = compute_matchups(home, away)
 
     home_wins = sum(1 for m in matchups if m.winner == "home")
     away_wins = sum(1 for m in matchups if m.winner == "away")
 
-    # Blend team strength with the head-to-head matchup edge into one number.
-    # Fit is intentionally NOT added here -- it now lives in the per-player
-    # matchup deltas (so it's counted once, via matchup wins).
     home_strength = home.base_total + home_wins * MATCHUP_STRENGTH
     away_strength = away.base_total + away_wins * MATCHUP_STRENGTH
 
-    # Project a realistic NBA-style final score: both teams sit near a league
-    # baseline, separated by their relative strength. Round to whole points so
-    # it reads like a real box score (e.g. 112-104).
     avg = (home_strength + away_strength) / 2.0
     home_pts = _project_points(home_strength, avg)
     away_pts = _project_points(away_strength, avg)
 
-    # Avoid an actual tie in a "game" -- nudge the stronger lineup by 1 (OT).
+    overtime = False
+    regulation = None
     if home_pts == away_pts:
+        # Regulation tie -> overtime. Stronger lineup tends to win OT.
+        overtime = True
+        regulation = home_pts
         if home_strength > away_strength:
-            home_pts += 1
+            ot_winner = "home"
         elif away_strength > home_strength:
-            away_pts += 1
+            ot_winner = "away"
+        else:
+            ot_winner = rng.choice(["home", "away"])
+        w_ot = rng.randint(8, 14)
+        l_ot = rng.randint(3, w_ot - 2)
+        if ot_winner == "home":
+            home_pts, away_pts = regulation + w_ot, regulation + l_ot
+        else:
+            away_pts, home_pts = regulation + w_ot, regulation + l_ot
 
-    if home_pts > away_pts:
-        winner = "home"
-    elif away_pts > home_pts:
-        winner = "away"
-    else:
-        winner = "tie"
+    winner = "home" if home_pts > away_pts else "away"
 
     return DuelResult(
         winner=winner,
@@ -364,4 +401,8 @@ def duel(home_players: list[PlayerStats], away_players: list[PlayerStats]) -> Du
         matchups=matchups,
         home_matchup_wins=home_wins,
         away_matchup_wins=away_wins,
+        overtime=overtime,
+        regulation=regulation,
+        home_status=home_status,
+        away_status=away_status,
     )

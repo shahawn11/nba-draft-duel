@@ -15,7 +15,7 @@ import uuid
 from . import db, dataset
 from .models import player_from_dict, player_to_dict
 from .positions import SLOTS
-from .scoring import duel
+from .scoring import duel, roll_status, HOT_STAT_MULT, SLUMP_STAT_MULT
 
 
 def _picked_names(state: dict) -> set[str]:
@@ -152,15 +152,21 @@ def _poisson(rng: random.Random, lam: float) -> int:
             return k - 1
 
 
-def _simulate_box(players: list, team_pts: int, rng: random.Random) -> dict:
-    """Simulate a single-game box score per player, with randomness, such that
-    points sum to the team's final score. Returns {player_name: stat_line}."""
-    # Points: allocate the team total by scoring ability, with game-to-game noise.
-    weights = [max(p.ppg, 1.0) * rng.uniform(0.7, 1.35) for p in players]
+def _simulate_box(players: list, team_pts: int, rng: random.Random,
+                  status: dict | None = None) -> dict:
+    """Simulate a single-game box score per player; points sum to the team's
+    final score. Hot players get boosted lines, slumping players reduced ones."""
+    status = status or {}
+
+    def mult(name):
+        st = status.get(name)
+        return HOT_STAT_MULT if st == "hot" else SLUMP_STAT_MULT if st == "slump" else 1.0
+
+    # Points: allocate the team total by scoring ability (hot/slump tilt it).
+    weights = [max(p.ppg, 1.0) * rng.uniform(0.7, 1.35) * mult(p.name) for p in players]
     tot = sum(weights) or 1.0
     raw = [team_pts * w / tot for w in weights]
     pts = [max(0, int(round(x))) for x in raw]
-    # Reconcile rounding so points sum exactly to team_pts.
     diff = int(team_pts) - sum(pts)
     order = sorted(range(len(players)), key=lambda i: -raw[i])
     i = 0
@@ -174,14 +180,14 @@ def _simulate_box(players: list, team_pts: int, rng: random.Random) -> dict:
 
     lines = {}
     for p, pt in zip(players, pts):
-        # Rebounds/assists/steals/blocks ~ Poisson around the season average:
-        # self-scaling variance keeps rare stats rare and avoids flat inflation.
+        m = mult(p.name)
         lines[p.name] = {
             "pts": pt,
-            "reb": _poisson(rng, p.rpg),
-            "ast": _poisson(rng, p.apg),
-            "stl": _poisson(rng, p.spg),
-            "blk": _poisson(rng, p.bpg),
+            "reb": _poisson(rng, p.rpg * m),
+            "ast": _poisson(rng, p.apg * m),
+            "stl": _poisson(rng, p.spg * m),
+            "blk": _poisson(rng, p.bpg * m),
+            "status": status.get(p.name),
         }
     return lines
 
@@ -191,15 +197,18 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
     """Score two lineups head-to-head from the home side's POV. Returns
     (outcome, payload) where payload omits match_id/record (caller adds them)."""
     rng = rng or random.Random()
-    result = duel(home_players=home_players, away_players=away_players)
+    home_status = roll_status(home_players, rng)
+    away_status = roll_status(away_players, rng)
+    result = duel(home_players=home_players, away_players=away_players,
+                  home_status=home_status, away_status=away_status, rng=rng)
     outcome = {"home": "win", "away": "loss", "tie": "tie"}[result.winner]
 
     home_box = _simulate_box([s.player for s in result.home.player_scores],
-                             int(result.home_final), rng)
+                             int(result.home_final), rng, home_status)
     away_box = _simulate_box([s.player for s in result.away.player_scores],
-                             int(result.away_final), rng)
+                             int(result.away_final), rng, away_status)
 
-    def team_payload(team, box) -> dict:
+    def team_payload(team, box, status) -> dict:
         return {
             "base_total": round(team.base_total, 2),
             "fit_adjustment": round(team.fit_adjustment, 2),
@@ -213,6 +222,7 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
                     "decade": s.player.decade,
                     "height_in": s.player.height_in,
                     "rating": round(s.total, 1),
+                    "status": status.get(s.player.name),
                     "game": box.get(s.player.name, {}),
                 }
                 for s in sorted(
@@ -228,8 +238,10 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
         "your_final": round(result.home_final, 2),
         "opponent_final": round(result.away_final, 2),
         "opponent_team": opponent_label,
-        "your_team": team_payload(result.home, home_box),
-        "opponent_team_scored": team_payload(result.away, away_box),
+        "overtime": result.overtime,
+        "regulation": result.regulation,
+        "your_team": team_payload(result.home, home_box, home_status),
+        "opponent_team_scored": team_payload(result.away, away_box, away_status),
         "matchups": [
             {
                 "position": m.position,

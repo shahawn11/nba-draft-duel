@@ -193,7 +193,8 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   border-top: 1px solid var(--line);
 }
 .sp-head { display: flex; align-items: center; gap: 8px; }
-.sp-head .sp-name { flex: 1; font-weight: 600; }
+.sp-head .sp-name { font-weight: 600; }
+.sp-head .sp-ht { margin-left: auto; }
 .sp-head .sp-rating {
   font-weight: 800;
   background: var(--panel-2);
@@ -701,3 +702,15 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   margin-bottom: 14px;
 }
 .auth-hint div { margin-bottom: 3px; }
+
+/* ---- hot/slump + OT ---- */
+.status-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.status-badge.hot { background: rgba(255, 122, 0, 0.2); color: #ff9a3c; border: 1px solid var(--accent); }
+.status-badge.slump { background: rgba(58, 134, 255, 0.18); color: #7cc0ff; border: 1px solid #3a86ff; }
+.ot-tag { color: var(--tie); font-weight: 800; }
