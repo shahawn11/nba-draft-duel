@@ -137,6 +137,21 @@ def pick(match_id: str, player_name: str, slot: str) -> dict:
     return _resolve(match, state)
 
 
+def _poisson(rng: random.Random, lam: float) -> int:
+    """Sample a Poisson(lam) — variance equals the mean, so low averages (e.g.
+    a guard's 0.2 blocks) almost always read 0 and never inflate."""
+    if lam <= 0:
+        return 0
+    import math
+    target = math.exp(-lam)
+    k, p = 0, 1.0
+    while True:
+        k += 1
+        p *= rng.random()
+        if p <= target:
+            return k - 1
+
+
 def _simulate_box(players: list, team_pts: int, rng: random.Random) -> dict:
     """Simulate a single-game box score per player, with randomness, such that
     points sum to the team's final score. Returns {player_name: stat_line}."""
@@ -159,12 +174,14 @@ def _simulate_box(players: list, team_pts: int, rng: random.Random) -> dict:
 
     lines = {}
     for p, pt in zip(players, pts):
+        # Rebounds/assists/steals/blocks ~ Poisson around the season average:
+        # self-scaling variance keeps rare stats rare and avoids flat inflation.
         lines[p.name] = {
             "pts": pt,
-            "reb": max(0, round(rng.gauss(p.rpg, p.rpg * 0.3 + 1.0))),
-            "ast": max(0, round(rng.gauss(p.apg, p.apg * 0.3 + 0.8))),
-            "stl": max(0, round(rng.gauss(p.spg, p.spg * 0.5 + 0.4))),
-            "blk": max(0, round(rng.gauss(p.bpg, p.bpg * 0.5 + 0.4))),
+            "reb": _poisson(rng, p.rpg),
+            "ast": _poisson(rng, p.apg),
+            "stl": _poisson(rng, p.spg),
+            "blk": _poisson(rng, p.bpg),
         }
     return lines
 
