@@ -197,12 +197,9 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .sp-head .sp-ht { margin-left: auto; }
 .sp-head .sp-rating {
   font-weight: 800;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 1px 8px;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
+.sp-base { text-align: right; font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
 .sp-stats { font-size: 0.8rem; color: var(--muted); margin-top: 3px; }
 .sp-stats b { color: var(--text); }
 .sp-prov { color: var(--muted); }

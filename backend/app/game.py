@@ -208,7 +208,7 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
     away_box = _simulate_box([s.player for s in result.away.player_scores],
                              int(result.away_final), rng, away_status)
 
-    def team_payload(team, box, status) -> dict:
+    def team_payload(team, box, status, delta_by_pos) -> dict:
         return {
             "base_total": round(team.base_total, 2),
             "fit_adjustment": round(team.fit_adjustment, 2),
@@ -222,6 +222,7 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
                     "decade": s.player.decade,
                     "height_in": s.player.height_in,
                     "rating": round(s.total, 1),
+                    "delta": round(delta_by_pos.get(s.player.position, 0.0), 1),
                     "status": status.get(s.player.name),
                     "game": box.get(s.player.name, {}),
                 }
@@ -233,6 +234,9 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
             ],
         }
 
+    home_delta_by_pos = {m.position: m.home_delta for m in result.matchups}
+    away_delta_by_pos = {m.position: m.away_delta for m in result.matchups}
+
     payload = {
         "outcome": outcome,
         "your_final": round(result.home_final, 2),
@@ -240,8 +244,8 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
         "opponent_team": opponent_label,
         "overtime": result.overtime,
         "regulation": result.regulation,
-        "your_team": team_payload(result.home, home_box, home_status),
-        "opponent_team_scored": team_payload(result.away, away_box, away_status),
+        "your_team": team_payload(result.home, home_box, home_status, home_delta_by_pos),
+        "opponent_team_scored": team_payload(result.away, away_box, away_status, away_delta_by_pos),
         "matchups": [
             {
                 "position": m.position,
