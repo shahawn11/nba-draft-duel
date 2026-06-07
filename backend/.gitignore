@@ -2,3 +2,4 @@
 __pycache__/
 *.pyc
 app/data/*.db
+!app/data/players.db

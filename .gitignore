@@ -9,6 +9,8 @@ __pycache__/
 
 # Generated data (rebuilt by the pipeline / at runtime)
 backend/app/data/*.db
+# …but the prebuilt historical dataset MUST ship (deploys build from GitHub).
+!backend/app/data/players.db
 
 # Node / frontend
 node_modules/
