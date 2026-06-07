@@ -1,117 +1,156 @@
 """
-SQLite persistence: user W/L records + match sessions.
+Persistence: user records + match sessions + accounts/sessions.
 
-Player stats themselves come from seed_data (or the pipeline-built players.db
-later); this DB only stores game state.
+Backed by SQLAlchemy Core so the same code runs on:
+  * Postgres in production  -- set DATABASE_URL=postgresql://user:pass@host/db
+  * SQLite locally/tests    -- default file at GAME_DB_PATH (zero config)
+
+Player stats come from the read-only dataset (dataset.py / players.db); this DB
+only stores game state, records, and auth.
 """
 from __future__ import annotations
 
 import json
-import sqlite3
+import os
 import time
 from pathlib import Path
 
-import os
+from sqlalchemy import (
+    create_engine, MetaData, Table, Column, String, Integer, Float, Text,
+    select, insert, update, delete, func, and_,
+)
+from sqlalchemy.engine import Row
+from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 
 from . import rating
 
-# Writable runtime DB. Overridable via GAME_DB_PATH so it can live on a mounted
-# volume in a container (the read-only players.db dataset stays baked in-image).
+# Writable runtime DB (SQLite fallback). Overridable via GAME_DB_PATH so it can
+# live on a mounted volume in a container (the read-only players.db stays baked).
 DB_PATH = Path(os.environ.get("GAME_DB_PATH") or (Path(__file__).parent / "data" / "game.db"))
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS users (
-    username TEXT PRIMARY KEY,
-    wins     INTEGER NOT NULL DEFAULT 0,
-    losses   INTEGER NOT NULL DEFAULT 0,
-    ties     INTEGER NOT NULL DEFAULT 0,
-    rating   INTEGER NOT NULL DEFAULT 1000,
-    avatar       TEXT NOT NULL DEFAULT 'amateur',
-    peak_rating  INTEGER NOT NULL DEFAULT 1000,
-    achievements TEXT NOT NULL DEFAULT '',
-    games_played INTEGER NOT NULL DEFAULT 0,
-    games_won    INTEGER NOT NULL DEFAULT 0
-);
-CREATE TABLE IF NOT EXISTS matches (
-    id             TEXT PRIMARY KEY,
-    username       TEXT NOT NULL,
-    mode           TEXT NOT NULL DEFAULT 'offline',
-    opponent_team  TEXT NOT NULL,
-    opponent_json  TEXT NOT NULL,   -- frozen opponent lineup (hidden until resolve)
-    state_json     TEXT NOT NULL,   -- evolving draft state (slot order, picks, current step)
-    status         TEXT NOT NULL DEFAULT 'open',  -- open | resolved
-    result_json    TEXT,            -- scored DuelResult once drafted
-    created_at     REAL NOT NULL
-);
-"""
 
-AUTH_SCHEMA = """
-CREATE TABLE IF NOT EXISTS accounts (
-    username    TEXT PRIMARY KEY,
-    pw_hash     TEXT NOT NULL,
-    salt        TEXT NOT NULL,
-    created_at  REAL NOT NULL
-);
-CREATE TABLE IF NOT EXISTS sessions (
-    token       TEXT PRIMARY KEY,
-    username    TEXT NOT NULL,
-    created_at  REAL NOT NULL
-);
-"""
-
-
-def _conn() -> sqlite3.Connection:
+def _engine_url() -> str:
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        # Use the psycopg (v3) driver we ship in the image.
+        if url.startswith("postgres://"):
+            return "postgresql+psycopg://" + url[len("postgres://"):]
+        if url.startswith("postgresql://"):
+            return "postgresql+psycopg://" + url[len("postgresql://"):]
+        return url
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return f"sqlite:///{DB_PATH}"
+
+
+_URL = _engine_url()
+_IS_SQLITE = _URL.startswith("sqlite")
+_engine = create_engine(
+    _URL,
+    pool_pre_ping=not _IS_SQLITE,
+    connect_args={"check_same_thread": False} if _IS_SQLITE else {},
+    future=True,
+)
+
+metadata = MetaData()
+R = rating.START_RATING
+
+users = Table(
+    "users", metadata,
+    Column("username", String(64), primary_key=True),
+    Column("wins", Integer, nullable=False, default=0, server_default="0"),
+    Column("losses", Integer, nullable=False, default=0, server_default="0"),
+    Column("ties", Integer, nullable=False, default=0, server_default="0"),
+    Column("rating", Integer, nullable=False, default=R, server_default=str(R)),
+    Column("peak_rating", Integer, nullable=False, default=R, server_default=str(R)),
+    Column("display_name", String(64)),
+    Column("avatar", String(32), nullable=False, default="amateur", server_default="amateur"),
+    Column("achievements", Text, nullable=False, default="", server_default=""),
+    Column("games_played", Integer, nullable=False, default=0, server_default="0"),
+    Column("games_won", Integer, nullable=False, default=0, server_default="0"),
+)
+
+matches = Table(
+    "matches", metadata,
+    Column("id", String(64), primary_key=True),
+    Column("username", String(64), nullable=False),
+    Column("mode", String(16), nullable=False, default="offline", server_default="offline"),
+    Column("opponent_team", Text, nullable=False),
+    Column("opponent_json", Text, nullable=False),
+    Column("state_json", Text, nullable=False),
+    Column("status", String(16), nullable=False, default="open", server_default="open"),
+    Column("result_json", Text),
+    Column("created_at", Float, nullable=False),
+)
+
+accounts = Table(
+    "accounts", metadata,
+    Column("username", String(64), primary_key=True),
+    Column("pw_hash", Text, nullable=False),
+    Column("salt", Text, nullable=False),
+    Column("created_at", Float, nullable=False),
+)
+
+sessions = Table(
+    "sessions", metadata,
+    Column("token", String(128), primary_key=True),
+    Column("username", String(64), nullable=False),
+    Column("created_at", Float, nullable=False),
+)
+
+# Columns that may be missing on a legacy SQLite users table -> ADD COLUMN.
+_USER_MIGRATIONS = {
+    "rating": f"INTEGER NOT NULL DEFAULT {R}",
+    "peak_rating": f"INTEGER NOT NULL DEFAULT {R}",
+    "display_name": "TEXT",
+    "avatar": "TEXT NOT NULL DEFAULT 'amateur'",
+    "achievements": "TEXT NOT NULL DEFAULT ''",
+    "games_played": "INTEGER NOT NULL DEFAULT 0",
+    "games_won": "INTEGER NOT NULL DEFAULT 0",
+}
 
 
 def init_db() -> None:
-    with _conn() as c:
-        c.executescript(SCHEMA)
-        c.executescript(AUTH_SCHEMA)
-        # Migration: add rating to pre-existing users tables.
-        cols = {r[1] for r in c.execute("PRAGMA table_info(users)")}
-        if "rating" not in cols:
-            c.execute(f"ALTER TABLE users ADD COLUMN rating INTEGER NOT NULL DEFAULT {rating.START_RATING}")
-        if "display_name" not in cols:
-            c.execute("ALTER TABLE users ADD COLUMN display_name TEXT")
-        if "avatar" not in cols:
-            c.execute("ALTER TABLE users ADD COLUMN avatar TEXT NOT NULL DEFAULT 'amateur'")
-        if "peak_rating" not in cols:
-            # Backfill peak to at least the current rating so existing players
-            # keep any rank avatars their rating already qualifies for.
-            c.execute(f"ALTER TABLE users ADD COLUMN peak_rating INTEGER NOT NULL DEFAULT {rating.START_RATING}")
-            c.execute("UPDATE users SET peak_rating = rating WHERE rating > peak_rating")
-        if "achievements" not in cols:
-            c.execute("ALTER TABLE users ADD COLUMN achievements TEXT NOT NULL DEFAULT ''")
-        if "games_played" not in cols:
-            c.execute("ALTER TABLE users ADD COLUMN games_played INTEGER NOT NULL DEFAULT 0")
-        if "games_won" not in cols:
-            c.execute("ALTER TABLE users ADD COLUMN games_won INTEGER NOT NULL DEFAULT 0")
+    metadata.create_all(_engine)
+    # Migrate legacy tables that predate newer columns (no-op on fresh DBs).
+    from sqlalchemy import inspect, text
+    insp = inspect(_engine)
+    existing = {c["name"] for c in insp.get_columns("users")}
+    with _engine.begin() as c:
+        for col, ddl in _USER_MIGRATIONS.items():
+            if col not in existing:
+                c.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
+        if "peak_rating" not in existing:
+            c.execute(text("UPDATE users SET peak_rating = rating WHERE rating > peak_rating"))
+
+
+def _row_dict(row: Row | None) -> dict | None:
+    return dict(row._mapping) if row is not None else None
 
 
 # ---- users / records -------------------------------------------------------
 def ensure_user(username: str) -> None:
-    with _conn() as c:
-        c.execute("INSERT OR IGNORE INTO users(username) VALUES (?)", (username,))
+    with _engine.begin() as c:
+        exists = c.execute(select(users.c.username).where(users.c.username == username)).first()
+        if not exists:
+            try:
+                c.execute(insert(users).values(username=username))
+            except IntegrityError:
+                pass  # created concurrently
 
 
 def set_display_name(username: str, name: str, force: bool = False) -> None:
-    """Set a guest's display label (record key stays the username/guest id).
-    A guest name is LOCKED once set -- subsequent calls are ignored unless
-    force=True (used at signup, where the account username becomes official)."""
+    """A guest name is LOCKED once set; later calls are ignored unless force=True
+    (used at signup, where the account username becomes the official name)."""
     name = (name or "").strip()[:24]
     if not name:
         return
     ensure_user(username)
-    with _conn() as c:
+    with _engine.begin() as c:
         if not force:
-            row = c.execute("SELECT display_name FROM users WHERE username = ?", (username,)).fetchone()
-            if row and (row["display_name"] or "").strip():
+            row = c.execute(select(users.c.display_name).where(users.c.username == username)).first()
+            if row and (row[0] or "").strip():
                 return  # already named -> locked
-        c.execute("UPDATE users SET display_name = ? WHERE username = ?", (name, username))
+        c.execute(update(users).where(users.c.username == username).values(display_name=name))
 
 
 def _record_dict(row) -> dict:
@@ -125,48 +164,43 @@ def _record_dict(row) -> dict:
     d["next_tier"] = nxt["name"] if nxt else None
     d["next_tier_at"] = nxt["min"] if nxt else None
     d["display_name"] = d.get("display_name") or d.get("username")
-    # Avatars: default to the always-unlocked Amateur brown shirt.
     d["avatar"] = d.get("avatar") or "amateur"
     earned = [a for a in (d.get("achievements") or "").split(",") if a]
     d["achievements"] = earned
     d["unlocked"] = rating.unlocked_avatar_ids(peak) + earned
-    # Ties are no longer tracked in records (OT resolves all games).
     d.pop("ties", None)
     return d
 
 
+_REC_COLS = (users.c.username, users.c.wins, users.c.losses, users.c.rating,
+             users.c.peak_rating, users.c.display_name, users.c.avatar, users.c.achievements)
+
+
 def get_record(username: str) -> dict:
-    with _conn() as c:
-        row = c.execute(
-            "SELECT username, wins, losses, rating, peak_rating, display_name, avatar, achievements "
-            "FROM users WHERE username = ?",
-            (username,),
-        ).fetchone()
+    with _engine.connect() as c:
+        row = c.execute(select(*_REC_COLS).where(users.c.username == username)).first()
     if not row:
         return _record_dict({"username": username, "wins": 0, "losses": 0,
-                             "rating": rating.START_RATING,
-                             "peak_rating": rating.START_RATING, "avatar": "amateur",
-                             "achievements": ""})
-    return _record_dict(row)
+                             "rating": rating.START_RATING, "peak_rating": rating.START_RATING,
+                             "avatar": "amateur", "achievements": ""})
+    return _record_dict(dict(row._mapping))
 
 
 def set_avatar(username: str, avatar_id: str) -> dict:
-    """Set the player's avatar. Rank avatars require the tier to be unlocked
-    (by peak rating); unknown/locked ids are rejected with ValueError."""
+    """Rank avatars require the tier unlocked (by peak rating); locked/unknown
+    ids raise ValueError."""
     ensure_user(username)
     rec = get_record(username)
     if avatar_id not in rec["unlocked"]:
         raise ValueError("locked")
-    with _conn() as c:
-        c.execute("UPDATE users SET avatar = ? WHERE username = ?", (avatar_id, username))
+    with _engine.begin() as c:
+        c.execute(update(users).where(users.c.username == username).values(avatar=avatar_id))
     return get_record(username)
 
 
 def award_achievements(username: str, won: bool, players: list[dict]) -> tuple[dict, list[str]]:
-    """Record a finished match for `username` and unlock any newly-earned
-    achievement avatars. `players` is the user's own scored lineup (each with
-    `status` and a `game` box line). Cosmetic only -- never touches rating/W-L.
-    Returns (updated_record, newly_unlocked_ids)."""
+    """Record a finished match and unlock newly-earned achievement avatars.
+    Cosmetic only -- never touches rating/W-L. Returns (record, newly_unlocked)."""
     ensure_user(username)
     newly: set[str] = set()
     for p in players or []:
@@ -177,97 +211,73 @@ def award_achievements(username: str, won: bool, players: list[dict]) -> tuple[d
         g = p.get("game") or {}
         if (g.get("pts") or 0) >= 50:
             newly.add("fifty")
-        big = sum(1 for k in ("pts", "reb", "ast") if (g.get(k) or 0) >= 10)
-        if big >= 3:
+        if sum(1 for k in ("pts", "reb", "ast") if (g.get(k) or 0) >= 10) >= 3:
             newly.add("tripledouble")
 
-    with _conn() as c:
+    with _engine.begin() as c:
         row = c.execute(
-            "SELECT achievements, games_played, games_won FROM users WHERE username = ?",
-            (username,),
-        ).fetchone()
-        earned = {a for a in ((row["achievements"] if row else "") or "").split(",") if a}
-        gp = (row["games_played"] if row else 0) + 1
-        gw = (row["games_won"] if row else 0) + (1 if won else 0)
+            select(users.c.achievements, users.c.games_played, users.c.games_won)
+            .where(users.c.username == username)
+        ).first()
+        earned = {a for a in ((row[0] if row else "") or "").split(",") if a}
+        gp = (row[1] if row else 0) + 1
+        gw = (row[2] if row else 0) + (1 if won else 0)
         if gp >= 25:
             newly.add("games25")
         if gw >= 100:
             newly.add("wins100")
         newly &= rating.ACHIEVEMENT_IDS
-        newly_unlocked = sorted(newly - earned)   # only those not already earned
+        newly_unlocked = sorted(newly - earned)
         earned |= newly
-        c.execute(
-            "UPDATE users SET achievements = ?, games_played = ?, games_won = ? WHERE username = ?",
-            (",".join(sorted(earned)), gp, gw, username),
-        )
+        c.execute(update(users).where(users.c.username == username).values(
+            achievements=",".join(sorted(earned)), games_played=gp, games_won=gw))
     return get_record(username), newly_unlocked
 
 
 def apply_result(username: str, outcome: str) -> dict:
-    """outcome in {'win','loss'}; updates W/L + rating (+peak); returns record.
-    Ties no longer occur (OT resolves them) but are tolerated as a no-op."""
+    """outcome in {'win','loss'} updates W/L + rating (+peak). 'tie' is a no-op."""
     ensure_user(username)
     if outcome == "tie":
         return get_record(username)
     col = {"win": "wins", "loss": "losses"}[outcome]
-    with _conn() as c:
-        row = c.execute("SELECT rating, peak_rating FROM users WHERE username = ?", (username,)).fetchone()
-        cur = row["rating"] if row and row["rating"] is not None else rating.START_RATING
-        peak = row["peak_rating"] if row and row["peak_rating"] is not None else cur
+    with _engine.begin() as c:
+        row = c.execute(select(users.c.rating, users.c.peak_rating)
+                        .where(users.c.username == username)).first()
+        cur = row[0] if row and row[0] is not None else rating.START_RATING
+        peak = row[1] if row and row[1] is not None else cur
         new_rating = rating.apply_outcome(cur, outcome)
         new_peak = max(peak, new_rating)
-        c.execute(
-            f"UPDATE users SET {col} = {col} + 1, rating = ?, peak_rating = ? WHERE username = ?",
-            (new_rating, new_peak, username),
-        )
+        c.execute(update(users).where(users.c.username == username).values(
+            **{col: users.c[col] + 1, "rating": new_rating, "peak_rating": new_peak}))
     return get_record(username)
 
 
 def leaderboard(limit: int = 20) -> list[dict]:
-    with _conn() as c:
+    with _engine.connect() as c:
         rows = c.execute(
-            "SELECT username, wins, losses, rating, peak_rating, display_name, avatar, achievements "
-            "FROM users "
-            "WHERE (wins + losses) > 0 "
-            "ORDER BY rating DESC, wins DESC, username ASC LIMIT ?",
-            (limit,),
-        ).fetchall()
-    return [_record_dict(r) for r in rows]
+            select(*_REC_COLS)
+            .where((users.c.wins + users.c.losses) > 0)
+            .order_by(users.c.rating.desc(), users.c.wins.desc(), users.c.username.asc())
+            .limit(limit)
+        ).all()
+    return [_record_dict(dict(r._mapping)) for r in rows]
 
 
 # ---- matches ---------------------------------------------------------------
-def create_match(
-    match_id: str,
-    username: str,
-    opponent_team: str,
-    opponent_json: list,
-    state_json: dict,
-    mode: str = "offline",
-) -> None:
-    with _conn() as c:
-        c.execute(
-            """INSERT INTO matches
-               (id, username, mode, opponent_team, opponent_json, state_json,
-                status, created_at)
-               VALUES (?,?,?,?,?,?, 'open', ?)""",
-            (
-                match_id,
-                username,
-                mode,
-                opponent_team,
-                json.dumps(opponent_json),
-                json.dumps(state_json),
-                time.time(),
-            ),
-        )
+def create_match(match_id, username, opponent_team, opponent_json, state_json, mode="offline") -> None:
+    with _engine.begin() as c:
+        c.execute(insert(matches).values(
+            id=match_id, username=username, mode=mode, opponent_team=opponent_team,
+            opponent_json=json.dumps(opponent_json), state_json=json.dumps(state_json),
+            status="open", created_at=time.time()))
 
 
 def get_match(match_id: str) -> dict | None:
-    with _conn() as c:
-        row = c.execute("SELECT * FROM matches WHERE id = ?", (match_id,)).fetchone()
+    with _engine.connect() as c:
+        row = c.execute(select(matches).where(matches.c.id == match_id)).first()
     if not row:
         return None
-    d = dict(row)
+    d = dict(row._mapping)
     d["opponent_json"] = json.loads(d["opponent_json"])
     d["state_json"] = json.loads(d["state_json"])
     d["result_json"] = json.loads(d["result_json"]) if d["result_json"] else None
@@ -275,91 +285,82 @@ def get_match(match_id: str) -> dict | None:
 
 
 def update_state(match_id: str, state_json: dict) -> None:
-    with _conn() as c:
-        c.execute(
-            "UPDATE matches SET state_json = ? WHERE id = ?",
-            (json.dumps(state_json), match_id),
-        )
+    with _engine.begin() as c:
+        c.execute(update(matches).where(matches.c.id == match_id)
+                  .values(state_json=json.dumps(state_json)))
 
 
 def resolve_match(match_id: str, state_json: dict, result_json: dict) -> None:
-    with _conn() as c:
-        c.execute(
-            "UPDATE matches SET status = 'resolved', state_json = ?, result_json = ? WHERE id = ?",
-            (json.dumps(state_json), json.dumps(result_json), match_id),
-        )
+    with _engine.begin() as c:
+        c.execute(update(matches).where(matches.c.id == match_id).values(
+            status="resolved", state_json=json.dumps(state_json),
+            result_json=json.dumps(result_json)))
 
 
 # ---- accounts / sessions ---------------------------------------------------
 def account_exists(username: str) -> bool:
-    with _conn() as c:
-        return c.execute(
-            "SELECT 1 FROM accounts WHERE lower(username) = lower(?)", (username,)
-        ).fetchone() is not None
+    with _engine.connect() as c:
+        return c.execute(select(accounts.c.username)
+                         .where(func.lower(accounts.c.username) == func.lower(username))).first() is not None
 
 
 def get_account(username: str) -> dict | None:
-    with _conn() as c:
-        row = c.execute(
-            "SELECT username, pw_hash, salt FROM accounts WHERE lower(username) = lower(?)",
-            (username,),
-        ).fetchone()
-    return dict(row) if row else None
+    with _engine.connect() as c:
+        row = c.execute(select(accounts.c.username, accounts.c.pw_hash, accounts.c.salt)
+                        .where(func.lower(accounts.c.username) == func.lower(username))).first()
+    return _row_dict(row)
 
 
 def create_account(username: str, pw_hash: str, salt: str) -> None:
-    with _conn() as c:
-        c.execute(
-            "INSERT INTO accounts(username, pw_hash, salt, created_at) VALUES (?,?,?,?)",
-            (username, pw_hash, salt, time.time()),
-        )
+    with _engine.begin() as c:
+        c.execute(insert(accounts).values(
+            username=username, pw_hash=pw_hash, salt=salt, created_at=time.time()))
 
 
 def create_session(username: str, token: str) -> None:
-    with _conn() as c:
-        c.execute(
-            "INSERT INTO sessions(token, username, created_at) VALUES (?,?,?)",
-            (token, username, time.time()),
-        )
+    with _engine.begin() as c:
+        c.execute(insert(sessions).values(token=token, username=username, created_at=time.time()))
 
 
 def username_for_token(token: str | None) -> str | None:
     if not token:
         return None
-    with _conn() as c:
-        row = c.execute("SELECT username FROM sessions WHERE token = ?", (token,)).fetchone()
-    return row["username"] if row else None
+    with _engine.connect() as c:
+        row = c.execute(select(sessions.c.username).where(sessions.c.token == token)).first()
+    return row[0] if row else None
 
 
 def delete_session(token: str) -> None:
-    with _conn() as c:
-        c.execute("DELETE FROM sessions WHERE token = ?", (token,))
+    with _engine.begin() as c:
+        c.execute(delete(sessions).where(sessions.c.token == token))
 
 
 def transfer_stats(src: str, dst: str) -> None:
-    """Move a guest's W/L/T + rating into a (new) account, then clear the guest."""
+    """Move a guest's W/L/T + rating + avatar/achievements into a (new) account,
+    then clear the guest row."""
     if not src or src == dst:
         return
-    with _conn() as c:
-        s = c.execute("SELECT wins, losses, ties, rating, peak_rating, avatar, "
-                      "achievements, games_played, games_won FROM users WHERE username = ?", (src,)).fetchone()
+    with _engine.begin() as c:
+        s = c.execute(select(users).where(users.c.username == src)).first()
         if not s:
             return
-        c.execute("INSERT OR IGNORE INTO users(username) VALUES (?)", (dst,))
-        d = c.execute("SELECT peak_rating, achievements, games_played, games_won "
-                      "FROM users WHERE username = ?", (dst,)).fetchone()
-        dst_peak = d["peak_rating"] if d and d["peak_rating"] is not None else rating.START_RATING
+        s = s._mapping
+        # ensure dst exists
+        if not c.execute(select(users.c.username).where(users.c.username == dst)).first():
+            c.execute(insert(users).values(username=dst))
+        d = c.execute(select(users.c.peak_rating, users.c.achievements,
+                             users.c.games_played, users.c.games_won)
+                      .where(users.c.username == dst)).first()
+        dst_peak = d[0] if d and d[0] is not None else rating.START_RATING
         new_peak = max(dst_peak, s["peak_rating"] or s["rating"], s["rating"])
         src_ach = {a for a in (s["achievements"] or "").split(",") if a}
-        dst_ach = {a for a in ((d["achievements"] if d else "") or "").split(",") if a}
+        dst_ach = {a for a in ((d[1] if d else "") or "").split(",") if a}
         merged_ach = ",".join(sorted(src_ach | dst_ach))
-        gp = (d["games_played"] if d else 0) + (s["games_played"] or 0)
-        gw = (d["games_won"] if d else 0) + (s["games_won"] or 0)
-        c.execute(
-            "UPDATE users SET wins = wins + ?, losses = losses + ?, ties = ties + ?, "
-            "rating = ?, peak_rating = ?, avatar = ?, achievements = ?, "
-            "games_played = ?, games_won = ? WHERE username = ?",
-            (s["wins"], s["losses"], s["ties"], s["rating"], new_peak,
-             s["avatar"] or "amateur", merged_ach, gp, gw, dst),
-        )
-        c.execute("DELETE FROM users WHERE username = ?", (src,))
+        gp = (d[2] if d else 0) + (s["games_played"] or 0)
+        gw = (d[3] if d else 0) + (s["games_won"] or 0)
+        c.execute(update(users).where(users.c.username == dst).values(
+            wins=users.c.wins + s["wins"], losses=users.c.losses + s["losses"],
+            ties=users.c.ties + s["ties"], rating=s["rating"], peak_rating=new_peak,
+            avatar=s["avatar"] or "amateur", achievements=merged_ach,
+            games_played=gp, games_won=gw))
+        c.execute(delete(users).where(users.c.username == src))

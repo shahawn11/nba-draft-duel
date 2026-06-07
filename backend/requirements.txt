@@ -1,8 +1,11 @@
 fastapi>=0.110
 uvicorn[standard]>=0.29
+sqlalchemy>=2.0
 # Production: shared rate limiting / sessions / matchmaking. Optional locally
 # (the app falls back to an in-process limiter when REDIS_URL is unset).
 redis>=5.0
+# Postgres driver (prod). Local dev/tests default to SQLite (no driver needed).
+psycopg[binary]>=3.1
 # Data pipeline (optional; only needed to rebuild the historical dataset)
 nba_api>=1.4
 pandas>=2.0

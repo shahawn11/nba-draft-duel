@@ -14,7 +14,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --upgrade pip && \
     pip install "fastapi>=0.110" "uvicorn[standard]>=0.29" "gunicorn>=22.0" "redis>=5.0" \
-                "psycopg[binary]>=3.1"
+                "sqlalchemy>=2.0" "psycopg[binary]>=3.1"
 
 # App code + baked read-only dataset (app/data/players.db). game.db is written
 # at runtime to GAME_DB_PATH (a mounted volume), not into the image.
