@@ -53,3 +53,8 @@ RATE_LIMIT_RULES: dict[str, tuple[int, int]] = {
 
 # Trust X-Forwarded-For (set true when behind a CDN/ALB that appends client IP).
 TRUST_PROXY = _bool("TRUST_PROXY", False)
+
+# --- Sessions -----------------------------------------------------------
+# Bearer-token TTL. Stored in Redis (with expiry) when REDIS_URL is set, so the
+# HTTP tier is stateless across replicas; otherwise falls back to the DB table.
+SESSION_TTL_SECONDS = _int("SESSION_TTL_SECONDS", 30 * 24 * 3600)  # 30 days

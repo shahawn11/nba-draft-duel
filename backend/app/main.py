@@ -16,7 +16,7 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException, WebSocket, Header
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import db, game, live, auth, moderation, config
+from . import db, game, live, auth, moderation, config, session_store
 from .ratelimit import RateLimitMiddleware
 from .models import (
     AuthRequest,
@@ -76,7 +76,7 @@ def _authorize_identity(username: str, token: str | None) -> None:
     """A registered username may only be written to by its owner (valid token).
     Guest ids (no account) are open."""
     if db.account_exists(username):
-        if db.username_for_token(token) != username:
+        if session_store.username_for(token) != username:
             raise HTTPException(status_code=403, detail="log in to play as this account")
 
 
@@ -149,7 +149,7 @@ def signup(req: AuthRequest) -> dict:
         db.transfer_stats(req.guest_id, uname)  # keep current guest stats
     db.set_display_name(uname, uname, force=True)  # the username is now their official name
     token = auth.new_token()
-    db.create_session(uname, token)
+    session_store.create(uname, token)
     return {"token": token, "username": uname, "record": db.get_record(uname)}
 
 
@@ -159,7 +159,7 @@ def login(req: AuthRequest) -> dict:
     if not acct or not auth.verify_password(req.password, acct["pw_hash"], acct["salt"]):
         raise HTTPException(status_code=401, detail="invalid username or password")
     token = auth.new_token()
-    db.create_session(acct["username"], token)
+    session_store.create(acct["username"], token)
     return {"token": token, "username": acct["username"], "record": db.get_record(acct["username"])}
 
 
@@ -167,13 +167,13 @@ def login(req: AuthRequest) -> dict:
 def logout(authorization: str | None = Header(default=None)) -> dict:
     tok = _bearer(authorization)
     if tok:
-        db.delete_session(tok)
+        session_store.delete(tok)
     return {"ok": True}
 
 
 @app.get("/auth/me")
 def me(authorization: str | None = Header(default=None)) -> dict:
-    uname = db.username_for_token(_bearer(authorization))
+    uname = session_store.username_for(_bearer(authorization))
     if not uname:
         raise HTTPException(status_code=401, detail="not logged in")
     return {"username": uname, "record": db.get_record(uname)}
@@ -185,7 +185,7 @@ async def ws_pvp(ws: WebSocket) -> None:
     await ws.accept()
     username = (ws.query_params.get("username") or "anon")[:40]
     token = ws.query_params.get("token")
-    if db.account_exists(username) and db.username_for_token(token) != username:
+    if db.account_exists(username) and session_store.username_for(token) != username:
         await ws.send_json({"type": "error", "detail": "log in to play as this account"})
         await ws.close()
         return

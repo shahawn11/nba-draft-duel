@@ -66,3 +66,15 @@ Phase 0 = one API container + managed Postgres + Redis behind Cloudflare. To run
 multiple API replicas (Phase 1) the live-PvP matchmaking must move to Redis
 (pub/sub + an atomic queue) and WebSocket routing needs stickiness or a shared
 broker.
+
+## Phase 1 (Option A) — stateless HTTP scale-out + a single WS node
+- **Sessions live in Redis** (TTL, sliding expiry) when `REDIS_URL` is set, so the
+  HTTP tier is **stateless** — run as many HTTP replicas as you like behind the LB.
+- **Live PvP runs on ONE WS node** (its match state is in-process). Route the
+  WebSocket path there and everything else to the HTTP pool:
+  - Cloudflare/LB rule: `*/ws/pvp` → the WS service; all other paths → HTTP replicas.
+  - Run the WS service as a single replica (scale it vertically). One node handles
+    thousands of concurrent matches; HTTP + static carry the request volume.
+- Matchmaking stays **in-process on that one WS node** (Redis matchmaking + a
+  pub/sub relay are only needed for multi-node WS — a future Phase 1b).
+- `SESSION_TTL_SECONDS` (default 30d) controls token lifetime.
