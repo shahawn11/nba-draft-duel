@@ -117,11 +117,11 @@ that depends on your **current tier** — climbing gets slower, slipping costs m
 | Tier | Reached at | Win | Loss |
 |------|-----------|-----|------|
 | Amateur | 0 | +10 | −2 |
-| Pro | 2,000 | +8 | −3 |
-| All-Star | 5,000 | +7 | −4 |
-| Veteran | 10,000 | +6 | −5 |
-| Hall-of-Fame | 25,000 | +5 | −5 |
-| GOAT | 100,000 | +4 | −5 |
+| Pro | 1,500 | +8 | −3 |
+| All-Star | 4,000 | +7 | −4 |
+| Veteran | 8,000 | +6 | −5 |
+| Hall-of-Fame | 18,000 | +5 | −5 |
+| GOAT | 50,000 | +4 | −5 |
 
 Ties don't change rating. Tunable in `app/rating.py`. The header shows your tier
 badge + rating; the 🏆 Leaderboard ranks the top players.
