@@ -279,14 +279,11 @@ def _resolve(match: dict, state: dict) -> dict:
     opponent = [player_from_dict(d) for d in match["opponent_json"]]
 
     outcome, result_payload = score_lineups(drafted, opponent, match["opponent_team"])
-    # Offline mode is unranked: it does NOT change W/L or rating. Achievements are
-    # cosmetic, so they still accrue (games played, hot/slump, 50pt, triple-double).
-    rec, newly = db.award_achievements(match["username"], outcome == "win",
-                                       result_payload["your_team"]["players"])
-    # Best-team tracking is PvP-only (offline is unranked / casual).
+    # Offline is unranked & casual: no W/L, rating, streaks, achievements, or
+    # best-team tracking — purely a warm-up.
     result_payload["match_id"] = match["id"]
     result_payload["record"] = db.get_record(match["username"])
-    result_payload["newly_unlocked"] = newly
+    result_payload["newly_unlocked"] = []
     result_payload["ranked"] = False
     result_payload["rating_change"] = 0
 
