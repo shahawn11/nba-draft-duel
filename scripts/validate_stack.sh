@@ -70,10 +70,16 @@ try: print(json.load(sys.stdin).get("db") or "")
 except Exception: print("")' 2>/dev/null)
 echo "   /health db backend = ${backend:-<none>}"
 if [ "$backend" != "postgresql" ]; then
-  echo "✗ The API answering on $API is NOT on Postgres (got '${backend:-none}')."
-  echo "  A stale/orphan container is likely holding the port. Check:"
-  echo "    docker ps --filter publish=8000"
-  echo "  Then: $COMPOSE down --remove-orphans && $COMPOSE up -d --build --force-recreate"
+  # Is the CONTAINER itself fine? If so, something else owns host port 8000.
+  if $COMPOSE exec -T api python -c "from app import main; raise SystemExit(0 if main.health().get('db')=='postgresql' else 1)" 2>/dev/null; then
+    echo "✗ The container IS on Postgres, but $API is being answered by ANOTHER process."
+    echo "  A non-Docker server (likely a stray 'uvicorn' from backend/run.sh) is holding port 8000."
+    echo "  Find and stop it:"
+    echo "    lsof -iTCP:8000 -sTCP:LISTEN -nP      # kill the Python/uvicorn PID (not Docker)"
+    echo "  …then re-run. (Or set API=http://localhost:8000 to a free port and republish.)"
+  else
+    echo "✗ The API on $API is not on Postgres (got '${backend:-none}'). Stale container/code."
+  fi
   exit 1
 fi
 $COMPOSE exec -T db psql -U duel -d duel -c "\dt" | grep -E "users|matches|accounts|sessions" \
