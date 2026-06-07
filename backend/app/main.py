@@ -56,6 +56,8 @@ def health() -> dict:
         "status": "ok",
         "db": db.backend(),
         "db_ready": db.ping(),
+        "cors_origins": config.ALLOWED_ORIGINS,
+        "cors_regex": config.ALLOWED_ORIGIN_REGEX,
         "pool_source": game.dataset.source(),
         "opponent_season": game.dataset.current_season(),
         "starters_source": game.dataset.starters_source(),
