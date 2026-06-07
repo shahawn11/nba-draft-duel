@@ -20,6 +20,12 @@ RUN pip install --upgrade pip && \
 # at runtime to GAME_DB_PATH (a mounted volume), not into the image.
 COPY app ./app
 
+# Defensive: strip any bytecode that slipped into the build context so the
+# interpreter always compiles fresh from the copied .py sources (avoids a stale
+# __pycache__/*.pyc shadowing updated code when .dockerignore isn't honored).
+RUN find /app -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null; \
+    find /app -name '*.pyc' -delete 2>/dev/null; true
+
 # Non-root user.
 RUN useradd -m appuser && \
     mkdir -p /data && chown -R appuser:appuser /app /data

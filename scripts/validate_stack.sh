@@ -43,11 +43,14 @@ $COMPOSE build --no-cache api
 echo "==> Bringing up the stack (force-recreate)…"
 $COMPOSE up -d --force-recreate --remove-orphans
 
-echo "==> Sanity: confirming the running image has the current code…"
-if $COMPOSE exec -T api grep -q '"db": db.backend()' app/main.py; then
-  echo "   image main.py is current ✓"
+echo "==> Sanity: confirming the running interpreter executes current code…"
+if $COMPOSE exec -T api python -c "from app import main; raise SystemExit(0 if 'db' in main.health() else 1)" 2>/dev/null; then
+  echo "   running code is current ✓"
 else
-  echo "✗ running image is STILL stale (old main.py). Try: docker system prune -f then re-run."
+  echo "✗ container interpreter is running STALE code (health() has no 'db')."
+  echo "  Clear everything and retry:"
+  echo "    docker rmi -f nba-draft-duel-api; docker builder prune -af"
+  echo "    $COMPOSE build --no-cache api && $COMPOSE up -d --force-recreate"
   exit 1
 fi
 
