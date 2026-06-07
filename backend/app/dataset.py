@@ -78,7 +78,10 @@ def _load_from_db(path: Path) -> dict[str, list[PlayerStats]]:
                 team=team, season=decade, decade=decade,
                 eligible_positions=elig,
             ))
-        cands.sort(key=lambda p: p.bpm, reverse=True)
+        # "Top 10" = most notable players: scoring-led with a light impact nudge.
+        # Pure PIE/impact buried high scorers like Klay Thompson behind forgettable
+        # role players, so we lead with points.
+        cands.sort(key=lambda p: p.ppg + 0.5 * p.bpm, reverse=True)
         cands = cands[:MAX_CANDIDATES]
         if len(cands) >= MIN_CANDIDATES:
             pool[key] = cands

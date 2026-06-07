@@ -11,11 +11,11 @@ function Lineup({ title, team, highlight }) {
             <div className="sp-head">
               <span className="pos-badge">{p.position}</span>
               <span className="sp-name">{p.name}</span>
-              <span className="sp-rating" title="player rating">{p.total.toFixed(0)}</span>
+              <span className="sp-rating" title="player rating">{p.rating}</span>
             </div>
             <div className="sp-stats">
-              <b>{p.ppg}</b> pts · <b>{p.rpg}</b> reb · <b>{p.apg}</b> ast
-              {' · '}{p.spg} stl · {p.bpg} blk
+              <b>{p.game?.pts ?? 0}</b> pts · <b>{p.game?.reb ?? 0}</b> reb · <b>{p.game?.ast ?? 0}</b> ast
+              {' · '}{p.game?.stl ?? 0} stl · {p.game?.blk ?? 0} blk
               {p.team || p.decade ? (
                 <span className="sp-prov"> — {p.decade} {p.team}</span>
               ) : null}

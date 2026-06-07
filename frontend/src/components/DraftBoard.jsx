@@ -41,7 +41,9 @@ function Candidate({ p, index, onSelect, busy }) {
             <span key={pos} className="pos-badge">{pos}</span>
           ))}
         </span>
-        {!eligible && <span className="locked">no open slot</span>}
+        {!eligible && (
+          <span className="locked">{p.taken ? '✓ already drafted' : 'no open slot'}</span>
+        )}
       </div>
       <div className="cand-name">{p.name}</div>
       <div className="cand-stats">

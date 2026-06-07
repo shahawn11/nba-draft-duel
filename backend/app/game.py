@@ -28,6 +28,7 @@ def _annotate(p_dict: dict, eligible_positions: list[str], open_slots: list[str]
     d = dict(p_dict)
     d["eligible_slots"] = elig_open if available else []
     d["eligible"] = available and bool(elig_open)
+    d["taken"] = not available   # already drafted earlier in this match
     return d
 
 
@@ -136,6 +137,38 @@ def pick(match_id: str, player_name: str, slot: str) -> dict:
     return _resolve(match, state)
 
 
+def _simulate_box(players: list, team_pts: int, rng: random.Random) -> dict:
+    """Simulate a single-game box score per player, with randomness, such that
+    points sum to the team's final score. Returns {player_name: stat_line}."""
+    # Points: allocate the team total by scoring ability, with game-to-game noise.
+    weights = [max(p.ppg, 1.0) * rng.uniform(0.7, 1.35) for p in players]
+    tot = sum(weights) or 1.0
+    raw = [team_pts * w / tot for w in weights]
+    pts = [max(0, int(round(x))) for x in raw]
+    # Reconcile rounding so points sum exactly to team_pts.
+    diff = int(team_pts) - sum(pts)
+    order = sorted(range(len(players)), key=lambda i: -raw[i])
+    i = 0
+    while diff != 0 and order:
+        idx = order[i % len(order)]
+        step = 1 if diff > 0 else -1
+        if pts[idx] + step >= 0:
+            pts[idx] += step
+            diff -= step
+        i += 1
+
+    lines = {}
+    for p, pt in zip(players, pts):
+        lines[p.name] = {
+            "pts": pt,
+            "reb": max(0, round(rng.gauss(p.rpg, p.rpg * 0.3 + 1.0))),
+            "ast": max(0, round(rng.gauss(p.apg, p.apg * 0.3 + 0.8))),
+            "stl": max(0, round(rng.gauss(p.spg, p.spg * 0.5 + 0.4))),
+            "blk": max(0, round(rng.gauss(p.bpg, p.bpg * 0.5 + 0.4))),
+        }
+    return lines
+
+
 def _resolve(match: dict, state: dict) -> dict:
     drafted = [player_from_dict(p["player"]) for p in state["picks"]]
     opponent = [player_from_dict(d) for d in match["opponent_json"]]
@@ -144,7 +177,13 @@ def _resolve(match: dict, state: dict) -> dict:
     outcome = {"home": "win", "away": "loss", "tie": "tie"}[result.winner]
     record = db.apply_result(match["username"], outcome)
 
-    def team_payload(team) -> dict:
+    rng = random.Random()
+    home_box = _simulate_box([s.player for s in result.home.player_scores],
+                             int(result.home_final), rng)
+    away_box = _simulate_box([s.player for s in result.away.player_scores],
+                             int(result.away_final), rng)
+
+    def team_payload(team, box) -> dict:
         return {
             "base_total": round(team.base_total, 2),
             "fit_adjustment": round(team.fit_adjustment, 2),
@@ -156,17 +195,14 @@ def _resolve(match: dict, state: dict) -> dict:
                     "position": s.player.position,
                     "team": s.player.team,
                     "decade": s.player.decade,
-                    "ppg": s.player.ppg,
-                    "rpg": s.player.rpg,
-                    "apg": s.player.apg,
-                    "spg": s.player.spg,
-                    "bpg": s.player.bpg,
-                    "bpm": s.player.bpm,
-                    "production": round(s.production, 2),
-                    "advanced": round(s.advanced, 2),
-                    "total": round(s.total, 2),
+                    "rating": round(s.total, 1),
+                    "game": box.get(s.player.name, {}),
                 }
-                for s in sorted(team.player_scores, key=lambda s: -s.total)
+                # sort starters by game points (box-score style)
+                for s in sorted(
+                    team.player_scores,
+                    key=lambda s: -box.get(s.player.name, {}).get("pts", 0),
+                )
             ],
         }
 
@@ -176,8 +212,8 @@ def _resolve(match: dict, state: dict) -> dict:
         "your_final": round(result.home_final, 2),
         "opponent_final": round(result.away_final, 2),
         "opponent_team": match["opponent_team"],
-        "your_team": team_payload(result.home),
-        "opponent_team_scored": team_payload(result.away),
+        "your_team": team_payload(result.home, home_box),
+        "opponent_team_scored": team_payload(result.away, away_box),
         "matchups": [
             {
                 "position": m.position,
