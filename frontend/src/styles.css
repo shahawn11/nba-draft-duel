@@ -422,3 +422,56 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .mode-btn.active { border-color: var(--accent); background: rgba(255, 122, 0, 0.14); }
 .mode-btn .mode-sub { font-size: 0.74rem; color: var(--muted); font-weight: 400; }
 @media (max-width: 480px) { .mode-toggle { grid-template-columns: 1fr; } }
+
+/* ---- live PvP ---- */
+.timer {
+  position: relative;
+  height: 22px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.timer-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, var(--accent), #ffb060);
+  transition: width 0.25s linear;
+}
+.timer-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.opp-progress { color: var(--muted); }
+.waiting-banner {
+  margin-top: 14px;
+  text-align: center;
+  color: var(--win);
+  font-weight: 700;
+}
+.live-banner {
+  background: rgba(231, 76, 60, 0.14);
+  border: 1px solid var(--loss);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+}
+.waiting-room { text-align: center; padding: 30px 10px; }
+.waiting-room .submit { margin-top: 14px; }
+.spinner {
+  width: 44px; height: 44px; margin: 0 auto 16px;
+  border: 4px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

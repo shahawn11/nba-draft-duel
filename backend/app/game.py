@@ -201,15 +201,14 @@ def _simulate_box(players: list, team_pts: int, rng: random.Random) -> dict:
     return lines
 
 
-def _resolve(match: dict, state: dict) -> dict:
-    drafted = [player_from_dict(p["player"]) for p in state["picks"]]
-    opponent = [player_from_dict(d) for d in match["opponent_json"]]
-
-    result = duel(home_players=drafted, away_players=opponent)
+def score_lineups(home_players: list, away_players: list, opponent_label: str,
+                  rng: random.Random | None = None) -> tuple[str, dict]:
+    """Score two lineups head-to-head from the home side's POV. Returns
+    (outcome, payload) where payload omits match_id/record (caller adds them)."""
+    rng = rng or random.Random()
+    result = duel(home_players=home_players, away_players=away_players)
     outcome = {"home": "win", "away": "loss", "tie": "tie"}[result.winner]
-    record = db.apply_result(match["username"], outcome)
 
-    rng = random.Random()
     home_box = _simulate_box([s.player for s in result.home.player_scores],
                              int(result.home_final), rng)
     away_box = _simulate_box([s.player for s in result.away.player_scores],
@@ -231,7 +230,6 @@ def _resolve(match: dict, state: dict) -> dict:
                     "rating": round(s.total, 1),
                     "game": box.get(s.player.name, {}),
                 }
-                # ordered PG, SG, SF, PF, C
                 for s in sorted(
                     team.player_scores,
                     key=lambda s: ["PG", "SG", "SF", "PF", "C"].index(s.player.position)
@@ -240,12 +238,11 @@ def _resolve(match: dict, state: dict) -> dict:
             ],
         }
 
-    result_payload = {
-        "match_id": match["id"],
+    payload = {
         "outcome": outcome,
         "your_final": round(result.home_final, 2),
         "opponent_final": round(result.away_final, 2),
-        "opponent_team": match["opponent_team"],
+        "opponent_team": opponent_label,
         "your_team": team_payload(result.home, home_box),
         "opponent_team_scored": team_payload(result.away, away_box),
         "matchups": [
@@ -262,8 +259,19 @@ def _resolve(match: dict, state: dict) -> dict:
         ],
         "your_matchup_wins": result.home_matchup_wins,
         "opponent_matchup_wins": result.away_matchup_wins,
-        "record": record,
     }
+    return outcome, payload
+
+
+def _resolve(match: dict, state: dict) -> dict:
+    drafted = [player_from_dict(p["player"]) for p in state["picks"]]
+    opponent = [player_from_dict(d) for d in match["opponent_json"]]
+
+    outcome, result_payload = score_lineups(drafted, opponent, match["opponent_team"])
+    record = db.apply_result(match["username"], outcome)
+    result_payload["match_id"] = match["id"]
+    result_payload["record"] = record
+
     db.resolve_match(match["id"], state, result_payload)
     # Feed the async-PvP pool: this drafted five becomes a future opponent.
     db.save_submitted_lineup(

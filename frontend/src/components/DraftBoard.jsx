@@ -1,9 +1,25 @@
 // Sequential draft with free slot choice + UX polish.
 // Interaction: click a player card -> a modal shows the open slots that player
 // can fill -> click a slot to draft them there. Ineligible players are locked.
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
+
+function Timer({ deadline }) {
+  const [now, setNow] = useState(Date.now() / 1000)
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now() / 1000), 250)
+    return () => clearInterval(id)
+  }, [])
+  const left = Math.max(0, Math.ceil(deadline - now))
+  const pct = Math.max(0, Math.min(100, (left / 30) * 100))
+  return (
+    <div className="timer">
+      <div className="timer-bar" style={{ width: `${pct}%` }} />
+      <span className="timer-text">⏱ {left}s</span>
+    </div>
+  )
+}
 
 function LineupStrip({ filled, openSlots, lastSlot }) {
   const bySlot = Object.fromEntries(filled.map((f) => [f.slot, f]))
@@ -89,7 +105,7 @@ function SlotModal({ player, onDraft, onCancel, busy }) {
   )
 }
 
-export default function DraftBoard({ view, onPick, busy }) {
+export default function DraftBoard({ view, onPick, busy, deadline, waiting, opponentPicks }) {
   const [selected, setSelected] = useState(null)
   const step = view.current_step
   const lastSlot = view.filled.length ? view.filled[view.filled.length - 1].slot : null
@@ -104,8 +120,15 @@ export default function DraftBoard({ view, onPick, busy }) {
     <div className="draft-board">
       <LineupStrip filled={view.filled} openSlots={view.open_slots} lastSlot={lastSlot} />
 
+      {deadline ? <Timer deadline={deadline} key={stepKey + '-t'} /> : null}
+
       <div className="step-head" key={stepKey + '-head'}>
-        <div className="step-count">Pick {view.picks_made + 1} of {view.total_slots}</div>
+        <div className="step-count">
+          Pick {view.picks_made + 1} of {view.total_slots}
+          {opponentPicks != null && (
+            <span className="opp-progress"> · opponent: {opponentPicks}/{view.total_slots}</span>
+          )}
+        </div>
         <div className="prompt-head">
           <span className="decade">{step.decade}</span>
           <span className="team">{step.team}</span>
@@ -118,9 +141,11 @@ export default function DraftBoard({ view, onPick, busy }) {
 
       <div className="candidates" key={stepKey}>
         {step.candidates.map((p, i) => (
-          <Candidate key={p.name} p={p} index={i} busy={busy} onSelect={setSelected} />
+          <Candidate key={p.name} p={p} index={i} busy={busy || waiting} onSelect={setSelected} />
         ))}
       </div>
+
+      {waiting && <div className="waiting-banner">✅ Pick locked — waiting for your opponent…</div>}
 
       {selected && (
         <SlotModal player={selected} busy={busy} onDraft={draft} onCancel={() => setSelected(null)} />

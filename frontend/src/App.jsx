@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api } from './api.js'
 import DraftBoard from './components/DraftBoard.jsx'
 import Results from './components/Results.jsx'
+import LivePvP from './components/LivePvP.jsx'
 
 export default function App() {
   const [username, setUsername] = useState('')
@@ -13,8 +14,16 @@ export default function App() {
   const [result, setResult] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [live, setLive] = useState(false)
 
   async function startMatch(name, chosenMode = 'offline') {
+    setCommittedName(name)
+    setCommittedMode(chosenMode)
+    if (chosenMode === 'live') {
+      setLive(true)
+      return
+    }
+    setLive(false)
     setError('')
     setBusy(true)
     try {
@@ -69,7 +78,9 @@ export default function App() {
 
       {error && <div className="error">{error}</div>}
 
-      {phase === 'setup' && (
+      {live && <LivePvP username={committedName} onExit={() => setLive(false)} />}
+
+      {!live && phase === 'setup' && (
         <div className="setup">
           <h2>Enter the arena</h2>
           <p className="hint">
@@ -90,8 +101,16 @@ export default function App() {
               onClick={() => setMode('pvp')}
               type="button"
             >
-              ⚔️ PvP
+              ⚔️ Async PvP
               <span className="mode-sub">vs another player's drafted squad</span>
+            </button>
+            <button
+              className={`mode-btn ${mode === 'live' ? 'active' : ''}`}
+              onClick={() => setMode('live')}
+              type="button"
+            >
+              🔴 Live PvP
+              <span className="mode-sub">real-time head-to-head draft</span>
             </button>
           </div>
           <form

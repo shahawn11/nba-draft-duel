@@ -13,10 +13,10 @@ Run:  uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 """
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import db, game
+from . import db, game, live
 from .models import (
     NewMatchRequest,
     PickRequest,
@@ -87,3 +87,11 @@ def submit_pick(match_id: str, req: PickRequest) -> dict:
 @app.get("/record/{username}", response_model=Record)
 def record(username: str) -> Record:
     return Record(**db.get_record(username))
+
+
+@app.websocket("/ws/pvp")
+async def ws_pvp(ws: WebSocket) -> None:
+    """Live real-time PvP: matchmaking + synchronized timed draft."""
+    await ws.accept()
+    username = ws.query_params.get("username") or "anon"
+    await live.manager.handle(ws, username[:40])

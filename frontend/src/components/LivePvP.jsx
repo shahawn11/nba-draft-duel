@@ -1,0 +1,117 @@
+import { useState, useEffect, useRef, useCallback } from 'react'
+import DraftBoard from './DraftBoard.jsx'
+import Results from './Results.jsx'
+
+const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
+
+function wsUrl(username) {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${proto}//${location.host}/ws/pvp?username=${encodeURIComponent(username)}`
+}
+
+export default function LivePvP({ username, onExit }) {
+  const [status, setStatus] = useState('connecting') // connecting|waiting|drafting|result|left|error
+  const [opponent, setOpponent] = useState('')
+  const [step, setStep] = useState(null)
+  const [deadline, setDeadline] = useState(0)
+  const [filled, setFilled] = useState([])
+  const [picksMade, setPicksMade] = useState(0)
+  const [opponentPicks, setOpponentPicks] = useState(0)
+  const [waitingForOpp, setWaitingForOpp] = useState(false)
+  const [result, setResult] = useState(null)
+  const [record, setRecord] = useState(null)
+  const [error, setError] = useState('')
+  const wsRef = useRef(null)
+  const [nonce, setNonce] = useState(0) // bump to reconnect
+
+  const connect = useCallback(() => {
+    setStatus('connecting'); setResult(null); setFilled([]); setPicksMade(0)
+    setOpponentPicks(0); setWaitingForOpp(false); setError('')
+    const ws = new WebSocket(wsUrl(username))
+    wsRef.current = ws
+    ws.onmessage = (ev) => {
+      const m = JSON.parse(ev.data)
+      switch (m.type) {
+        case 'waiting': setStatus('waiting'); break
+        case 'matched': setOpponent(m.opponent); break
+        case 'round':
+          setStep(m.current_step); setDeadline(m.deadline)
+          setPicksMade(m.picks_made); setWaitingForOpp(false); setStatus('drafting')
+          break
+        case 'picked_ok':
+        case 'auto_picked':
+          setFilled(m.filled || []); if (m.picks_made != null) setPicksMade(m.picks_made)
+          setWaitingForOpp(true)
+          break
+        case 'opponent_progress': setOpponentPicks(m.picks_made); break
+        case 'error': setError(m.detail); setWaitingForOpp(false); break
+        case 'result': setResult(m.result); setRecord(m.result.record); setStatus('result'); break
+        case 'opponent_left': setRecord(m.record); setStatus('left'); break
+        default: break
+      }
+    }
+    ws.onerror = () => setError('connection error')
+    ws.onclose = () => { if (statusRef.current === 'connecting') setStatus('error') }
+  }, [username])
+
+  // keep a ref of status for onclose
+  const statusRef = useRef(status)
+  useEffect(() => { statusRef.current = status }, [status])
+
+  useEffect(() => {
+    connect()
+    return () => { try { wsRef.current && wsRef.current.close() } catch { /* */ } }
+  }, [connect, nonce])
+
+  function pick(name, slot) {
+    setWaitingForOpp(true)
+    try { wsRef.current.send(JSON.stringify({ type: 'pick', player_name: name, slot })) } catch { /* */ }
+  }
+
+  const openSlots = SLOTS.filter((s) => !filled.some((f) => f.slot === s))
+  const view = step && {
+    current_step: step, filled, open_slots: openSlots,
+    picks_made: picksMade, total_slots: SLOTS.length,
+  }
+
+  return (
+    <div className="live">
+      {error && <div className="error">{error}</div>}
+
+      {(status === 'connecting' || status === 'waiting') && (
+        <div className="waiting-room">
+          <div className="spinner" />
+          <h2>{status === 'connecting' ? 'Connecting…' : 'Finding an opponent…'}</h2>
+          <p className="hint">Live PvP — you'll draft head-to-head on a 30s-per-pick clock.</p>
+          <button className="btn-cancel modal-actions" onClick={onExit}>Cancel</button>
+        </div>
+      )}
+
+      {status === 'drafting' && view && (
+        <>
+          <div className="live-banner">⚔️ Live vs <b>{opponent || 'opponent'}</b></div>
+          <DraftBoard
+            view={view}
+            onPick={pick}
+            deadline={deadline}
+            waiting={waitingForOpp}
+            opponentPicks={opponentPicks}
+          />
+        </>
+      )}
+
+      {status === 'result' && result && (
+        <Results result={result} onPlayAgain={() => setNonce((n) => n + 1)} />
+      )}
+
+      {status === 'left' && (
+        <div className="waiting-room">
+          <h2 className="banner win" style={{ padding: '18px 24px' }}>Opponent left — you win! 🏆</h2>
+          {record && <p className="hint">Record: {record.wins}W · {record.losses}L · {record.ties}T</p>}
+          <button className="submit" onClick={() => setNonce((n) => n + 1)}>Find new match</button>
+          <button className="btn-cancel" style={{ marginTop: 8 }} onClick={onExit}>Back</button>
+        </div>
+      )}
+    </div>
+  )
+}
