@@ -5,6 +5,8 @@ import Results from './components/Results.jsx'
 import LivePvP from './components/LivePvP.jsx'
 import Leaderboard from './components/Leaderboard.jsx'
 import AuthModal from './components/AuthModal.jsx'
+import Avatar from './components/Avatar.jsx'
+import AvatarPicker from './components/AvatarPicker.jsx'
 import { isMuted, toggleMuted } from './audio.js'
 
 function loadAuth() {
@@ -30,6 +32,7 @@ export default function App() {
   const [live, setLive] = useState(false)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
+  const [showAvatar, setShowAvatar] = useState(false)
   const [muted, setMuted] = useState(isMuted())
 
   const identity = (auth && auth.username) || guestId
@@ -69,6 +72,11 @@ export default function App() {
     localStorage.removeItem('ndd_auth')
     setAuthToken(null)
     api.record(guestId).then(setRecord).catch(() => {})
+  }
+
+  async function chooseAvatar(avatarId) {
+    const rec = await api.setAvatar(identity, avatarId)
+    setRecord(rec)
   }
 
   async function startMatch(chosenMode = 'offline') {
@@ -124,20 +132,21 @@ export default function App() {
             ? <button className="lb-toggle" onClick={logout}>Log out</button>
             : <button className="lb-toggle" onClick={() => setShowAuth(true)}>Log in / Sign up</button>}
           {record && (
-            <div className="record">
-              <span className="who">{loggedIn ? identity : (guestName.trim() || 'Guest')}</span>
-              <span className="rating-line">
-                {record.tier && (
-                  <span className={`tier-badge ${(record.tier || '').toLowerCase().replace(/[^a-z]/g, '')}`}>
-                    {record.tier}
-                  </span>
-                )}
-                {record.rating != null && <b className="rating-num">{record.rating}</b>}
+            <button className="identity-card" onClick={() => setShowAvatar(true)} title="Change avatar">
+              <Avatar id={record.avatar || 'amateur'} size={44} />
+              <span className="id-text">
+                <span className="id-name">{loggedIn ? identity : (guestName.trim() || 'Guest')}</span>
+                <span className="id-stats">
+                  {record.tier && (
+                    <span className={`tier-badge ${(record.tier || '').toLowerCase().replace(/[^a-z]/g, '')}`}>
+                      {record.tier}
+                    </span>
+                  )}
+                  {record.rating != null && <b className="rating-num">{record.rating}</b>}
+                  <span className="wl"><b className="w">{record.wins}W</b>·<b className="l">{record.losses}L</b></span>
+                </span>
               </span>
-              <span className="wlt">
-                <b className="w">{record.wins}W</b> · <b className="l">{record.losses}L</b> · <b className="t">{record.ties}T</b>
-              </span>
-            </div>
+            </button>
           )}
         </div>
       </header>
@@ -145,6 +154,10 @@ export default function App() {
       {error && <div className="error">{error}</div>}
 
       {showAuth && <AuthModal guestId={guestId} onClose={() => setShowAuth(false)} onAuth={onAuth} />}
+
+      {showAvatar && record && (
+        <AvatarPicker record={record} onSelect={chooseAvatar} onClose={() => setShowAvatar(false)} />
+      )}
 
       {showLeaderboard && <Leaderboard onClose={() => setShowLeaderboard(false)} highlight={identity} />}
 

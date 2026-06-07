@@ -71,6 +71,11 @@ class AuthRequest(BaseModel):
     guest_id: str | None = None   # signup: transfer this guest's stats
 
 
+class AvatarRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    avatar: str = Field(min_length=1, max_length=32)
+
+
 class PickRequest(BaseModel):
     player_name: str = Field(min_length=1)
     slot: str = Field(min_length=1)   # which open lineup slot to assign the player to
@@ -105,11 +110,14 @@ class Record(BaseModel):
     username: str
     wins: int
     losses: int
-    ties: int
     rating: int = 1000
+    peak_rating: int = 1000
     tier: str = "Amateur"
     next_tier: str | None = None
     next_tier_at: int | None = None
+    display_name: str | None = None
+    avatar: str = "amateur"
+    unlocked: list[str] = []
 
 
 class ResultOut(BaseModel):

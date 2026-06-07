@@ -141,7 +141,7 @@ export default function LivePvP({ username, token, displayName, onExit, onRecord
       {status === 'left' && (
         <div className="waiting-room">
           <h2 className="banner win" style={{ padding: '18px 24px' }}>Opponent left — you win! 🏆</h2>
-          {record && <p className="hint">Record: {record.wins}W · {record.losses}L · {record.ties}T</p>}
+          {record && <p className="hint">Record: {record.wins}W · {record.losses}L</p>}
           <button className="submit" onClick={() => setNonce((n) => n + 1)}>Find new match</button>
           <button className="btn-cancel" style={{ marginTop: 8 }} onClick={onExit}>Back</button>
         </div>

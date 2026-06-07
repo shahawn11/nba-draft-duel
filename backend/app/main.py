@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import db, game, live, auth, moderation
 from .models import (
     AuthRequest,
+    AvatarRequest,
     NewMatchRequest,
     PickRequest,
     Record,
@@ -108,6 +109,17 @@ def submit_pick(match_id: str, req: PickRequest) -> dict:
 @app.get("/record/{username}", response_model=Record)
 def record(username: str) -> Record:
     return Record(**db.get_record(username))
+
+
+@app.post("/avatar", response_model=Record)
+def set_avatar(req: AvatarRequest, authorization: str | None = Header(default=None)) -> Record:
+    """Select a rank avatar. Registered accounts require their token; the chosen
+    avatar must be unlocked by the player's peak rating."""
+    _authorize_identity(req.username, _bearer(authorization))
+    try:
+        return Record(**db.set_avatar(req.username, req.avatar))
+    except ValueError:
+        raise HTTPException(status_code=403, detail="that avatar is still locked")
 
 
 @app.get("/leaderboard")

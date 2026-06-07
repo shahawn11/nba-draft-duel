@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api.js'
+import Avatar from './Avatar.jsx'
 
 const TIER_CLASS = {
   'Amateur': 'amateur', 'Pro': 'pro', 'All-Star': 'allstar',
@@ -27,16 +28,21 @@ export default function Leaderboard({ onClose, highlight }) {
       {rows && rows.length > 0 && (
         <table className="lb-table">
           <thead>
-            <tr><th>#</th><th>Player</th><th>Tier</th><th>Rating</th><th>W–L–T</th></tr>
+            <tr><th>#</th><th>Player</th><th>Tier</th><th>Rating</th><th>W–L</th></tr>
           </thead>
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.username} className={highlight === r.username ? 'me' : ''}>
                 <td className="rank">{i + 1}</td>
-                <td className="lb-name">{r.display_name || r.username}</td>
+                <td className="lb-name">
+                  <span className="lb-player">
+                    <Avatar id={r.avatar || 'amateur'} size={28} />
+                    {r.display_name || r.username}
+                  </span>
+                </td>
                 <td><span className={`tier-badge ${TIER_CLASS[r.tier] || ''}`}>{r.tier}</span></td>
                 <td className="lb-rating">{r.rating}</td>
-                <td className="lb-wlt">{r.wins}–{r.losses}–{r.ties}</td>
+                <td className="lb-wlt">{r.wins}–{r.losses}</td>
               </tr>
             ))}
           </tbody>

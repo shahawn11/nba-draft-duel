@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS users (
     wins     INTEGER NOT NULL DEFAULT 0,
     losses   INTEGER NOT NULL DEFAULT 0,
     ties     INTEGER NOT NULL DEFAULT 0,
-    rating   INTEGER NOT NULL DEFAULT 1000
+    rating   INTEGER NOT NULL DEFAULT 1000,
+    avatar       TEXT NOT NULL DEFAULT 'amateur',
+    peak_rating  INTEGER NOT NULL DEFAULT 1000
 );
 CREATE TABLE IF NOT EXISTS matches (
     id             TEXT PRIMARY KEY,
@@ -68,6 +70,13 @@ def init_db() -> None:
             c.execute(f"ALTER TABLE users ADD COLUMN rating INTEGER NOT NULL DEFAULT {rating.START_RATING}")
         if "display_name" not in cols:
             c.execute("ALTER TABLE users ADD COLUMN display_name TEXT")
+        if "avatar" not in cols:
+            c.execute("ALTER TABLE users ADD COLUMN avatar TEXT NOT NULL DEFAULT 'amateur'")
+        if "peak_rating" not in cols:
+            # Backfill peak to at least the current rating so existing players
+            # keep any rank avatars their rating already qualifies for.
+            c.execute(f"ALTER TABLE users ADD COLUMN peak_rating INTEGER NOT NULL DEFAULT {rating.START_RATING}")
+            c.execute("UPDATE users SET peak_rating = rating WHERE rating > peak_rating")
 
 
 # ---- users / records -------------------------------------------------------
@@ -91,37 +100,63 @@ def _record_dict(row) -> dict:
     d = dict(row)
     r = d.get("rating", rating.START_RATING)
     d["rating"] = r
+    peak = max(d.get("peak_rating") or r, r)
+    d["peak_rating"] = peak
     d["tier"] = rating.tier_name(r)
     nxt = rating.next_tier(r)
     d["next_tier"] = nxt["name"] if nxt else None
     d["next_tier_at"] = nxt["min"] if nxt else None
     d["display_name"] = d.get("display_name") or d.get("username")
+    # Avatars: default to the always-unlocked Amateur brown shirt.
+    d["avatar"] = d.get("avatar") or "amateur"
+    d["unlocked"] = rating.unlocked_avatar_ids(peak)
+    # Ties are no longer tracked in records (OT resolves all games).
+    d.pop("ties", None)
     return d
 
 
 def get_record(username: str) -> dict:
     with _conn() as c:
         row = c.execute(
-            "SELECT username, wins, losses, ties, rating, display_name FROM users WHERE username = ?",
+            "SELECT username, wins, losses, rating, peak_rating, display_name, avatar "
+            "FROM users WHERE username = ?",
             (username,),
         ).fetchone()
     if not row:
         return _record_dict({"username": username, "wins": 0, "losses": 0,
-                             "ties": 0, "rating": rating.START_RATING})
+                             "rating": rating.START_RATING,
+                             "peak_rating": rating.START_RATING, "avatar": "amateur"})
     return _record_dict(row)
 
 
-def apply_result(username: str, outcome: str) -> dict:
-    """outcome in {'win','loss','tie'}; updates W/L/T and rating; returns record."""
-    col = {"win": "wins", "loss": "losses", "tie": "ties"}[outcome]
+def set_avatar(username: str, avatar_id: str) -> dict:
+    """Set the player's avatar. Rank avatars require the tier to be unlocked
+    (by peak rating); unknown/locked ids are rejected with ValueError."""
     ensure_user(username)
+    rec = get_record(username)
+    if avatar_id not in rec["unlocked"]:
+        raise ValueError("locked")
     with _conn() as c:
-        row = c.execute("SELECT rating FROM users WHERE username = ?", (username,)).fetchone()
+        c.execute("UPDATE users SET avatar = ? WHERE username = ?", (avatar_id, username))
+    return get_record(username)
+
+
+def apply_result(username: str, outcome: str) -> dict:
+    """outcome in {'win','loss'}; updates W/L + rating (+peak); returns record.
+    Ties no longer occur (OT resolves them) but are tolerated as a no-op."""
+    ensure_user(username)
+    if outcome == "tie":
+        return get_record(username)
+    col = {"win": "wins", "loss": "losses"}[outcome]
+    with _conn() as c:
+        row = c.execute("SELECT rating, peak_rating FROM users WHERE username = ?", (username,)).fetchone()
         cur = row["rating"] if row and row["rating"] is not None else rating.START_RATING
+        peak = row["peak_rating"] if row and row["peak_rating"] is not None else cur
         new_rating = rating.apply_outcome(cur, outcome)
+        new_peak = max(peak, new_rating)
         c.execute(
-            f"UPDATE users SET {col} = {col} + 1, rating = ? WHERE username = ?",
-            (new_rating, username),
+            f"UPDATE users SET {col} = {col} + 1, rating = ?, peak_rating = ? WHERE username = ?",
+            (new_rating, new_peak, username),
         )
     return get_record(username)
 
@@ -129,8 +164,9 @@ def apply_result(username: str, outcome: str) -> dict:
 def leaderboard(limit: int = 20) -> list[dict]:
     with _conn() as c:
         rows = c.execute(
-            "SELECT username, wins, losses, ties, rating, display_name FROM users "
-            "WHERE (wins + losses + ties) > 0 "
+            "SELECT username, wins, losses, rating, peak_rating, display_name, avatar "
+            "FROM users "
+            "WHERE (wins + losses) > 0 "
             "ORDER BY rating DESC, wins DESC, username ASC LIMIT ?",
             (limit,),
         ).fetchall()
@@ -243,12 +279,16 @@ def transfer_stats(src: str, dst: str) -> None:
     if not src or src == dst:
         return
     with _conn() as c:
-        s = c.execute("SELECT wins, losses, ties, rating FROM users WHERE username = ?", (src,)).fetchone()
+        s = c.execute("SELECT wins, losses, ties, rating, peak_rating, avatar FROM users WHERE username = ?", (src,)).fetchone()
         if not s:
             return
         c.execute("INSERT OR IGNORE INTO users(username) VALUES (?)", (dst,))
+        d = c.execute("SELECT peak_rating FROM users WHERE username = ?", (dst,)).fetchone()
+        dst_peak = d["peak_rating"] if d and d["peak_rating"] is not None else rating.START_RATING
+        new_peak = max(dst_peak, s["peak_rating"] or s["rating"], s["rating"])
         c.execute(
-            "UPDATE users SET wins = wins + ?, losses = losses + ?, ties = ties + ?, rating = ? WHERE username = ?",
-            (s["wins"], s["losses"], s["ties"], s["rating"], dst),
+            "UPDATE users SET wins = wins + ?, losses = losses + ?, ties = ties + ?, "
+            "rating = ?, peak_rating = ?, avatar = ? WHERE username = ?",
+            (s["wins"], s["losses"], s["ties"], s["rating"], new_peak, s["avatar"] or "amateur", dst),
         )
         c.execute("DELETE FROM users WHERE username = ?", (src,))

@@ -30,6 +30,8 @@ export const api = {
       body: JSON.stringify({ player_name: playerName, slot }),
     }),
   record: (username) => req(`/record/${encodeURIComponent(username)}`),
+  setAvatar: (username, avatar) =>
+    req('/avatar', { method: 'POST', body: JSON.stringify({ username, avatar }) }),
   leaderboard: () => req('/leaderboard'),
   signup: (username, password, guest_id) =>
     req('/auth/signup', { method: 'POST', body: JSON.stringify({ username, password, guest_id }) }),

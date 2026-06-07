@@ -75,7 +75,7 @@ def test_full_flow() -> None:
     assert result["ranked"] is False
     assert result["rating_change"] == 0
     rec = client.get(f"/record/{user}").json()
-    assert rec["wins"] + rec["losses"] + rec["ties"] == 0
+    assert rec["wins"] + rec["losses"] == 0
     print("OK:", result["outcome"], "vs", result["opponent_team"],
           "| final", round(result["your_final"]), "-", round(result["opponent_final"]),
           "| unranked, record", rec)

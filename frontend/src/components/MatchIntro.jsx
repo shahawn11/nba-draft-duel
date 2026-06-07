@@ -2,6 +2,7 @@
 // record slide in from opposite sides and collide in the middle.
 import { useEffect } from 'react'
 import { playClash } from '../sound.js'
+import Avatar from './Avatar.jsx'
 
 function tierCls(tier) {
   return (tier || '').toLowerCase().replace(/[^a-z]/g, '')
@@ -11,12 +12,13 @@ function Fighter({ side, name, record }) {
   const label = name || (record && record.display_name) || 'Player'
   return (
     <div className={`fighter ${side}`}>
+      <Avatar id={(record && record.avatar) || 'amateur'} size={56} />
       <div className="fighter-name">{label}</div>
       {record && (
         <>
           <span className={`tier-badge ${tierCls(record.tier)}`}>{record.tier}</span>
           <div className="fighter-rating">{record.rating}</div>
-          <div className="fighter-wlt">{record.wins}W · {record.losses}L · {record.ties}T</div>
+          <div className="fighter-wlt">{record.wins}W · {record.losses}L</div>
         </>
       )}
     </div>
