@@ -141,7 +141,7 @@ def signup(req: AuthRequest) -> dict:
     db.ensure_user(uname)
     if req.guest_id:
         db.transfer_stats(req.guest_id, uname)  # keep current guest stats
-    db.set_display_name(uname, uname)  # the username is now their official name
+    db.set_display_name(uname, uname, force=True)  # the username is now their official name
     token = auth.new_token()
     db.create_session(uname, token)
     return {"token": token, "username": uname, "record": db.get_record(uname)}

@@ -41,6 +41,9 @@ export default function App() {
   const identity = (auth && auth.username) || guestId
   const loggedIn = !!(auth && auth.username)
   const displayName = loggedIn ? null : (guestName.trim() || null)
+  // A guest name is locked once committed server-side (display_name set to a
+  // custom value). Only signing up can change it after that.
+  const guestNamed = !loggedIn && !!record && !!record.display_name && record.display_name !== guestId
 
   function setGuest(name) {
     setGuestName(name)
@@ -206,7 +209,9 @@ export default function App() {
             Playing as <b>{loggedIn ? identity : (guestName.trim() || 'Guest')}</b>
             {!loggedIn && <> — <button className="link-btn" onClick={() => setShowAuth(true)}>sign up</button> to keep your record.</>}
           </p>
-          {!loggedIn && (
+          {!loggedIn && (guestNamed ? (
+            <p className="hint guest-locked">🔒 Guest name set — <button className="link-btn" onClick={() => setShowAuth(true)}>sign up</button> to change it.</p>
+          ) : (
             <input
               className="guest-name"
               placeholder="guest name (optional)"
@@ -214,7 +219,7 @@ export default function App() {
               value={guestName}
               onChange={(e) => setGuest(e.target.value)}
             />
-          )}
+          ))}
           <div className="mode-toggle">
             <button className={`mode-btn ${mode === 'offline' ? 'active' : ''}`} onClick={() => setMode('offline')} type="button">
               🏀 Offline

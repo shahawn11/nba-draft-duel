@@ -94,14 +94,19 @@ def ensure_user(username: str) -> None:
         c.execute("INSERT OR IGNORE INTO users(username) VALUES (?)", (username,))
 
 
-def set_display_name(username: str, name: str) -> None:
+def set_display_name(username: str, name: str, force: bool = False) -> None:
     """Set a guest's display label (record key stays the username/guest id).
-    Ignored for registered accounts (their display is the account name)."""
+    A guest name is LOCKED once set -- subsequent calls are ignored unless
+    force=True (used at signup, where the account username becomes official)."""
     name = (name or "").strip()[:24]
     if not name:
         return
     ensure_user(username)
     with _conn() as c:
+        if not force:
+            row = c.execute("SELECT display_name FROM users WHERE username = ?", (username,)).fetchone()
+            if row and (row["display_name"] or "").strip():
+                return  # already named -> locked
         c.execute("UPDATE users SET display_name = ? WHERE username = ?", (name, username))
 
 
