@@ -35,8 +35,11 @@ else
 fi
 echo "==> Using compose: $COMPOSE"
 
+echo "==> Clearing any previous/orphan containers (a stale one can hold port 8000)…"
+$COMPOSE down --remove-orphans >/dev/null 2>&1 || true
+
 echo "==> Bringing up the stack (build + force-recreate to avoid stale containers)…"
-$COMPOSE up -d --build --force-recreate
+$COMPOSE up -d --build --force-recreate --remove-orphans
 
 echo "==> Waiting for API health at $API/health …"
 for i in $(seq 1 60); do
@@ -47,11 +50,17 @@ done
 
 echo "==> Confirming the API is using Postgres (not SQLite)…"
 $COMPOSE exec -T api sh -c 'echo "DATABASE_URL=$DATABASE_URL"'
-backend=$(curl -fsS "$API/health" | "$PY" -c 'import sys,json; print(json.load(sys.stdin).get("db"))')
-echo "   /health db backend = $backend"
+raw=$(curl -fsS "$API/health" || true)
+echo "   raw /health: $raw"
+backend=$(printf '%s' "$raw" | "$PY" -c 'import sys,json;
+try: print(json.load(sys.stdin).get("db") or "")
+except Exception: print("")' 2>/dev/null)
+echo "   /health db backend = ${backend:-<none>}"
 if [ "$backend" != "postgresql" ]; then
-  echo "✗ API is NOT on Postgres (got '$backend'). Likely a STALE container running old code."
-  echo "  Fix: $COMPOSE down && $COMPOSE up -d --build --force-recreate   (or: $COMPOSE build --no-cache api)"
+  echo "✗ The API answering on $API is NOT on Postgres (got '${backend:-none}')."
+  echo "  A stale/orphan container is likely holding the port. Check:"
+  echo "    docker ps --filter publish=8000"
+  echo "  Then: $COMPOSE down --remove-orphans && $COMPOSE up -d --build --force-recreate"
   exit 1
 fi
 $COMPOSE exec -T db psql -U duel -d duel -c "\dt" | grep -E "users|matches|accounts|sessions" \
