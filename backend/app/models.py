@@ -62,6 +62,7 @@ class PlayerOut(BaseModel):
 
 class NewMatchRequest(BaseModel):
     username: str = Field(min_length=1, max_length=40)
+    mode: str = "offline"   # "offline" (vs current NBA team) | "pvp" (vs a saved squad)
 
 
 class PickRequest(BaseModel):

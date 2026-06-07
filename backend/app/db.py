@@ -31,6 +31,13 @@ CREATE TABLE IF NOT EXISTS matches (
     result_json    TEXT,            -- scored DuelResult once drafted
     created_at     REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS submitted_lineups (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    username    TEXT NOT NULL,
+    players_json TEXT NOT NULL,     -- the drafted five (list of player dicts, slot=position)
+    label       TEXT,               -- how this squad reads as an opponent
+    created_at  REAL NOT NULL
+);
 """
 
 
@@ -125,3 +132,31 @@ def resolve_match(match_id: str, state_json: dict, result_json: dict) -> None:
             "UPDATE matches SET status = 'resolved', state_json = ?, result_json = ? WHERE id = ?",
             (json.dumps(state_json), json.dumps(result_json), match_id),
         )
+
+
+# ---- async PvP opponent pool ----------------------------------------------
+def save_submitted_lineup(username: str, players_json: list, label: str) -> None:
+    """Store a completed drafted five so future PvP matches can face it."""
+    with _conn() as c:
+        c.execute(
+            "INSERT INTO submitted_lineups(username, players_json, label, created_at) VALUES (?,?,?,?)",
+            (username, json.dumps(players_json), label, time.time()),
+        )
+
+
+def random_submitted_lineup(exclude_username: str | None = None) -> dict | None:
+    """Return a random previously-submitted lineup, preferably from someone else."""
+    with _conn() as c:
+        row = c.execute(
+            "SELECT username, players_json, label FROM submitted_lineups "
+            "WHERE username != ? ORDER BY RANDOM() LIMIT 1",
+            (exclude_username or "",),
+        ).fetchone()
+        if row is None:
+            # no rivals from other users yet
+            return None
+    return {
+        "username": row["username"],
+        "players": json.loads(row["players_json"]),
+        "label": row["label"],
+    }

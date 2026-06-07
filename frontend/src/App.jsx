@@ -6,20 +6,23 @@ import Results from './components/Results.jsx'
 export default function App() {
   const [username, setUsername] = useState('')
   const [committedName, setCommittedName] = useState('')
+  const [mode, setMode] = useState('offline')
+  const [committedMode, setCommittedMode] = useState('offline')
   const [record, setRecord] = useState(null)
   const [view, setView] = useState(null) // latest step view from backend
   const [result, setResult] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  async function startMatch(name) {
+  async function startMatch(name, chosenMode = 'offline') {
     setError('')
     setBusy(true)
     try {
-      const v = await api.newMatch(name)
+      const v = await api.newMatch(name, chosenMode)
       setView(v)
       setResult(null)
       setCommittedName(name)
+      setCommittedMode(chosenMode)
       setRecord(await api.record(name))
     } catch (e) {
       setError(e.message)
@@ -70,13 +73,31 @@ export default function App() {
         <div className="setup">
           <h2>Enter the arena</h2>
           <p className="hint">
-            Offline mode: a random decade &amp; team is revealed for each of your
-            five lineup slots — draft a player who fits, one pick at a time.
+            Each of your five slots reveals a random decade &amp; team — draft a
+            player who fits, one pick at a time.
           </p>
+          <div className="mode-toggle">
+            <button
+              className={`mode-btn ${mode === 'offline' ? 'active' : ''}`}
+              onClick={() => setMode('offline')}
+              type="button"
+            >
+              🏀 Offline
+              <span className="mode-sub">vs a current NBA starting five</span>
+            </button>
+            <button
+              className={`mode-btn ${mode === 'pvp' ? 'active' : ''}`}
+              onClick={() => setMode('pvp')}
+              type="button"
+            >
+              ⚔️ PvP
+              <span className="mode-sub">vs another player's drafted squad</span>
+            </button>
+          </div>
           <form
             onSubmit={(e) => {
               e.preventDefault()
-              if (username.trim()) startMatch(username.trim())
+              if (username.trim()) startMatch(username.trim(), mode)
             }}
           >
             <input
@@ -97,7 +118,7 @@ export default function App() {
       )}
 
       {phase === 'result' && result && (
-        <Results result={result} onPlayAgain={() => startMatch(committedName)} />
+        <Results result={result} onPlayAgain={() => startMatch(committedName, committedMode)} />
       )}
     </div>
   )
