@@ -12,7 +12,7 @@ from __future__ import annotations
 import random
 import uuid
 
-from . import db, dataset
+from . import db, dataset, teams
 from .models import player_from_dict, player_to_dict
 from .positions import SLOTS
 from .scoring import duel, roll_status, HOT_STAT_MULT, SLUMP_STAT_MULT
@@ -54,7 +54,7 @@ def _build_step(rng: random.Random, open_slots: list[str], picked: set[str]) -> 
                   p.name not in picked)
         for p in pool[chosen]
     ]
-    return {"decade": decade, "team": team, "candidates": candidates}
+    return {"decade": decade, "team": teams.era_team_name(team, decade), "candidates": candidates}
 
 
 def _public_view(match: dict, state: dict) -> dict:
@@ -221,7 +221,7 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
                 {
                     "name": s.player.name,
                     "position": s.player.position,
-                    "team": s.player.team,
+                    "team": teams.era_team_name(s.player.team, s.player.decade),
                     "decade": s.player.decade,
                     "height_in": s.player.height_in,
                     "rating": round(s.total - team.status_deltas.get(s.player.name, 0.0), 1),
