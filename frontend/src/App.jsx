@@ -19,7 +19,7 @@ export default function App() {
   async function startMatch(name, chosenMode = 'offline') {
     setCommittedName(name)
     setCommittedMode(chosenMode)
-    if (chosenMode === 'live') {
+    if (chosenMode === 'pvp') {
       setLive(true)
       return
     }
@@ -101,15 +101,7 @@ export default function App() {
               onClick={() => setMode('pvp')}
               type="button"
             >
-              ⚔️ Async PvP
-              <span className="mode-sub">vs another player's drafted squad</span>
-            </button>
-            <button
-              className={`mode-btn ${mode === 'live' ? 'active' : ''}`}
-              onClick={() => setMode('live')}
-              type="button"
-            >
-              🔴 Live PvP
+              ⚔️ PvP
               <span className="mode-sub">real-time head-to-head draft</span>
             </button>
           </div>

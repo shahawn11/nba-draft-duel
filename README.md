@@ -11,8 +11,7 @@ five is then scored against an opponent's in a simulated game. Win → W, lose �
 | Mode | Opponent | Status |
 |------|----------|--------|
 | **Offline** | A real **current NBA starting five** (random team) | ✅ playable |
-| **Async PvP** | Another player's previously submitted five | ✅ playable |
-| **Live PvP** | Real-time draft vs another player (WebSockets) | ✅ playable |
+| **PvP** | Real-time head-to-head draft vs another player (WebSockets) | ✅ playable |
 
 ## Stack
 
@@ -34,17 +33,11 @@ Rules: five slots (PG/SG/SF/PF/C); a player can only go in a slot they're
 eligible for (most are single-slot, true combos are multi); a player already
 drafted can't be picked again even if they reappear from another team/decade.
 
-**Async PvP** (`mode: "pvp"` on `POST /match`): instead of a current NBA team,
-you face another player's previously-submitted five. Every completed match adds
-the drafted squad to the opponent pool, so it grows as people play; if no rival
-exists yet it falls back to a current NBA team. Records currently update for the
-active drafter (the stored squad is a "ghost").
-
-**Live PvP** (`WebSocket /ws/pvp?username=…`): two players are matched from a
-queue and draft simultaneously on a **30s-per-pick clock** (auto-pick on
-timeout). After five rounds both lineups are scored head-to-head and **both
-records update**; a disconnect awards the other player the win. State is
-in-memory (single process); `app/live.py` holds the match manager.
+**PvP** (`WebSocket /ws/pvp?username=…`): two players are matched from a queue
+and draft simultaneously on a **10s-per-pick clock** (auto-pick on timeout).
+After five rounds both lineups are scored head-to-head and **both records
+update**; a disconnect awards the other player the win. State is in-memory
+(single process); `app/live.py` holds the match manager.
 
 ## Layout
 

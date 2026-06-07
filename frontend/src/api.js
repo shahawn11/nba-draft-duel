@@ -19,8 +19,8 @@ async function req(path, options = {}) {
 }
 
 export const api = {
-  newMatch: (username, mode = 'offline') =>
-    req('/match', { method: 'POST', body: JSON.stringify({ username, mode }) }),
+  newMatch: (username) =>
+    req('/match', { method: 'POST', body: JSON.stringify({ username }) }),
   pick: (matchId, playerName, slot) =>
     req(`/match/${matchId}/pick`, {
       method: 'POST',

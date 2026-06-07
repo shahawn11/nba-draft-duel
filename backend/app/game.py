@@ -74,25 +74,11 @@ def _public_view(match: dict, state: dict) -> dict:
     }
 
 
-def _select_opponent(username: str, mode: str, rng) -> tuple[str, list[dict], str]:
-    """Return (opponent_label, opponent_player_dicts, effective_mode)."""
-    if mode == "pvp":
-        opp = db.random_submitted_lineup(exclude_username=username)
-        if opp:
-            label = opp["label"] or f"{opp['username']}'s squad"
-            return label, opp["players"], "pvp"
-        # No human rivals yet -> fall back to a current NBA team, but say so.
-        team, players = dataset.random_current_opponent(rng)
-        return f"{team} (no rivals yet)", [player_to_dict(p) for p in players], "pvp"
-    team, players = dataset.random_current_opponent(rng)
-    return team, [player_to_dict(p) for p in players], "offline"
-
-
-def new_match(username: str, mode: str = "offline", seed: int | None = None) -> dict:
+def new_match(username: str, seed: int | None = None) -> dict:
     rng = random.Random(seed)
     db.ensure_user(username)
 
-    opp_team, opponent_dicts, eff_mode = _select_opponent(username, mode, rng)
+    opp_team, opponent = dataset.random_current_opponent(rng)
     open_slots = list(SLOTS)
     state = {
         "open_slots": open_slots,
@@ -105,11 +91,10 @@ def new_match(username: str, mode: str = "offline", seed: int | None = None) -> 
         match_id=match_id,
         username=username,
         opponent_team=opp_team,
-        opponent_json=opponent_dicts,
+        opponent_json=[player_to_dict(p) for p in opponent],
         state_json=state,
-        mode=eff_mode,
     )
-    match = {"id": match_id, "username": username, "mode": eff_mode, "status": "open"}
+    match = {"id": match_id, "username": username, "mode": "offline", "status": "open"}
     return _public_view(match, state)
 
 
@@ -273,12 +258,6 @@ def _resolve(match: dict, state: dict) -> dict:
     result_payload["record"] = record
 
     db.resolve_match(match["id"], state, result_payload)
-    # Feed the async-PvP pool: this drafted five becomes a future opponent.
-    db.save_submitted_lineup(
-        match["username"],
-        [pk["player"] for pk in state["picks"]],
-        f"{match['username']}'s squad",
-    )
     return {"done": True, "result": result_payload}
 
 

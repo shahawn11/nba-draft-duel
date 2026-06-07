@@ -12,7 +12,7 @@ function Timer({ deadline }) {
     return () => clearInterval(id)
   }, [])
   const left = Math.max(0, Math.ceil(deadline - now))
-  const pct = Math.max(0, Math.min(100, (left / 30) * 100))
+  const pct = Math.max(0, Math.min(100, (left / 10) * 100))
   return (
     <div className="timer">
       <div className="timer-bar" style={{ width: `${pct}%` }} />

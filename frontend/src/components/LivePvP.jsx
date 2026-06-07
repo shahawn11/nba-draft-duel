@@ -82,7 +82,7 @@ export default function LivePvP({ username, onExit }) {
         <div className="waiting-room">
           <div className="spinner" />
           <h2>{status === 'connecting' ? 'Connecting…' : 'Finding an opponent…'}</h2>
-          <p className="hint">Live PvP — you'll draft head-to-head on a 30s-per-pick clock.</p>
+          <p className="hint">PvP — you'll draft head-to-head on a 10s-per-pick clock.</p>
           <button className="btn-cancel modal-actions" onClick={onExit}>Cancel</button>
         </div>
       )}

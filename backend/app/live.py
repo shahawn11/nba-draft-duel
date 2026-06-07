@@ -19,7 +19,7 @@ from . import db, game
 from .models import player_from_dict
 from .positions import SLOTS
 
-ROUND_SECONDS = 30
+ROUND_SECONDS = 10
 NUM_ROUNDS = len(SLOTS)
 _INVERSE = {"win": "loss", "loss": "win", "tie": "tie"}
 
@@ -150,9 +150,6 @@ class LiveGame:
         # Await the sends so results arrive before the sockets close.
         await self.a.send({"type": "result", "result": pa})
         await self.b.send({"type": "result", "result": pb})
-        for p in (self.a, self.b):
-            db.save_submitted_lineup(p.username, [pk["player"] for pk in p.picks],
-                                     f"{p.username}'s squad")
         self.a.done.set()
         self.b.done.set()
 

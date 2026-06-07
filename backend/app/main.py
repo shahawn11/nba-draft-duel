@@ -60,8 +60,8 @@ def teams() -> dict:
 
 @app.post("/match")
 def create_match(req: NewMatchRequest) -> dict:
-    """Start a match -> returns the first draft step (opponent hidden)."""
-    return game.new_match(req.username, mode=req.mode)
+    """Start an offline match -> returns the first draft step (opponent hidden)."""
+    return game.new_match(req.username)
 
 
 @app.get("/match/{match_id}")
