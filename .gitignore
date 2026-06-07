@@ -25,3 +25,9 @@ npm-debug.log*
 *.swp
 .idea/
 .vscode/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
