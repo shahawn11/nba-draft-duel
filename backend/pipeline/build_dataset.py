@@ -40,6 +40,12 @@ import sqlite3
 import time
 from pathlib import Path
 
+# Ensure the backend dir (parent of pipeline/) is importable so `app.*` works
+# whether this is run as `python pipeline/build_dataset.py` or `-m pipeline...`.
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # --- Franchise abbreviation -> full name (incl. common historical aliases) --
 # Keeps decade x team keys consistent (e.g. SEA/OKC, VAN/MEM, CHH/CHA).
 TEAM_ABBREV_TO_FULL: dict[str, str] = {
