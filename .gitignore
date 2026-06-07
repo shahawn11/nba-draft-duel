@@ -1,0 +1,27 @@
+# Python
+.venv*/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# Generated data (rebuilt by the pipeline / at runtime)
+backend/app/data/*.db
+
+# Node / frontend
+node_modules/
+dist/
+*.log
+npm-debug.log*
+
+# Env / secrets
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

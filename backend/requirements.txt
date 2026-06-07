@@ -1,0 +1,5 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+# Data pipeline (optional; only needed to rebuild the historical dataset)
+nba_api>=1.4
+pandas>=2.0
