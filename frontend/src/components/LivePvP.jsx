@@ -2,14 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import DraftBoard from './DraftBoard.jsx'
 import Results from './Results.jsx'
 import MatchIntro from './MatchIntro.jsx'
+import { wsBaseUrl } from '../api.js'
 
 const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
 
 function wsUrl(username, token, displayName) {
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
   const t = token ? `&token=${encodeURIComponent(token)}` : ''
   const d = displayName ? `&display_name=${encodeURIComponent(displayName)}` : ''
-  return `${proto}//${location.host}/ws/pvp?username=${encodeURIComponent(username)}${t}${d}`
+  return `${wsBaseUrl()}/ws/pvp?username=${encodeURIComponent(username)}${t}${d}`
 }
 
 export default function LivePvP({ username, token, displayName, onExit, onRecord, meRecord, onActive }) {

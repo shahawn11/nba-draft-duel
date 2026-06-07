@@ -26,8 +26,12 @@ docker compose up --build
    - `DATABASE_URL=postgresql://...` (after the PG migration)
    - `TRUST_PROXY=true` (Cloudflare forwards the client IP)
    - `GAME_DB_PATH=/data/game.db` (mount a volume) — temporary until PG
-3. **Frontend**: `cd frontend && npm run build` → deploy `dist/` to Cloudflare
-   Pages (or any static host). Point it at the API origin.
+3. **Frontend** (Cloudflare Pages):
+   - Build command `npm run build`, output dir `dist`, root `frontend/`.
+   - Set build env **`VITE_API=https://api.yourdomain.com`** — both REST and the
+     PvP WebSocket (`wss://api.yourdomain.com/ws/pvp`) derive from it.
+   - `frontend/public/_redirects` ships an SPA fallback (`/* /index.html 200`).
+   - Put the app on your apex/`www` domain; the API on `api.` subdomain.
 4. **Cloudflare**:
    - DNS + proxied (orange-cloud) record for the API host → TLS at the edge.
    - **WAF rate-limiting rules** as a coarse first layer (per-IP); the app's

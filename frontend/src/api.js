@@ -1,5 +1,20 @@
 // Thin API client. In dev, Vite proxies /api -> backend (see vite.config.js).
+// In prod, set VITE_API to the API origin (e.g. https://api.yourdomain.com).
 const BASE = import.meta.env.VITE_API ?? '/api'
+export const API_BASE = BASE
+
+// WebSocket origin. When VITE_API is an absolute URL (prod), derive ws(s)://
+// from it; otherwise (dev '/api' proxy) use the current page host.
+export function wsBaseUrl() {
+  const api = import.meta.env.VITE_API
+  if (api && /^https?:\/\//i.test(api)) {
+    const u = new URL(api)
+    const proto = u.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${proto}//${u.host}`
+  }
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${proto}//${location.host}`
+}
 
 let authToken = null
 export function setAuthToken(t) { authToken = t }
