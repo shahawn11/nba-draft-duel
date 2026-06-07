@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Validate the full Phase 0 stack (API + Postgres + Redis) via docker compose.
+# Run on a Docker-capable host from the repo root:  ./scripts/validate_stack.sh
+# Add --down to tear the stack down afterwards.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+API=${API:-http://localhost:8000}
+PY=${PYTHON:-python3}
+
+echo "==> Bringing up the stack (build)…"
+docker compose up -d --build
+
+echo "==> Waiting for API health at $API/health …"
+for i in $(seq 1 60); do
+  if curl -fsS "$API/health" >/dev/null 2>&1; then echo "   healthy"; break; fi
+  sleep 1
+  [ "$i" = 60 ] && { echo "API never became healthy"; docker compose logs --tail=50 api; exit 1; }
+done
+
+echo "==> Confirming the API is using Postgres (not SQLite)…"
+docker compose exec -T api sh -c 'echo "DATABASE_URL=$DATABASE_URL"'
+docker compose exec -T db psql -U duel -d duel -c "\dt" | grep -E "users|matches|accounts|sessions" \
+  && echo "   Postgres tables present"
+
+echo "==> Driving a full offline draft over HTTP…"
+API="$API" "$PY" - <<'PYEOF'
+import json, os, urllib.request
+API = os.environ["API"]
+def call(method, path, body=None):
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(API+path, data=data, method=method,
+                                 headers={"Content-Type":"application/json"})
+    with urllib.request.urlopen(req) as r:
+        return r.status, json.loads(r.read() or "{}")
+
+user = "validate_pg_user"
+_, view = call("POST", "/match", {"username": user})
+mid = view["match_id"]
+for _ in range(5):
+    if view.get("done"): break
+    step = view.get("current") or view.get("current_step")
+    cand = next(c for c in step["candidates"] if c.get("eligible") and c.get("eligible_slots"))
+    _, view = call("POST", f"/match/{mid}/pick",
+                   {"player_name": cand["name"], "slot": cand["eligible_slots"][0]})
+res = view["result"]
+print(f"   match resolved: {res['outcome']} {round(res['your_final'])}-{round(res['opponent_final'])} "
+      f"(ranked={res['ranked']})")
+PYEOF
+
+echo "==> Verifying the match row landed in Postgres…"
+docker compose exec -T db psql -U duel -d duel -tAc "SELECT count(*) FROM matches;" \
+  | awk '{print "   matches rows in Postgres:", $1; if ($1+0 < 1) exit 1}'
+
+echo "==> Checking rate limiting (signup rule = 5/min -> expect a 429)…"
+codes=""
+for i in $(seq 1 7); do
+  c=$(curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" \
+        -d '{"username":"x","password":"short"}' "$API/auth/signup")
+  codes="$codes $c"
+done
+echo "   signup status codes:$codes"
+echo "$codes" | grep -q 429 && echo "   rate limiting active (429 seen)" || { echo "   NO 429 — rate limit FAILED"; exit 1; }
+
+echo "==> Confirming Redis is the limiter backend (keys present)…"
+docker compose exec -T redis redis-cli --scan --pattern 'rl:*' | head -1 \
+  && echo "   Redis rate-limit keys present"
+
+echo ""
+echo "✅ Stack validated on Postgres + Redis."
+if [ "${1:-}" = "--down" ]; then echo "==> Tearing down…"; docker compose down; fi

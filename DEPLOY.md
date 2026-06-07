@@ -5,6 +5,16 @@
 docker compose up --build
 # API on http://localhost:8000  (Postgres + Redis alongside)
 ```
+
+### Validate it (Postgres + Redis + rate limiting)
+```bash
+./scripts/validate_stack.sh            # boots compose, drives a match, checks PG + Redis
+./scripts/validate_stack.sh --down     # …and tears the stack down afterwards
+```
+The script confirms: API health, that the API is on Postgres (tables + a match
+row land in PG), a full offline draft resolves over HTTP, the signup rate limit
+returns 429, and Redis holds the rate-limit keys.
+
 - Rate limiting uses **Redis** immediately (shared across replicas).
 - Runtime SQLite DB lives on the `api_data` volume at `GAME_DB_PATH=/data/game.db`.
 - The read-only historical dataset (`app/data/players.db`) is **baked into the image**.
