@@ -798,6 +798,17 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 
 /* ---- Win-streak bonus + best stats ---- */
 .streak-bonus { color: var(--accent); font-size: 0.9rem; }
+.streak { margin-left: 4px; white-space: nowrap; }
+.streak-fire { font-size: 0.8em; position: relative; top: -2px; }   /* smaller + raised */
+.streak-num {
+  font-weight: 800;
+  margin-left: 1px;
+  background: linear-gradient(180deg, #ffd34d 0%, #ff7a1a 55%, #e8473b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
 .best-stats {
   margin: 20px auto 0; max-width: 360px; text-align: left;
   background: rgba(255,255,255,0.03); border: 1px solid var(--line);

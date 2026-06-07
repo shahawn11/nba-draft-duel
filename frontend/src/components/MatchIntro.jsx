@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { playClash } from '../sound.js'
 import Avatar from './Avatar.jsx'
+import StreakBadge from './StreakBadge.jsx'
 import { nameLabel } from '../nameLabel.js'
 
 function tierCls(tier) {
@@ -14,7 +15,7 @@ function Fighter({ side, name, record }) {
   return (
     <div className={`fighter ${side}`}>
       <Avatar id={(record && record.avatar) || 'amateur'} size={56} />
-      <div className="fighter-name">{label}{record && record.on_streak && <span title={`${record.win_streak}-game win streak`}> 🔥{record.win_streak}</span>}</div>
+      <div className="fighter-name">{label}<StreakBadge record={record} /></div>
       {record && (
         <>
           <span className={`tier-badge ${tierCls(record.tier)}`}>{record.tier}</span>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '../api.js'
 import Avatar from './Avatar.jsx'
+import StreakBadge from './StreakBadge.jsx'
 import { nameLabel } from '../nameLabel.js'
 
 const TIER_CLASS = {
@@ -38,7 +39,7 @@ export default function Leaderboard({ onClose, highlight }) {
                 <td className="lb-name">
                   <span className="lb-player">
                     <Avatar id={r.avatar || 'amateur'} size={28} />
-                    {nameLabel(r)}{r.on_streak && <span title={`${r.win_streak}-game win streak`}> 🔥{r.win_streak}</span>}
+                    {nameLabel(r)}<StreakBadge record={r} />
                   </span>
                 </td>
                 <td><span className={`tier-badge ${TIER_CLASS[r.tier] || ''}`}>{r.tier}</span></td>

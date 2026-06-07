@@ -8,6 +8,7 @@ import AuthModal from './components/AuthModal.jsx'
 import Avatar from './components/Avatar.jsx'
 import AvatarPicker from './components/AvatarPicker.jsx'
 import ConfirmModal from './components/ConfirmModal.jsx'
+import StreakBadge from './components/StreakBadge.jsx'
 import { isMuted, toggleMuted } from './audio.js'
 import { nameLabel } from './nameLabel.js'
 
@@ -162,7 +163,7 @@ export default function App() {
             <button className="identity-card" onClick={() => setShowAvatar(true)} title="Change avatar">
               <Avatar id={record.avatar || 'amateur'} size={44} />
               <span className="id-text">
-                <span className="id-name">{loggedIn ? identity : (guestNamed ? nameLabel({ username: guestId, display_name: record.display_name }) : (guestName.trim() || 'Guest'))}{record.on_streak && <span className="streak-flame" title={`${record.win_streak}-game win streak`}> 🔥{record.win_streak}</span>}</span>
+                <span className="id-name">{loggedIn ? identity : (guestNamed ? nameLabel({ username: guestId, display_name: record.display_name }) : (guestName.trim() || 'Guest'))}<StreakBadge record={record} /></span>
                 <span className="id-stats">
                   {record.tier && (
                     <span className={`tier-badge ${(record.tier || '').toLowerCase().replace(/[^a-z]/g, '')}`}>
