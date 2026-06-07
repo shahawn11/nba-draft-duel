@@ -43,12 +43,16 @@ GAME_MIN, GAME_MAX = 80, 150
 # their slot. A slot expects a signature stat -- a PG should create (assists),
 # a center should rebound -- and players short of it are penalized while strong
 # fits earn a small bonus. (attr, expected, weight, good_label, bad_note)
-SLOT_EXPECTATION: dict[str, tuple] = {
-    "PG": ("apg", 5.0, 0.6, "floor general", "not a true PG (low assists)"),
-    "SG": ("ppg", 16.0, 0.2, "scoring guard", "pass-first for an SG (low scoring)"),
-    "SF": ("ppg", 14.0, 0.2, "scoring wing", "low-scoring for an SF"),
-    "PF": ("rpg", 6.0, 0.35, "strong PF", "undersized PF (low rebounds)"),
-    "C": ("rpg", 9.0, 0.45, "anchor at C", "undersized at C (low rebounds)"),
+SLOT_EXPECTATION: dict[str, dict] = {
+    "PG": {"primary": ("apg", 5.0, 0.6), "good": "floor general", "bad": "not a true PG (low assists)"},
+    "SG": {"primary": ("ppg", 16.0, 0.2), "good": "scoring guard", "bad": "pass-first for an SG (low scoring)"},
+    "SF": {"primary": ("ppg", 14.0, 0.2), "good": "scoring wing", "bad": "low-scoring for an SF"},
+    # PF/C size is judged by HEIGHT (a tall big isn't "undersized" even with
+    # modest rebounds). Falls back to rebounds only when height is unknown.
+    "PF": {"primary": ("height_in", 80.0, 0.35), "fallback": ("rpg", 6.0, 0.5),
+           "good": "good size at PF", "bad": "undersized PF"},
+    "C": {"primary": ("height_in", 82.0, 0.45), "fallback": ("rpg", 9.0, 0.7),
+          "good": "true center", "bad": "undersized at C"},
 }
 FIT_BONUS_SCALE = 0.25      # fraction of the surplus turned into a bonus
 MAX_FIT_BONUS = 1.0         # cap on per-player fit bonus (small: minor factor)
@@ -179,25 +183,42 @@ def score_player(p: PlayerStats) -> PlayerScore:
 # ---- Positional fit quality ------------------------------------------------
 def evaluate_fit(players: list[PlayerStats]) -> tuple[float, list[str]]:
     """Judge how well each player suits the slot they're playing. Players short
-    of a slot's signature stat are penalized; strong fits earn a small bonus."""
+    of a slot's signature stat are penalized; strong fits earn a small bonus.
+    PF/C size is judged by height (rebound fallback only when height unknown)."""
     notes: list[str] = []
     adjustment = 0.0
 
     for p in players:
         spec = SLOT_EXPECTATION.get(p.position)
         if not spec:
-            continue  # SG/SF have no hard statistical expectation
-        attr, expected, weight, good_label, bad_note = spec
+            continue  # SG/SF handled below via dict too; SG/SF have specs
+        attr, expected, weight = spec["primary"]
         value = getattr(p, attr)
+        is_height = attr == "height_in"
+        if is_height and not value and "fallback" in spec:
+            attr, expected, weight = spec["fallback"]
+            value = getattr(p, attr)
+            is_height = False
+
         if value < expected:
             pen = min(MAX_FIT_PENALTY, round((expected - value) * weight, 1))
+            if pen < 0.1:
+                continue
             adjustment -= pen
-            notes.append(f"{p.name} — {bad_note} (-{pen:.1f})")
+            if is_height:
+                detail = format_height(value)
+            elif attr == "rpg":
+                detail = "low rebounds"
+            elif attr == "apg":
+                detail = "low assists"
+            else:
+                detail = "low scoring"
+            notes.append(f"{p.name} — {spec['bad']} ({detail}) (-{pen:.1f})")
         else:
             bonus = min(MAX_FIT_BONUS, round((value - expected) * weight * FIT_BONUS_SCALE, 1))
             if bonus >= 0.5:
                 adjustment += bonus
-                notes.append(f"{p.name} — {good_label} (+{bonus:.1f})")
+                notes.append(f"{p.name} — {spec['good']} (+{bonus:.1f})")
 
     return adjustment, notes
 

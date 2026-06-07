@@ -216,10 +216,11 @@ def _resolve(match: dict, state: dict) -> dict:
                     "rating": round(s.total, 1),
                     "game": box.get(s.player.name, {}),
                 }
-                # sort starters by game points (box-score style)
+                # ordered PG, SG, SF, PF, C
                 for s in sorted(
                     team.player_scores,
-                    key=lambda s: -box.get(s.player.name, {}).get("pts", 0),
+                    key=lambda s: ["PG", "SG", "SF", "PF", "C"].index(s.player.position)
+                    if s.player.position in ("PG", "SG", "SF", "PF", "C") else 99,
                 )
             ],
         }
