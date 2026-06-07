@@ -50,8 +50,8 @@ export default function Results({ result, onPlayAgain }) {
 
       <div className="matchups">
         <h3>Positional matchups ({result.your_matchup_wins}–{result.opponent_matchup_wins})</h3>
-        {result.matchups.map((m) => (
-          <div className={`matchup ${m.winner === 'home' ? 'you' : m.winner === 'away' ? 'opp' : 'even'}`} key={m.position}>
+        {result.matchups.map((m, i) => (
+          <div className={`matchup ${m.winner === 'home' ? 'you' : m.winner === 'away' ? 'opp' : 'even'}`} key={m.position} style={{ animationDelay: `${i * 70}ms` }}>
             <span className="m-pos">{m.position}</span>
             <span className="m-home">{m.home_player} · {m.home_score.toFixed(1)}</span>
             <span className="m-vs">vs</span>

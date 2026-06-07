@@ -282,3 +282,78 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 }
 .slot-btn:hover:not(:disabled) { transform: translateY(-1px); }
 .slot-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---- animations & confirmation ---- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.8); }
+  60%  { transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slotFlash {
+  0%   { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.6); }
+  100% { box-shadow: 0 0 0 14px rgba(46, 204, 113, 0); }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* staggered candidate entrance (container key remounts each step) */
+.candidates .candidate { animation: fadeInUp 0.35s ease both; }
+
+.step-head { animation: fadeIn 0.3s ease both; }
+
+.slot-chip.flash { animation: slotFlash 0.7s ease-out 1; }
+
+/* results */
+.banner { animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.matchups .matchup { animation: slideInLeft 0.3s ease both; }
+.lineup { animation: fadeInUp 0.4s ease both; }
+
+/* confirmation modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 11, 16, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  animation: fadeIn 0.15s ease both;
+}
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px;
+  width: min(380px, 90vw);
+  text-align: center;
+  animation: popIn 0.25s ease both;
+}
+.modal .m-player { font-size: 1.3rem; font-weight: 800; margin: 4px 0; }
+.modal .m-assign { color: var(--muted); margin-bottom: 4px; }
+.modal .m-slot {
+  display: inline-block;
+  background: var(--accent);
+  color: #1a1206;
+  font-weight: 800;
+  padding: 2px 12px;
+  border-radius: 999px;
+  font-size: 1rem;
+}
+.modal .m-stats { color: var(--muted); font-size: 0.85rem; margin: 10px 0 18px; }
+.modal-actions { display: flex; gap: 10px; }
+.modal-actions button { flex: 1; padding: 11px; border-radius: 8px; font-weight: 700; cursor: pointer; border: none; }
+.btn-confirm { background: var(--accent); color: #1a1206; }
+.btn-cancel { background: var(--panel-2); color: var(--text); border: 1px solid var(--line) !important; }
+.modal-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+  .candidates .candidate, .step-head, .slot-chip.flash, .banner,
+  .matchups .matchup, .lineup, .modal-backdrop, .modal { animation: none !important; }
+}
