@@ -129,7 +129,7 @@ export default function LivePvP({ username, token, displayName, onExit, onRecord
         <>
           <div className="live-banner">
             ⚔️ Live vs <b>{opponentRecord ? nameLabel(opponentRecord) : (opponent || 'opponent')}</b>
-            {opponentRecord && opponentRecord.on_streak && <span title={`${opponentRecord.win_streak}-game win streak`}> 🔥</span>}
+            {opponentRecord && opponentRecord.on_streak && <span title={`${opponentRecord.win_streak}-game win streak`}> 🔥{opponentRecord.win_streak}</span>}
             {opponentRecord && (
               <span className="opp-rec">
                 {' '}— <span className={`tier-badge ${(opponentRecord.tier || '').toLowerCase().replace(/[^a-z]/g, '')}`}>{opponentRecord.tier}</span>
