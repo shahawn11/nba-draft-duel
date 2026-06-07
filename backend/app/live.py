@@ -85,21 +85,25 @@ class LiveGame:
         await self._finish()
 
     # ---- per-player round collection ----
+    async def _send_autopick(self, p: Player, other: Player) -> None:
+        self._autopick(p)
+        ap = p.picks[-1] if p.picks else None
+        await p.send({"type": "auto_picked", "filled": self._filled(p),
+                      "player": ap["player"]["name"] if ap else None,
+                      "slot": ap["slot"] if ap else None})
+        await other.send({"type": "opponent_progress", "picks_made": len(p.picks)})
+
     async def _collect(self, p: Player, deadline: float, rnd: int) -> None:
         other = self.b if p is self.a else self.a
         while True:
             remaining = deadline - time.time()
             if remaining <= 0:
-                self._autopick(p)
-                await p.send({"type": "auto_picked", "filled": self._filled(p)})
-                await other.send({"type": "opponent_progress", "picks_made": len(p.picks)})
+                await self._send_autopick(p, other)
                 return
             try:
                 msg = await asyncio.wait_for(p.inbox.get(), timeout=remaining)
             except asyncio.TimeoutError:
-                self._autopick(p)
-                await p.send({"type": "auto_picked", "filled": self._filled(p)})
-                await other.send({"type": "opponent_progress", "picks_made": len(p.picks)})
+                await self._send_autopick(p, other)
                 return
             if msg.get("type") == "_disconnect":
                 raise PlayerLeft(p)

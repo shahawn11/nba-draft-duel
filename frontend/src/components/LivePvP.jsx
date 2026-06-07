@@ -22,6 +22,7 @@ export default function LivePvP({ username, onExit }) {
   const [result, setResult] = useState(null)
   const [record, setRecord] = useState(null)
   const [error, setError] = useState('')
+  const [toast, setToast] = useState('')
   const wsRef = useRef(null)
   const [nonce, setNonce] = useState(0) // bump to reconnect
 
@@ -44,6 +45,9 @@ export default function LivePvP({ username, onExit }) {
         case 'auto_picked':
           setFilled(m.filled || []); if (m.picks_made != null) setPicksMade(m.picks_made)
           setWaitingForOpp(true)
+          if (m.type === 'auto_picked' && m.player) {
+            setToast(`⏱ Time! Auto-drafted ${m.player}${m.slot ? ` at ${m.slot}` : ''}`)
+          }
           break
         case 'opponent_progress': setOpponentPicks(m.picks_made); break
         case 'error': setError(m.detail); setWaitingForOpp(false); break
@@ -59,6 +63,12 @@ export default function LivePvP({ username, onExit }) {
   // keep a ref of status for onclose
   const statusRef = useRef(status)
   useEffect(() => { statusRef.current = status }, [status])
+
+  useEffect(() => {
+    if (!toast) return
+    const id = setTimeout(() => setToast(''), 3500)
+    return () => clearTimeout(id)
+  }, [toast])
 
   useEffect(() => {
     connect()
@@ -79,6 +89,7 @@ export default function LivePvP({ username, onExit }) {
   return (
     <div className="live">
       {error && <div className="error">{error}</div>}
+      {toast && <div className="toast">{toast}</div>}
 
       {(status === 'connecting' || status === 'waiting') && (
         <div className="waiting-room">
