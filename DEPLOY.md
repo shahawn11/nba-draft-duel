@@ -15,6 +15,18 @@ The script confirms: API health, that the API is on Postgres (tables + a match
 row land in PG), a full offline draft resolves over HTTP, the signup rate limit
 returns 429, and Redis holds the rate-limit keys.
 
+> No Docker? On macOS the lightest fix is Colima:
+> `brew install colima docker docker-compose && colima start`, then re-run.
+
+### Validate without Docker (local Postgres + Redis)
+```bash
+brew install postgresql@16 redis
+brew services start postgresql@16 && brew services start redis
+createdb duel
+./scripts/validate_local.sh        # runs the API from .venv312 against local PG+Redis
+```
+Same checks (Postgres match row, rate-limit 429) without containers.
+
 - Rate limiting uses **Redis** immediately (shared across replicas).
 - Runtime SQLite DB lives on the `api_data` volume at `GAME_DB_PATH=/data/game.db`.
 - The read-only historical dataset (`app/data/players.db`) is **baked into the image**.

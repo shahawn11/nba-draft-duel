@@ -8,6 +8,22 @@ cd "$(dirname "$0")/.."
 API=${API:-http://localhost:8000}
 PY=${PYTHON:-python3}
 
+# --- preflight: Docker must be installed and running ---
+if ! command -v docker >/dev/null 2>&1; then
+  cat <<'MSG'
+✗ Docker isn't installed. On macOS, the lightest option is Colima (no Docker Desktop):
+    brew install colima docker docker-compose
+    colima start
+  …then re-run this script. (Or install Docker Desktop: brew install --cask docker)
+  No Docker? Use the no-Docker path in DEPLOY.md ("Validate without Docker").
+MSG
+  exit 127
+fi
+if ! docker info >/dev/null 2>&1; then
+  echo "✗ Docker is installed but the daemon isn't running. Start it (e.g. 'colima start' or open Docker Desktop) and retry."
+  exit 1
+fi
+
 echo "==> Bringing up the stack (build)…"
 docker compose up -d --build
 
