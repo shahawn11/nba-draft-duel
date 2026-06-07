@@ -38,8 +38,18 @@ echo "==> Using compose: $COMPOSE"
 echo "==> Clearing any previous/orphan containers (a stale one can hold port 8000)…"
 $COMPOSE down --remove-orphans >/dev/null 2>&1 || true
 
-echo "==> Bringing up the stack (build + force-recreate to avoid stale containers)…"
-$COMPOSE up -d --build --force-recreate --remove-orphans
+echo "==> Rebuilding the api image from scratch (no cache — defeats stale COPY layers)…"
+$COMPOSE build --no-cache api
+echo "==> Bringing up the stack (force-recreate)…"
+$COMPOSE up -d --force-recreate --remove-orphans
+
+echo "==> Sanity: confirming the running image has the current code…"
+if $COMPOSE exec -T api grep -q '"db": db.backend()' app/main.py; then
+  echo "   image main.py is current ✓"
+else
+  echo "✗ running image is STILL stale (old main.py). Try: docker system prune -f then re-run."
+  exit 1
+fi
 
 echo "==> Waiting for API health at $API/health …"
 for i in $(seq 1 60); do
