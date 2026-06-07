@@ -1,9 +1,11 @@
 """
-Game logic: build match prompts and resolve a submitted draft into a duel.
+Game logic: 82-0-style sequential blind draft.
 
-Offline mode: opponent is a random current NBA starting 5. The player gets 5
-draft prompts (each a random decade x team pool) and picks one player per
-prompt. Positional fit is judged on the natural positions of their 5 picks.
+You fill five fixed slots (PG/SG/SF/PF/C) one at a time. Each step reveals a
+fresh random decade x team and that franchise's top-10 players for the decade
+(stats are decade averages). You may only place a player in the current slot if
+they're eligible for it; ineligible / already-taken players are shown but not
+selectable. Future steps and the opponent stay hidden until the draft resolves.
 """
 from __future__ import annotations
 
@@ -12,31 +14,52 @@ import uuid
 
 from . import db, dataset
 from .models import player_from_dict, player_to_dict
+from .positions import SLOTS, can_play
 from .scoring import PlayerStats, duel
 
-NUM_PROMPTS = 5
+
+def _picked_names(state: dict) -> set[str]:
+    return {p["player"]["name"] for p in state["picks"]}
 
 
-def _make_prompts(rng: random.Random) -> list[dict]:
+def _build_step(rng: random.Random, slot: str, picked: set[str]) -> dict:
+    """Pick a random (decade, team) that has a selectable player for `slot`."""
     pool = dataset.historical_pool()
     keys = list(pool.keys())
     rng.shuffle(keys)
-    # Distinct pools first; if fewer pools than prompts, allow repeats.
-    chosen: list[str] = []
-    while len(chosen) < NUM_PROMPTS:
-        if keys:
-            chosen.append(keys.pop())
-        else:
-            chosen.append(rng.choice(list(pool.keys())))
 
-    prompts = []
-    for i, key in enumerate(chosen):
-        decade, team = key.split("|", 1)
-        candidates = [player_to_dict(p) for p in pool[key]]
-        prompts.append(
-            {"index": i, "decade": decade, "team": team, "candidates": candidates}
-        )
-    return prompts
+    chosen = None
+    for k in keys:
+        if any(can_play(p.eligible(), slot) and p.name not in picked for p in pool[k]):
+            chosen = k
+            break
+    if chosen is None:                       # safety net (shouldn't happen)
+        chosen = rng.choice(keys)
+
+    decade, team = chosen.split("|", 1)
+    candidates = []
+    for p in pool[chosen]:
+        d = player_to_dict(p)
+        d["eligible"] = can_play(p.eligible(), slot) and (p.name not in picked)
+        candidates.append(d)
+    return {"slot": slot, "decade": decade, "team": team, "candidates": candidates}
+
+
+def _public_view(match: dict, state: dict) -> dict:
+    return {
+        "match_id": match["id"],
+        "username": match["username"],
+        "mode": match["mode"],
+        "status": match["status"],
+        "total_slots": len(state["slot_order"]),
+        "picks_made": len(state["picks"]),
+        "filled": [
+            {"slot": p["slot"], "name": p["player"]["name"],
+             "position": p["player"]["position"]}
+            for p in state["picks"]
+        ],
+        "current_step": state.get("current"),
+    }
 
 
 def new_match(username: str, seed: int | None = None) -> dict:
@@ -44,7 +67,15 @@ def new_match(username: str, seed: int | None = None) -> dict:
     db.ensure_user(username)
 
     opp_team, opponent = dataset.random_current_opponent(rng)
-    prompts = _make_prompts(rng)
+
+    slot_order = list(SLOTS)
+    rng.shuffle(slot_order)
+    state = {
+        "slot_order": slot_order,
+        "step": 0,
+        "picks": [],
+        "current": _build_step(rng, slot_order[0], set()),
+    }
 
     match_id = uuid.uuid4().hex[:12]
     db.create_match(
@@ -52,43 +83,55 @@ def new_match(username: str, seed: int | None = None) -> dict:
         username=username,
         opponent_team=opp_team,
         opponent_json=[player_to_dict(p) for p in opponent],
-        prompts_json=prompts,
+        state_json=state,
     )
-    return {"match_id": match_id, "username": username, "mode": "offline", "prompts": prompts}
+    match = {"id": match_id, "username": username, "mode": "offline", "status": "open"}
+    return _public_view(match, state)
 
 
 class DraftError(ValueError):
     pass
 
 
-def resolve_draft(match_id: str, picks: list[dict]) -> dict:
+def pick(match_id: str, player_name: str) -> dict:
     match = db.get_match(match_id)
     if not match:
         raise DraftError("match not found")
     if match["status"] == "resolved":
         raise DraftError("match already resolved")
 
-    prompts = {p["index"]: p for p in match["prompts_json"]}
-    if {pk["prompt_index"] for pk in picks} != set(prompts.keys()):
-        raise DraftError("must submit exactly one pick per prompt")
+    state = match["state_json"]
+    current = state["current"]
+    slot = current["slot"]
 
-    drafted: list[PlayerStats] = []
-    seen_names: set[str] = set()
-    for pk in picks:
-        prompt = prompts[pk["prompt_index"]]
-        match_player = next(
-            (c for c in prompt["candidates"] if c["name"] == pk["player_name"]),
-            None,
-        )
-        if match_player is None:
-            raise DraftError(
-                f"'{pk['player_name']}' is not a candidate for prompt {pk['prompt_index']}"
-            )
-        if match_player["name"] in seen_names:
-            raise DraftError(f"duplicate pick: {match_player['name']}")
-        seen_names.add(match_player["name"])
-        drafted.append(player_from_dict(match_player))
+    cand = next((c for c in current["candidates"] if c["name"] == player_name), None)
+    if cand is None:
+        raise DraftError(f"'{player_name}' is not in the current pool")
+    if not cand.get("eligible"):
+        raise DraftError(f"'{player_name}' cannot play {slot} (or is already drafted)")
 
+    # Record the pick, forcing the player's effective position to the slot.
+    picked_player = dict(cand)
+    picked_player.pop("eligible", None)
+    picked_player["position"] = slot
+    state["picks"].append({"slot": slot, "player": picked_player})
+
+    state["step"] += 1
+    rng = random.Random()
+
+    if state["step"] < len(state["slot_order"]):
+        next_slot = state["slot_order"][state["step"]]
+        state["current"] = _build_step(rng, next_slot, _picked_names(state))
+        db.update_state(match_id, state)
+        return {"done": False, **_public_view(match, state)}
+
+    # All slots filled -> resolve the duel.
+    state["current"] = None
+    return _resolve(match, state)
+
+
+def _resolve(match: dict, state: dict) -> dict:
+    drafted = [player_from_dict(p["player"]) for p in state["picks"]]
     opponent = [player_from_dict(d) for d in match["opponent_json"]]
 
     result = duel(home_players=drafted, away_players=opponent)
@@ -113,8 +156,8 @@ def resolve_draft(match_id: str, picks: list[dict]) -> dict:
             ],
         }
 
-    payload = {
-        "match_id": match_id,
+    result_payload = {
+        "match_id": match["id"],
         "outcome": outcome,
         "your_final": round(result.home_final, 2),
         "opponent_final": round(result.away_final, 2),
@@ -136,8 +179,8 @@ def resolve_draft(match_id: str, picks: list[dict]) -> dict:
         "opponent_matchup_wins": result.away_matchup_wins,
         "record": record,
     }
-    db.resolve_match(match_id, payload)
-    return payload
+    db.resolve_match(match["id"], state, result_payload)
+    return {"done": True, "result": result_payload}
 
 
 def list_current_teams() -> list[str]:

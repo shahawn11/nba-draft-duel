@@ -1,76 +1,96 @@
-// Draft board: one card per prompt (decade x team). Click a candidate to fill
-// that slot. A player already chosen in another slot is disabled (picks must be
-// distinct, matching the backend rule).
+// Sequential draft: shows the lineup-so-far, the current slot to fill, the
+// randomly revealed decade x team, and that franchise's top-10 (decade-averaged)
+// players. Only players eligible for the current slot are selectable.
 
-function StatLine({ p }) {
+const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
+
+function LineupStrip({ filled, currentSlot }) {
+  const bySlot = Object.fromEntries(filled.map((f) => [f.slot, f]))
   return (
-    <span className="statline">
-      {p.ppg} pts · {p.rpg} reb · {p.apg} ast
+    <div className="lineup-strip">
+      {SLOTS.map((slot) => {
+        const f = bySlot[slot]
+        const isCurrent = slot === currentSlot
+        const cls = ['slot-chip', f && 'done', isCurrent && 'current']
+          .filter(Boolean)
+          .join(' ')
+        return (
+          <div className={cls} key={slot}>
+            <span className="slot-label">{slot}</span>
+            <span className="slot-name">{f ? f.name : isCurrent ? 'drafting…' : '—'}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function PosBadges({ positions, slot }) {
+  return (
+    <span className="pos-badges">
+      {positions.map((p) => (
+        <span key={p} className={`pos-badge ${p === slot ? 'match' : ''}`}>{p}</span>
+      ))}
     </span>
   )
 }
 
-function Candidate({ p, selected, disabled, onPick }) {
-  const cls = ['candidate', selected && 'selected', disabled && 'disabled']
-    .filter(Boolean)
-    .join(' ')
+function Candidate({ p, slot, disabled, onPick, busy }) {
+  const cls = ['candidate', !p.eligible && 'ineligible'].filter(Boolean).join(' ')
   return (
-    <button className={cls} disabled={disabled && !selected} onClick={onPick}>
-      <span className="pos-badge">{p.position}</span>
-      <span className="cand-name">{p.name}</span>
-      <StatLine p={p} />
+    <button className={cls} disabled={disabled || busy} onClick={onPick}>
+      <div className="cand-top">
+        <PosBadges positions={p.eligible_positions} slot={slot} />
+        {!p.eligible && <span className="locked">can't play {slot}</span>}
+      </div>
+      <div className="cand-name">{p.name}</div>
+      <div className="cand-stats">
+        <b>{p.ppg}</b> pts · <b>{p.rpg}</b> reb · <b>{p.apg}</b> ast
+      </div>
+      <div className="cand-stats sub">
+        {p.spg} stl · {p.bpg} blk · impact {p.bpm}
+      </div>
     </button>
   )
 }
 
-export default function DraftBoard({ prompts, picks, onPick, onSubmit, submitting }) {
-  const chosenNames = new Set(Object.values(picks))
-  const allPicked = prompts.every((p) => picks[p.index])
+export default function DraftBoard({ view, onPick, busy }) {
+  const step = view.current_step
+  const slot = step.slot
 
   return (
     <div className="draft-board">
-      <h2>Draft your starting 5</h2>
-      <p className="hint">
-        One pick per prompt · players must be distinct · opponent is hidden until
-        you submit
-      </p>
+      <LineupStrip filled={view.filled} currentSlot={slot} />
 
-      <div className="prompts">
-        {prompts.map((prompt) => {
-          const selectedName = picks[prompt.index]
-          return (
-            <div className="prompt" key={prompt.index}>
-              <div className="prompt-head">
-                <span className="decade">{prompt.decade}</span>
-                <span className="team">{prompt.team}</span>
-              </div>
-              <div className="candidates">
-                {prompt.candidates.map((c) => {
-                  const selected = selectedName === c.name
-                  const takenElsewhere = chosenNames.has(c.name) && !selected
-                  return (
-                    <Candidate
-                      key={c.name}
-                      p={c}
-                      selected={selected}
-                      disabled={takenElsewhere}
-                      onPick={() => onPick(prompt.index, c.name)}
-                    />
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
+      <div className="step-head">
+        <div className="step-count">
+          Pick {view.picks_made + 1} of {view.total_slots}
+        </div>
+        <h2>
+          Draft your <span className="slot-hi">{slot}</span>
+        </h2>
+        <div className="prompt-head">
+          <span className="decade">{step.decade}</span>
+          <span className="team">{step.team}</span>
+        </div>
+        <p className="hint">
+          Top 10 of the decade · stats are {step.decade} averages · only{' '}
+          <span className="slot-hi">{slot}</span>-eligible players can be picked
+        </p>
       </div>
 
-      <button
-        className="submit"
-        disabled={!allPicked || submitting}
-        onClick={onSubmit}
-      >
-        {submitting ? 'Simulating…' : allPicked ? 'Submit Draft ⚔️' : `Pick ${5 - Object.keys(picks).length} more`}
-      </button>
+      <div className="candidates">
+        {step.candidates.map((p) => (
+          <Candidate
+            key={p.name}
+            p={p}
+            slot={slot}
+            disabled={!p.eligible}
+            busy={busy}
+            onPick={() => onPick(p.name)}
+          />
+        ))}
+      </div>
     </div>
   )
 }

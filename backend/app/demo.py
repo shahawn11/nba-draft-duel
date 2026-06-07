@@ -24,8 +24,20 @@ def main(seed: int = 7) -> None:
     # Opponent = random current starting 5.
     opp_team, opponent = random_current_opponent(rng)
 
-    # "Player" draft: take the 90s Bulls as a sample drafted lineup.
-    drafted = HISTORICAL_POOL["1990s|Chicago Bulls"]
+    # "Player" draft: build a one-per-slot 5 from the 90s Bulls pool by taking
+    # the top eligible player for each slot (mirrors the real game's constraint).
+    from .positions import SLOTS, can_play
+    import dataclasses
+
+    bulls = sorted(HISTORICAL_POOL["1990s|Chicago Bulls"], key=lambda p: -p.bpm)
+    drafted = []
+    used = set()
+    for slot in SLOTS:
+        for p in bulls:
+            if p.name not in used and can_play(p.eligible(), slot):
+                drafted.append(dataclasses.replace(p, position=slot))
+                used.add(p.name)
+                break
 
     result = duel(home_players=drafted, away_players=opponent)
 

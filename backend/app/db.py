@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS matches (
     username       TEXT NOT NULL,
     mode           TEXT NOT NULL DEFAULT 'offline',
     opponent_team  TEXT NOT NULL,
-    opponent_json  TEXT NOT NULL,   -- frozen opponent lineup
-    prompts_json   TEXT NOT NULL,   -- the draft prompts shown to the player
+    opponent_json  TEXT NOT NULL,   -- frozen opponent lineup (hidden until resolve)
+    state_json     TEXT NOT NULL,   -- evolving draft state (slot order, picks, current step)
     status         TEXT NOT NULL DEFAULT 'open',  -- open | resolved
     result_json    TEXT,            -- scored DuelResult once drafted
     created_at     REAL NOT NULL
@@ -78,13 +78,13 @@ def create_match(
     username: str,
     opponent_team: str,
     opponent_json: list,
-    prompts_json: list,
+    state_json: dict,
     mode: str = "offline",
 ) -> None:
     with _conn() as c:
         c.execute(
             """INSERT INTO matches
-               (id, username, mode, opponent_team, opponent_json, prompts_json,
+               (id, username, mode, opponent_team, opponent_json, state_json,
                 status, created_at)
                VALUES (?,?,?,?,?,?, 'open', ?)""",
             (
@@ -93,7 +93,7 @@ def create_match(
                 mode,
                 opponent_team,
                 json.dumps(opponent_json),
-                json.dumps(prompts_json),
+                json.dumps(state_json),
                 time.time(),
             ),
         )
@@ -106,14 +106,22 @@ def get_match(match_id: str) -> dict | None:
         return None
     d = dict(row)
     d["opponent_json"] = json.loads(d["opponent_json"])
-    d["prompts_json"] = json.loads(d["prompts_json"])
+    d["state_json"] = json.loads(d["state_json"])
     d["result_json"] = json.loads(d["result_json"]) if d["result_json"] else None
     return d
 
 
-def resolve_match(match_id: str, result_json: dict) -> None:
+def update_state(match_id: str, state_json: dict) -> None:
     with _conn() as c:
         c.execute(
-            "UPDATE matches SET status = 'resolved', result_json = ? WHERE id = ?",
-            (json.dumps(result_json), match_id),
+            "UPDATE matches SET state_json = ? WHERE id = ?",
+            (json.dumps(state_json), match_id),
+        )
+
+
+def resolve_match(match_id: str, state_json: dict, result_json: dict) -> None:
+    with _conn() as c:
+        c.execute(
+            "UPDATE matches SET status = 'resolved', state_json = ?, result_json = ? WHERE id = ?",
+            (json.dumps(state_json), json.dumps(result_json), match_id),
         )

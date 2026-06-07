@@ -18,14 +18,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import db, game
 from .models import (
-    DraftRequest,
-    MatchOut,
     NewMatchRequest,
+    PickRequest,
     Record,
-    ResultOut,
 )
 
-app = FastAPI(title="NBA Draft Duel", version="0.1.0")
+app = FastAPI(title="NBA Draft Duel", version="0.2.0")
 
 # Ensure schema exists as soon as the app module is imported (covers TestClient
 # usage and any ASGI server, not just the startup event).
@@ -55,10 +53,10 @@ def teams() -> dict:
     return {"current_teams": game.list_current_teams()}
 
 
-@app.post("/match", response_model=MatchOut)
-def create_match(req: NewMatchRequest) -> MatchOut:
-    data = game.new_match(req.username)
-    return MatchOut(**data)
+@app.post("/match")
+def create_match(req: NewMatchRequest) -> dict:
+    """Start a match -> returns the first draft step (opponent hidden)."""
+    return game.new_match(req.username)
 
 
 @app.get("/match/{match_id}")
@@ -66,28 +64,19 @@ def get_match(match_id: str) -> dict:
     match = db.get_match(match_id)
     if not match:
         raise HTTPException(status_code=404, detail="match not found")
-    out = {
-        "match_id": match["id"],
-        "username": match["username"],
-        "mode": match["mode"],
-        "status": match["status"],
-        "prompts": match["prompts_json"],
-    }
-    # Reveal opponent + result only once resolved.
+    view = game._public_view(match, match["state_json"])
     if match["status"] == "resolved":
-        out["result"] = match["result_json"]
-    return out
+        view["result"] = match["result_json"]
+    return view
 
 
-@app.post("/match/{match_id}/draft", response_model=ResultOut)
-def submit_draft(match_id: str, req: DraftRequest) -> ResultOut:
+@app.post("/match/{match_id}/pick")
+def submit_pick(match_id: str, req: PickRequest) -> dict:
+    """Draft one player into the current slot. Returns next step or final result."""
     try:
-        payload = game.resolve_draft(
-            match_id, [p.model_dump() for p in req.picks]
-        )
+        return game.pick(match_id, req.player_name)
     except game.DraftError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return ResultOut(**payload)
 
 
 @app.get("/record/{username}", response_model=Record)

@@ -7,8 +7,7 @@ export default function App() {
   const [username, setUsername] = useState('')
   const [committedName, setCommittedName] = useState('')
   const [record, setRecord] = useState(null)
-  const [match, setMatch] = useState(null)
-  const [picks, setPicks] = useState({}) // promptIndex -> playerName
+  const [view, setView] = useState(null) // latest step view from backend
   const [result, setResult] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -17,9 +16,8 @@ export default function App() {
     setError('')
     setBusy(true)
     try {
-      const m = await api.newMatch(name)
-      setMatch(m)
-      setPicks({})
+      const v = await api.newMatch(name)
+      setView(v)
       setResult(null)
       setCommittedName(name)
       setRecord(await api.record(name))
@@ -30,21 +28,17 @@ export default function App() {
     }
   }
 
-  function pick(promptIndex, playerName) {
-    setPicks((prev) => ({ ...prev, [promptIndex]: playerName }))
-  }
-
-  async function submitDraft() {
+  async function pick(playerName) {
     setError('')
     setBusy(true)
     try {
-      const picksArr = Object.entries(picks).map(([idx, name]) => ({
-        prompt_index: Number(idx),
-        player_name: name,
-      }))
-      const res = await api.submitDraft(match.match_id, picksArr)
-      setResult(res)
-      setRecord(res.record)
+      const res = await api.pick(view.match_id, playerName)
+      if (res.done) {
+        setResult(res.result)
+        setRecord(res.result.record)
+      } else {
+        setView(res)
+      }
     } catch (e) {
       setError(e.message)
     } finally {
@@ -52,7 +46,7 @@ export default function App() {
     }
   }
 
-  const phase = result ? 'result' : match ? 'drafting' : 'setup'
+  const phase = result ? 'result' : view ? 'drafting' : 'setup'
 
   return (
     <div className="app">
@@ -75,7 +69,10 @@ export default function App() {
       {phase === 'setup' && (
         <div className="setup">
           <h2>Enter the arena</h2>
-          <p className="hint">Offline mode: draft a starting 5 against a random current NBA lineup.</p>
+          <p className="hint">
+            Offline mode: a random decade &amp; team is revealed for each of your
+            five lineup slots — draft a player who fits, one pick at a time.
+          </p>
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -95,14 +92,8 @@ export default function App() {
         </div>
       )}
 
-      {phase === 'drafting' && match && (
-        <DraftBoard
-          prompts={match.prompts}
-          picks={picks}
-          onPick={pick}
-          onSubmit={submitDraft}
-          submitting={busy}
-        />
+      {phase === 'drafting' && view && (
+        <DraftBoard view={view} onPick={pick} busy={busy} />
       )}
 
       {phase === 'result' && result && (

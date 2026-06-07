@@ -17,6 +17,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from . import seed_data
+from .positions import eligible_from_raw
 from .scoring import PlayerStats
 
 DB_PATH = Path(__file__).parent / "data" / "players.db"
@@ -28,34 +29,54 @@ def _load_from_db(path: Path) -> dict[str, list[PlayerStats]]:
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     try:
-        rows = conn.execute(
-            """SELECT decade, team, name, position, season,
-                      ppg, rpg, apg, spg, bpg, bpm, mpg
-               FROM players"""
-        ).fetchall()
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(players)")}
+        if not {"decade", "team", "name"} <= cols:
+            return {}
+        has_elig = "eligible" in cols
+        has_gp = "gp" in cols
+        sel = "decade, team, name, position, ppg, rpg, apg, spg, bpg, bpm"
+        sel += ", eligible" if has_elig else ""
+        sel += ", gp" if has_gp else ""
+        rows = conn.execute(f"SELECT {sel} FROM players").fetchall()
     except sqlite3.OperationalError:
         return {}
     finally:
         conn.close()
 
-    # key -> name -> (mpg, PlayerStats)  keeping each player's best season
-    best: dict[str, dict[str, tuple[float, PlayerStats]]] = defaultdict(dict)
+    # Aggregate each player's DECADE AVERAGE for a franchise (games-weighted).
+    # key -> name -> accumulator
+    agg: dict[str, dict[str, dict]] = defaultdict(dict)
     for r in rows:
         key = f"{r['decade']}|{r['team']}"
-        ps = PlayerStats(
-            name=r["name"], position=r["position"],
-            ppg=r["ppg"] or 0, rpg=r["rpg"] or 0, apg=r["apg"] or 0,
-            spg=r["spg"] or 0, bpg=r["bpg"] or 0, bpm=r["bpm"] or 0,
-            team=r["team"], season=r["season"], decade=r["decade"],
-        )
-        mpg = r["mpg"] or 0
-        prev = best[key].get(r["name"])
-        if prev is None or mpg > prev[0]:
-            best[key][r["name"]] = (mpg, ps)
+        w = float(r["gp"]) if has_gp and r["gp"] else 1.0
+        a = agg[key].get(r["name"])
+        if a is None:
+            a = {
+                "w": 0.0, "ppg": 0.0, "rpg": 0.0, "apg": 0.0, "spg": 0.0,
+                "bpg": 0.0, "bpm": 0.0, "position": r["position"],
+                "eligible": (r["eligible"] if has_elig else "") or "",
+            }
+            agg[key][r["name"]] = a
+        a["w"] += w
+        for s in ("ppg", "rpg", "apg", "spg", "bpg", "bpm"):
+            a[s] += (r[s] or 0) * w
 
     pool: dict[str, list[PlayerStats]] = {}
-    for key, namemap in best.items():
-        cands = [ps for _, ps in namemap.values()]
+    for key, namemap in agg.items():
+        decade, team = key.split("|", 1)
+        cands: list[PlayerStats] = []
+        for name, a in namemap.items():
+            w = a["w"] or 1.0
+            elig = tuple(p for p in a["eligible"].split(",") if p) or \
+                eligible_from_raw(None, a["position"])
+            cands.append(PlayerStats(
+                name=name, position=a["position"],
+                ppg=round(a["ppg"] / w, 1), rpg=round(a["rpg"] / w, 1),
+                apg=round(a["apg"] / w, 1), spg=round(a["spg"] / w, 1),
+                bpg=round(a["bpg"] / w, 1), bpm=round(a["bpm"] / w, 2),
+                team=team, season=decade, decade=decade,
+                eligible_positions=elig,
+            ))
         cands.sort(key=lambda p: p.bpm, reverse=True)
         cands = cands[:MAX_CANDIDATES]
         if len(cands) >= MIN_CANDIDATES:

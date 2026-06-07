@@ -48,6 +48,12 @@ class PlayerStats:
     team: str = ""
     season: str = ""
     decade: str = ""
+    # Slots this player may be drafted into (PG/SG/SF/PF/C). Empty => single
+    # slot equal to `position`. Genuine combos list multiple.
+    eligible_positions: tuple[str, ...] = ()
+
+    def eligible(self) -> tuple[str, ...]:
+        return self.eligible_positions if self.eligible_positions else (self.position,)
 
     def production(self) -> float:
         """Raw box-score composite."""

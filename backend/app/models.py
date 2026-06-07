@@ -20,6 +20,7 @@ def player_to_dict(p: PlayerStats) -> dict:
         "spg": p.spg,
         "bpg": p.bpg,
         "bpm": p.bpm,
+        "eligible_positions": list(p.eligible()),
     }
 
 
@@ -36,6 +37,7 @@ def player_from_dict(d: dict) -> PlayerStats:
         spg=d.get("spg", 0.0),
         bpg=d.get("bpg", 0.0),
         bpm=d.get("bpm", 0.0),
+        eligible_positions=tuple(d.get("eligible_positions", []) or []),
     )
 
 
@@ -52,34 +54,16 @@ class PlayerOut(BaseModel):
     spg: float
     bpg: float
     bpm: float
-
-
-class Prompt(BaseModel):
-    index: int
-    decade: str
-    team: str
-    candidates: list[PlayerOut]
+    eligible_positions: list[str]
+    eligible: bool = True   # eligible for the CURRENT slot (set per step)
 
 
 class NewMatchRequest(BaseModel):
     username: str = Field(min_length=1, max_length=40)
 
 
-class MatchOut(BaseModel):
-    match_id: str
-    username: str
-    mode: str
-    prompts: list[Prompt]
-    # Opponent stays hidden until the draft is submitted (blind draft).
-
-
-class DraftPick(BaseModel):
-    prompt_index: int
-    player_name: str
-
-
-class DraftRequest(BaseModel):
-    picks: list[DraftPick] = Field(min_length=5, max_length=5)
+class PickRequest(BaseModel):
+    player_name: str = Field(min_length=1)
 
 
 class ScoredPlayer(BaseModel):

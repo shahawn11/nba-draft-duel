@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS players (
     ppg  REAL, rpg REAL, apg REAL, spg REAL, bpg REAL,
     bpm  REAL,                           -- impact estimate from PIE (see header)
     pie  REAL,                           -- raw PIE, kept for transparency
+    eligible TEXT,                       -- comma-joined slots the player may fill
     gp   INTEGER, mpg REAL,
     UNIQUE(name, season, team)
 );
@@ -147,11 +148,14 @@ def _cache_position(conn: sqlite3.Connection, player_id: int, position: str, raw
 
 
 # ---- Network build ----------------------------------------------------------
-def resolve_position(conn, player_id, apg, rpg, sleep, _info_endpoint) -> str:
-    """Position from cache, else CommonPlayerInfo (then cached)."""
+def resolve_position(conn, player_id, apg, rpg, sleep, _info_endpoint) -> tuple[str, str]:
+    """Return (position, eligible_csv). From cache, else CommonPlayerInfo."""
+    from app.positions import eligible_from_raw
+
     cached = _cached_position(conn, player_id)
     if cached:
-        return cached[0]
+        pos, raw = cached
+        return pos, ",".join(eligible_from_raw(raw, pos))
     raw = ""
     try:
         info = _info_endpoint(player_id=player_id).get_data_frames()[0]
@@ -162,7 +166,7 @@ def resolve_position(conn, player_id, apg, rpg, sleep, _info_endpoint) -> str:
     _cache_position(conn, player_id, pos, raw)
     conn.commit()
     time.sleep(sleep)
-    return pos
+    return pos, ",".join(eligible_from_raw(raw, pos))
 
 
 def build(since: int, out: Path, sleep: float = 0.6, limit: int | None = None,
@@ -214,7 +218,7 @@ def build(since: int, out: Path, sleep: float = 0.6, limit: int | None = None,
         for _, r in base.iterrows():
             pid = int(r["PLAYER_ID"])
             apg, rpg = float(r.get("AST", 0) or 0), float(r.get("REB", 0) or 0)
-            position = resolve_position(
+            position, eligible = resolve_position(
                 conn, pid, apg, rpg, sleep, commonplayerinfo.CommonPlayerInfo
             )
             pie = pie_by_id.get(pid)
@@ -223,15 +227,15 @@ def build(since: int, out: Path, sleep: float = 0.6, limit: int | None = None,
                 cur.execute(
                     """INSERT OR IGNORE INTO players
                        (player_id, name, position, team, season, decade,
-                        ppg, rpg, apg, spg, bpg, bpm, pie, gp, mpg)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        ppg, rpg, apg, spg, bpg, bpm, pie, eligible, gp, mpg)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (
                         pid, r.get("PLAYER_NAME"), position,
                         full_team_name(r.get("TEAM_ABBREVIATION", "")),
                         season, decade,
                         float(r.get("PTS", 0) or 0), rpg, apg,
                         float(r.get("STL", 0) or 0), float(r.get("BLK", 0) or 0),
-                        pie_to_bpm(pie), pie,
+                        pie_to_bpm(pie), pie, eligible,
                         int(r.get("GP", 0) or 0), float(r.get("MIN", 0) or 0),
                     ),
                 )
