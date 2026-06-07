@@ -39,6 +39,35 @@ Same checks (Postgres match row, rate-limit 429) without containers.
 > the Phase 1 Redis-matchmaking refactor. Scale with **replicas behind the load
 > balancer**, not `-w N`. (Multiple workers would split the matchmaking queue.)
 
+## Deploy to Railway (recommended start)
+Railway builds from `backend/Dockerfile` (config in `backend/railway.json`) and
+provides Postgres + Redis as one-click plugins.
+
+1. **Create the project**: railway.com → New Project → Deploy from GitHub repo.
+2. **API service**: add a service from this repo. In its **Settings → Root
+   Directory set `backend`** (so the Docker build context matches the Dockerfile's
+   `COPY app` paths). Railway auto-detects `railway.json` (Dockerfile build,
+   `/health` healthcheck, 1 replica).
+3. **Add plugins**: New → **Database → PostgreSQL**, and New → **Database → Redis**.
+4. **Wire env vars** on the API service (Variables tab) using reference variables:
+   - `DATABASE_URL = ${{Postgres.DATABASE_URL}}`
+   - `REDIS_URL = ${{Redis.REDIS_URL}}`
+   - `ALLOWED_ORIGINS = https://yourdomain.com`
+   - `TRUST_PROXY = true`
+   - `SESSION_TTL_SECONDS = 2592000`
+   - (leave `GAME_DB_PATH` unset — Postgres is used once `DATABASE_URL` is set)
+5. **Deploy** → grab the service's public URL, e.g. `https://duel-api.up.railway.app`.
+   Verify: `curl https://<url>/health` → expect `"db":"postgresql","db_ready":true`.
+6. **Keep live PvP on one replica** (`numReplicas: 1` in railway.json). Scale the
+   HTTP load via Cloudflare caching + vertical sizing; multi-replica WS needs Phase 1b.
+7. **Frontend → Cloudflare Pages** with `VITE_API=https://<railway-url>` (see below).
+8. **Domain**: point `api.yourdomain.com` at Railway (custom domain in service
+   settings), apex/`www` at Cloudflare Pages.
+
+CI is optional — Railway auto-deploys on push once the repo is connected. A
+CLI-based GitHub Actions alternative lives at `.github/workflows/deploy-railway.yml`
+(needs a `RAILWAY_TOKEN` secret).
+
 ## Container host + Cloudflare (Phase 0 target)
 1. **Build & push** the image to your registry (GHCR/Docker Hub):
    `docker build -t <registry>/duel-api ./backend && docker push ...`
