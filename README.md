@@ -119,8 +119,8 @@ that depends on your **current tier** — climbing gets slower, slipping costs m
 | Amateur | 0 | +10 | −2 |
 | Pro | 1,500 | +8 | −3 |
 | All-Star | 4,000 | +7 | −4 |
-| Veteran | 8,000 | +6 | −5 |
-| Hall-of-Fame | 18,000 | +5 | −5 |
+| Veteran | 8,000 | +7 | −5 |
+| Hall-of-Fame | 18,000 | +6 | −5 |
 | GOAT | 50,000 | +4 | −5 |
 
 Ties don't change rating. Tunable in `app/rating.py`. The header shows your tier

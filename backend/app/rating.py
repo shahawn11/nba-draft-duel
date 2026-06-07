@@ -15,8 +15,8 @@ TIERS: list[dict] = [
     {"name": "Amateur", "min": 0, "win": 10, "loss": -2},
     {"name": "Pro", "min": 1500, "win": 8, "loss": -3},
     {"name": "All-Star", "min": 4000, "win": 7, "loss": -4},
-    {"name": "Veteran", "min": 8000, "win": 6, "loss": -5},
-    {"name": "Hall-of-Fame", "min": 18000, "win": 5, "loss": -5},
+    {"name": "Veteran", "min": 8000, "win": 7, "loss": -5},
+    {"name": "Hall-of-Fame", "min": 18000, "win": 6, "loss": -5},
     {"name": "GOAT", "min": 50000, "win": 4, "loss": -5},
 ]
 
