@@ -24,19 +24,30 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
+# Support both Compose v2 plugin ("docker compose") and standalone ("docker-compose").
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE="docker-compose"
+else
+  echo "✗ Docker Compose not found. Install it: 'brew install docker-compose' (standalone) or enable the Compose v2 plugin."
+  exit 127
+fi
+echo "==> Using compose: $COMPOSE"
+
 echo "==> Bringing up the stack (build)…"
-docker compose up -d --build
+$COMPOSE up -d --build
 
 echo "==> Waiting for API health at $API/health …"
 for i in $(seq 1 60); do
   if curl -fsS "$API/health" >/dev/null 2>&1; then echo "   healthy"; break; fi
   sleep 1
-  [ "$i" = 60 ] && { echo "API never became healthy"; docker compose logs --tail=50 api; exit 1; }
+  [ "$i" = 60 ] && { echo "API never became healthy"; $COMPOSE logs --tail=50 api; exit 1; }
 done
 
 echo "==> Confirming the API is using Postgres (not SQLite)…"
-docker compose exec -T api sh -c 'echo "DATABASE_URL=$DATABASE_URL"'
-docker compose exec -T db psql -U duel -d duel -c "\dt" | grep -E "users|matches|accounts|sessions" \
+$COMPOSE exec -T api sh -c 'echo "DATABASE_URL=$DATABASE_URL"'
+$COMPOSE exec -T db psql -U duel -d duel -c "\dt" | grep -E "users|matches|accounts|sessions" \
   && echo "   Postgres tables present"
 
 echo "==> Driving a full offline draft over HTTP…"
@@ -65,7 +76,7 @@ print(f"   match resolved: {res['outcome']} {round(res['your_final'])}-{round(re
 PYEOF
 
 echo "==> Verifying the match row landed in Postgres…"
-docker compose exec -T db psql -U duel -d duel -tAc "SELECT count(*) FROM matches;" \
+$COMPOSE exec -T db psql -U duel -d duel -tAc "SELECT count(*) FROM matches;" \
   | awk '{print "   matches rows in Postgres:", $1; if ($1+0 < 1) exit 1}'
 
 echo "==> Checking rate limiting (signup rule = 5/min -> expect a 429)…"
@@ -79,9 +90,9 @@ echo "   signup status codes:$codes"
 echo "$codes" | grep -q 429 && echo "   rate limiting active (429 seen)" || { echo "   NO 429 — rate limit FAILED"; exit 1; }
 
 echo "==> Confirming Redis is the limiter backend (keys present)…"
-docker compose exec -T redis redis-cli --scan --pattern 'rl:*' | head -1 \
+$COMPOSE exec -T redis redis-cli --scan --pattern 'rl:*' | head -1 \
   && echo "   Redis rate-limit keys present"
 
 echo ""
 echo "✅ Stack validated on Postgres + Redis."
-if [ "${1:-}" = "--down" ]; then echo "==> Tearing down…"; docker compose down; fi
+if [ "${1:-}" = "--down" ]; then echo "==> Tearing down…"; $COMPOSE down; fi
