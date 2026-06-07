@@ -52,6 +52,9 @@ def _startup() -> None:
 
 @app.get("/health")
 def health() -> dict:
+    pools = game.dataset.historical_pool()
+    from collections import Counter
+    by_decade = dict(sorted(Counter(k.split("|")[0] for k in pools).items()))
     return {
         "status": "ok",
         "db": db.backend(),
@@ -59,6 +62,8 @@ def health() -> dict:
         "cors_origins": config.ALLOWED_ORIGINS,
         "cors_regex": config.ALLOWED_ORIGIN_REGEX,
         "pool_source": game.dataset.source(),
+        "pool_count": len(pools),
+        "pools_by_decade": by_decade,
         "opponent_season": game.dataset.current_season(),
         "starters_source": game.dataset.starters_source(),
     }
