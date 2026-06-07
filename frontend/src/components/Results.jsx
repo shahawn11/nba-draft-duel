@@ -49,6 +49,16 @@ export default function Results({ result, onPlayAgain }) {
           {result.your_final.toFixed(1)} – {result.opponent_final.toFixed(1)}
         </span>
         <span className="vs-team">vs {result.opponent_team}</span>
+        {result.ranked ? (
+          <span className="rating-change">
+            <b className={result.rating_change >= 0 ? 'up' : 'down'}>
+              {result.rating_change >= 0 ? '+' : ''}{result.rating_change} rating
+            </b>
+            {result.record && <> → {result.record.rating} ({result.record.tier})</>}
+          </span>
+        ) : (
+          <span className="rating-change unranked">Offline · unranked (no rating change)</span>
+        )}
       </div>
 
       <div className="matchups">

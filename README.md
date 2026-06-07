@@ -111,8 +111,10 @@ npm run dev                  # http://127.0.0.1:5173  (proxies /api -> :8000)
 
 ## Rating & tiers
 
-Players start at **1000** (floor 0). Each result moves your rating by an amount
-that depends on your **current tier** — climbing gets slower, slipping costs more:
+Players start at **1000** (floor 0). **Only PvP is ranked** — offline matches
+don't change your W/L or rating (good for warm-ups). Each ranked result moves
+your rating by an amount that depends on your **current tier** — climbing gets
+slower, slipping costs more:
 
 | Tier | Reached at | Win | Loss |
 |------|-----------|-----|------|

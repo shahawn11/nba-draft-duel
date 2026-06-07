@@ -253,9 +253,11 @@ def _resolve(match: dict, state: dict) -> dict:
     opponent = [player_from_dict(d) for d in match["opponent_json"]]
 
     outcome, result_payload = score_lineups(drafted, opponent, match["opponent_team"])
-    record = db.apply_result(match["username"], outcome)
+    # Offline mode is unranked: it does NOT change W/L or rating.
     result_payload["match_id"] = match["id"]
-    result_payload["record"] = record
+    result_payload["record"] = db.get_record(match["username"])
+    result_payload["ranked"] = False
+    result_payload["rating_change"] = 0
 
     db.resolve_match(match["id"], state, result_payload)
     return {"done": True, "result": result_payload}

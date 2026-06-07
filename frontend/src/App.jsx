@@ -23,6 +23,7 @@ export default function App() {
     setCommittedMode(chosenMode)
     if (chosenMode === 'pvp') {
       setLive(true)
+      try { setRecord(await api.record(name)) } catch { /* */ }
       return
     }
     setLive(false)
@@ -101,7 +102,7 @@ export default function App() {
         <Leaderboard onClose={() => setShowLeaderboard(false)} highlight={committedName} />
       )}
 
-      {!showLeaderboard && live && <LivePvP username={committedName} onExit={() => setLive(false)} />}
+      {!showLeaderboard && live && <LivePvP username={committedName} onExit={() => setLive(false)} onRecord={setRecord} />}
 
       {!showLeaderboard && !live && phase === 'setup' && (
         <div className="setup">

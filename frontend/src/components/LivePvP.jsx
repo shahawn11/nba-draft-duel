@@ -9,9 +9,10 @@ function wsUrl(username) {
   return `${proto}//${location.host}/ws/pvp?username=${encodeURIComponent(username)}`
 }
 
-export default function LivePvP({ username, onExit }) {
+export default function LivePvP({ username, onExit, onRecord }) {
   const [status, setStatus] = useState('connecting') // connecting|waiting|drafting|result|left|error
   const [opponent, setOpponent] = useState('')
+  const [opponentRecord, setOpponentRecord] = useState(null)
   const [step, setStep] = useState(null)
   const [deadline, setDeadline] = useState(0)
   const [filled, setFilled] = useState([])
@@ -35,7 +36,7 @@ export default function LivePvP({ username, onExit }) {
       const m = JSON.parse(ev.data)
       switch (m.type) {
         case 'waiting': setStatus('waiting'); break
-        case 'matched': setOpponent(m.opponent); break
+        case 'matched': setOpponent(m.opponent); setOpponentRecord(m.opponent_record || null); break
         case 'round':
           roundRef.current = m.round
           setStep(m.current_step); setDeadline(m.deadline)
@@ -51,14 +52,20 @@ export default function LivePvP({ username, onExit }) {
           break
         case 'opponent_progress': setOpponentPicks(m.picks_made); break
         case 'error': setError(m.detail); setWaitingForOpp(false); break
-        case 'result': setResult(m.result); setRecord(m.result.record); setStatus('result'); break
-        case 'opponent_left': setRecord(m.record); setStatus('left'); break
+        case 'result':
+          setResult(m.result); setRecord(m.result.record); setStatus('result')
+          if (onRecord && m.result.record) onRecord(m.result.record)
+          break
+        case 'opponent_left':
+          setRecord(m.record); setStatus('left')
+          if (onRecord && m.record) onRecord(m.record)
+          break
         default: break
       }
     }
     ws.onerror = () => setError('connection error')
     ws.onclose = () => { if (statusRef.current === 'connecting') setStatus('error') }
-  }, [username])
+  }, [username, onRecord])
 
   // keep a ref of status for onclose
   const statusRef = useRef(status)
@@ -102,7 +109,15 @@ export default function LivePvP({ username, onExit }) {
 
       {status === 'drafting' && view && (
         <>
-          <div className="live-banner">⚔️ Live vs <b>{opponent || 'opponent'}</b></div>
+          <div className="live-banner">
+            ⚔️ Live vs <b>{opponent || 'opponent'}</b>
+            {opponentRecord && (
+              <span className="opp-rec">
+                {' '}— <span className={`tier-badge ${(opponentRecord.tier || '').toLowerCase().replace(/[^a-z]/g, '')}`}>{opponentRecord.tier}</span>
+                {' '}<b>{opponentRecord.rating}</b> · {opponentRecord.wins}W-{opponentRecord.losses}L
+              </span>
+            )}
+          </div>
           <DraftBoard
             view={view}
             onPick={pick}

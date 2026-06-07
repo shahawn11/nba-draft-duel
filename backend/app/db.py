@@ -101,6 +101,7 @@ def leaderboard(limit: int = 20) -> list[dict]:
     with _conn() as c:
         rows = c.execute(
             "SELECT username, wins, losses, ties, rating FROM users "
+            "WHERE (wins + losses + ties) > 0 "
             "ORDER BY rating DESC, wins DESC, username ASC LIMIT ?",
             (limit,),
         ).fetchall()

@@ -64,8 +64,12 @@ class LiveGame:
             p.open_slots = list(SLOTS)
             p.picks = []
             p.step = game._build_step(self.rng, p.open_slots, set())
-        await self.a.send({"type": "matched", "opponent": self.b.username, "total_slots": NUM_ROUNDS})
-        await self.b.send({"type": "matched", "opponent": self.a.username, "total_slots": NUM_ROUNDS})
+        a_rec = db.get_record(self.a.username)
+        b_rec = db.get_record(self.b.username)
+        await self.a.send({"type": "matched", "opponent": self.b.username,
+                           "opponent_record": b_rec, "total_slots": NUM_ROUNDS})
+        await self.b.send({"type": "matched", "opponent": self.a.username,
+                           "opponent_record": a_rec, "total_slots": NUM_ROUNDS})
 
         try:
             for rnd in range(1, NUM_ROUNDS + 1):
@@ -149,11 +153,16 @@ class LiveGame:
 
     # ---- end states ----
     async def _finish(self) -> None:
+        a_old = db.get_record(self.a.username)["rating"]
+        b_old = db.get_record(self.b.username)["rating"]
         a_out, pa = game.score_lineups(self.a.lineup(), self.b.lineup(), f"{self.b.username}'s squad")
         _, pb = game.score_lineups(self.b.lineup(), self.a.lineup(), f"{self.a.username}'s squad")
         b_out = _INVERSE[a_out]
         pa["record"] = db.apply_result(self.a.username, a_out)
         pb["record"] = db.apply_result(self.b.username, b_out)
+        pa["ranked"] = pb["ranked"] = True
+        pa["rating_change"] = pa["record"]["rating"] - a_old
+        pb["rating_change"] = pb["record"]["rating"] - b_old
         pa["mode"] = pb["mode"] = "live"
         # Await the sends so results arrive before the sockets close.
         await self.a.send({"type": "result", "result": pa})
