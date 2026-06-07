@@ -38,10 +38,19 @@ MATCHUP_STRENGTH = 5.0    # strength points added per head-to-head matchup won
 GAME_BASE = 106.0         # league-ish baseline points both teams sit near
 GAME_SCALE = 0.22         # how strongly a strength gap turns into a points margin
 GAME_MIN, GAME_MAX = 80, 150
-# Positional fit bonuses/penalties (added to team total, in score points).
-PERFECT_FIT_BONUS = 6.0
-MISSING_POSITION_PENALTY = 4.0
-DUPLICATE_POSITION_PENALTY = 2.0
+# Positional fit quality (added to team total, in rating points). Slots are
+# forced, so balance is automatic; instead we judge how well each player suits
+# their slot. A slot expects a signature stat -- a PG should create (assists),
+# a center should rebound -- and players short of it are penalized while strong
+# fits earn a small bonus. (attr, expected, weight, good_label, bad_note)
+SLOT_EXPECTATION: dict[str, tuple] = {
+    "PG": ("apg", 5.0, 1.3, "floor general", "not a true PG (low assists)"),
+    "PF": ("rpg", 6.0, 0.7, "strong PF", "light on the glass (low rebounds)"),
+    "C": ("rpg", 9.0, 0.9, "anchor at C", "undersized at C (low rebounds)"),
+}
+FIT_BONUS_SCALE = 0.3       # fraction of the surplus turned into a bonus
+MAX_FIT_BONUS = 2.0         # cap on per-player fit bonus
+MAX_FIT_PENALTY = 7.0       # cap on per-player fit penalty
 
 
 @dataclass(frozen=True)
@@ -149,30 +158,28 @@ def score_player(p: PlayerStats) -> PlayerScore:
     return PlayerScore(player=p, production=prod, advanced=adv, total=total)
 
 
-# ---- Positional fit --------------------------------------------------------
+# ---- Positional fit quality ------------------------------------------------
 def evaluate_fit(players: list[PlayerStats]) -> tuple[float, list[str]]:
-    counts: dict[str, int] = {}
-    for p in players:
-        counts[p.position] = counts.get(p.position, 0) + 1
-
+    """Judge how well each player suits the slot they're playing. Players short
+    of a slot's signature stat are penalized; strong fits earn a small bonus."""
     notes: list[str] = []
     adjustment = 0.0
 
-    missing = [pos for pos in CANONICAL_POSITIONS if counts.get(pos, 0) == 0]
-    duplicates = {pos: c for pos, c in counts.items() if c > 1}
-
-    if not missing and not duplicates and len(players) == 5:
-        adjustment += PERFECT_FIT_BONUS
-        notes.append(f"Perfect positional balance (+{PERFECT_FIT_BONUS:.0f})")
-    else:
-        for pos in missing:
-            adjustment -= MISSING_POSITION_PENALTY
-            notes.append(f"No {pos} on the floor (-{MISSING_POSITION_PENALTY:.0f})")
-        for pos, c in duplicates.items():
-            extra = c - 1
-            pen = DUPLICATE_POSITION_PENALTY * extra
+    for p in players:
+        spec = SLOT_EXPECTATION.get(p.position)
+        if not spec:
+            continue  # SG/SF have no hard statistical expectation
+        attr, expected, weight, good_label, bad_note = spec
+        value = getattr(p, attr)
+        if value < expected:
+            pen = min(MAX_FIT_PENALTY, round((expected - value) * weight, 1))
             adjustment -= pen
-            notes.append(f"{c} players at {pos} (-{pen:.0f})")
+            notes.append(f"{p.name} — {bad_note} (-{pen:.1f})")
+        else:
+            bonus = min(MAX_FIT_BONUS, round((value - expected) * weight * FIT_BONUS_SCALE, 1))
+            if bonus >= 0.5:
+                adjustment += bonus
+                notes.append(f"{p.name} — {good_label} (+{bonus:.1f})")
 
     return adjustment, notes
 
