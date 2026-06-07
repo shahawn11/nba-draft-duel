@@ -1,0 +1,51 @@
+# Local production-parity stack: API + Postgres + Redis.
+# Rate limiting uses Redis immediately. Postgres is provisioned and wired via
+# DATABASE_URL for the upcoming SQLite->Postgres migration (the API still uses
+# SQLite on the /data volume until that lands).
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      # CORS: set to your frontend origin(s) in prod (Cloudflare domain).
+      ALLOWED_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
+      # Shared rate limiting across replicas.
+      REDIS_URL: "redis://redis:6379/0"
+      # Used after the Postgres migration.
+      DATABASE_URL: "postgresql://duel:duel@db:5432/duel"
+      # Behind Cloudflare/LB -> trust the forwarded client IP for rate limiting.
+      TRUST_PROXY: "true"
+      GAME_DB_PATH: "/data/game.db"
+    volumes:
+      - api_data:/data
+    depends_on:
+      redis:
+        condition: service_started
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: duel
+      POSTGRES_PASSWORD: duel
+      POSTGRES_DB: duel
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U duel"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+
+volumes:
+  api_data:
+  pg_data:

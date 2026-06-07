@@ -11,9 +11,13 @@ import sqlite3
 import time
 from pathlib import Path
 
+import os
+
 from . import rating
 
-DB_PATH = Path(__file__).parent / "data" / "game.db"
+# Writable runtime DB. Overridable via GAME_DB_PATH so it can live on a mounted
+# volume in a container (the read-only players.db dataset stays baked in-image).
+DB_PATH = Path(os.environ.get("GAME_DB_PATH") or (Path(__file__).parent / "data" / "game.db"))
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (

@@ -1,0 +1,9 @@
+# Keep the image small & reproducible. NOTE: app/data/players.db (the read-only
+# historical dataset) is intentionally NOT ignored so it bakes into the image.
+.venv*
+**/__pycache__/
+*.pyc
+tests/
+# Runtime SQLite DB is created on a volume at GAME_DB_PATH, never baked in.
+app/data/game.db
+*.log
