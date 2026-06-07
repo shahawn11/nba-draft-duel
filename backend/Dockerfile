@@ -37,8 +37,7 @@ EXPOSE 8000
 
 # Single worker: live PvP keeps match state in-process until the Phase 1
 # Redis-matchmaking refactor. Scale via replicas behind the LB, not workers.
-# UvicornWorker handles WebSockets.
-CMD ["gunicorn", "app.main:app", \
-     "-k", "uvicorn.workers.UvicornWorker", \
-     "-w", "1", "-b", "0.0.0.0:8000", \
-     "--timeout", "120", "--access-logfile", "-"]
+# UvicornWorker handles WebSockets. Bind the platform-provided $PORT (Railway
+# injects it dynamically); fall back to 8000 for local/compose. sh -c is needed
+# so the env var expands (exec-form CMD does not expand variables).
+CMD ["sh", "-c", "gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 1 -b 0.0.0.0:${PORT:-8000} --timeout 120 --access-logfile -"]
