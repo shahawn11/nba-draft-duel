@@ -18,6 +18,7 @@ export default function LivePvP({ username, onExit }) {
   const [picksMade, setPicksMade] = useState(0)
   const [opponentPicks, setOpponentPicks] = useState(0)
   const [waitingForOpp, setWaitingForOpp] = useState(false)
+  const roundRef = useRef(0)
   const [result, setResult] = useState(null)
   const [record, setRecord] = useState(null)
   const [error, setError] = useState('')
@@ -35,6 +36,7 @@ export default function LivePvP({ username, onExit }) {
         case 'waiting': setStatus('waiting'); break
         case 'matched': setOpponent(m.opponent); break
         case 'round':
+          roundRef.current = m.round
           setStep(m.current_step); setDeadline(m.deadline)
           setPicksMade(m.picks_made); setWaitingForOpp(false); setStatus('drafting')
           break
@@ -65,7 +67,7 @@ export default function LivePvP({ username, onExit }) {
 
   function pick(name, slot) {
     setWaitingForOpp(true)
-    try { wsRef.current.send(JSON.stringify({ type: 'pick', player_name: name, slot })) } catch { /* */ }
+    try { wsRef.current.send(JSON.stringify({ type: 'pick', round: roundRef.current, player_name: name, slot })) } catch { /* */ }
   }
 
   const openSlots = SLOTS.filter((s) => !filled.some((f) => f.slot === s))

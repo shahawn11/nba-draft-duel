@@ -73,8 +73,8 @@ class LiveGame:
                 for p in (self.a, self.b):
                     await p.send({"type": "round", "round": rnd, "deadline": deadline,
                                   "current_step": p.step, "picks_made": len(p.picks)})
-                await asyncio.gather(self._collect(self.a, deadline),
-                                     self._collect(self.b, deadline))
+                await asyncio.gather(self._collect(self.a, deadline, rnd),
+                                     self._collect(self.b, deadline, rnd))
                 if rnd < NUM_ROUNDS:
                     for p in (self.a, self.b):
                         p.step = game._build_step(self.rng, p.open_slots, p.picked_names())
@@ -85,7 +85,7 @@ class LiveGame:
         await self._finish()
 
     # ---- per-player round collection ----
-    async def _collect(self, p: Player, deadline: float) -> None:
+    async def _collect(self, p: Player, deadline: float, rnd: int) -> None:
         other = self.b if p is self.a else self.a
         while True:
             remaining = deadline - time.time()
@@ -104,6 +104,10 @@ class LiveGame:
             if msg.get("type") == "_disconnect":
                 raise PlayerLeft(p)
             if msg.get("type") == "pick":
+                # Ignore picks for a stale round (e.g. a click that lands just
+                # after the timer auto-picked and advanced the round).
+                if msg.get("round") is not None and msg.get("round") != rnd:
+                    continue
                 ok, err = self._apply(p, msg.get("player_name"), msg.get("slot"))
                 if ok:
                     await p.send({"type": "picked_ok", "filled": self._filled(p),
