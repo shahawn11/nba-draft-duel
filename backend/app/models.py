@@ -62,6 +62,7 @@ class PlayerOut(BaseModel):
 
 class NewMatchRequest(BaseModel):
     username: str = Field(min_length=1, max_length=40)
+    display_name: str | None = None   # guest display label
 
 
 class AuthRequest(BaseModel):

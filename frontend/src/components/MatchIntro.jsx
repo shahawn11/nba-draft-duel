@@ -8,9 +8,10 @@ function tierCls(tier) {
 }
 
 function Fighter({ side, name, record }) {
+  const label = name || (record && record.display_name) || 'Player'
   return (
     <div className={`fighter ${side}`}>
-      <div className="fighter-name">{name || 'You'}</div>
+      <div className="fighter-name">{label}</div>
       {record && (
         <>
           <span className={`tier-badge ${tierCls(record.tier)}`}>{record.tier}</span>

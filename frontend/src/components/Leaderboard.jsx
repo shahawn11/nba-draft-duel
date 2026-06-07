@@ -33,7 +33,7 @@ export default function Leaderboard({ onClose, highlight }) {
             {rows.map((r, i) => (
               <tr key={r.username} className={highlight === r.username ? 'me' : ''}>
                 <td className="rank">{i + 1}</td>
-                <td className="lb-name">{r.username}</td>
+                <td className="lb-name">{r.display_name || r.username}</td>
                 <td><span className={`tier-badge ${TIER_CLASS[r.tier] || ''}`}>{r.tier}</span></td>
                 <td className="lb-rating">{r.rating}</td>
                 <td className="lb-wlt">{r.wins}–{r.losses}–{r.ties}</td>

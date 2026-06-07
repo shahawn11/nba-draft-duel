@@ -19,6 +19,7 @@ function getGuestId() {
 export default function App() {
   const [guestId] = useState(getGuestId)
   const [auth, setAuth] = useState(loadAuth)
+  const [guestName, setGuestName] = useState(() => localStorage.getItem('ndd_guest_name') || '')
   const [mode, setMode] = useState('offline')
   const [committedMode, setCommittedMode] = useState('offline')
   const [record, setRecord] = useState(null)
@@ -32,6 +33,13 @@ export default function App() {
   const [muted, setMuted] = useState(isMuted())
 
   const identity = (auth && auth.username) || guestId
+  const loggedIn = !!(auth && auth.username)
+  const displayName = loggedIn ? null : (guestName.trim() || null)
+
+  function setGuest(name) {
+    setGuestName(name)
+    try { localStorage.setItem('ndd_guest_name', name) } catch { /* */ }
+  }
 
   // On load: restore token, fetch record, validate session.
   useEffect(() => {
@@ -74,7 +82,7 @@ export default function App() {
     setError('')
     setBusy(true)
     try {
-      const v = await api.newMatch(identity)
+      const v = await api.newMatch(identity, displayName)
       setView(v)
       setResult(null)
       setRecord(await api.record(identity))
@@ -100,7 +108,6 @@ export default function App() {
   }
 
   const phase = result ? 'result' : view ? 'drafting' : 'setup'
-  const loggedIn = !!(auth && auth.username)
 
   return (
     <div className="app">
@@ -118,7 +125,7 @@ export default function App() {
             : <button className="lb-toggle" onClick={() => setShowAuth(true)}>Log in / Sign up</button>}
           {record && (
             <div className="record">
-              <span className="who">{loggedIn ? identity : 'Guest'}</span>
+              <span className="who">{loggedIn ? identity : (guestName.trim() || 'Guest')}</span>
               <span className="rating-line">
                 {record.tier && (
                   <span className={`tier-badge ${(record.tier || '').toLowerCase().replace(/[^a-z]/g, '')}`}>
@@ -142,16 +149,25 @@ export default function App() {
       {showLeaderboard && <Leaderboard onClose={() => setShowLeaderboard(false)} highlight={identity} />}
 
       {!showLeaderboard && live && (
-        <LivePvP username={identity} token={auth && auth.token} onExit={() => setLive(false)} onRecord={setRecord} meRecord={record} />
+        <LivePvP username={identity} token={auth && auth.token} displayName={displayName} onExit={() => setLive(false)} onRecord={setRecord} meRecord={record} />
       )}
 
       {!showLeaderboard && !live && phase === 'setup' && (
         <div className="setup">
           <h2>Enter the arena</h2>
           <p className="hint">
-            Playing as <b>{loggedIn ? identity : 'Guest'}</b>
+            Playing as <b>{loggedIn ? identity : (guestName.trim() || 'Guest')}</b>
             {!loggedIn && <> — <button className="link-btn" onClick={() => setShowAuth(true)}>sign up</button> to keep your record.</>}
           </p>
+          {!loggedIn && (
+            <input
+              className="guest-name"
+              placeholder="guest name (optional)"
+              maxLength={24}
+              value={guestName}
+              onChange={(e) => setGuest(e.target.value)}
+            />
+          )}
           <div className="mode-toggle">
             <button className={`mode-btn ${mode === 'offline' ? 'active' : ''}`} onClick={() => setMode('offline')} type="button">
               🏀 Offline

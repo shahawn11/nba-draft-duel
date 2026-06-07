@@ -5,13 +5,14 @@ import MatchIntro from './MatchIntro.jsx'
 
 const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
 
-function wsUrl(username, token) {
+function wsUrl(username, token, displayName) {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
   const t = token ? `&token=${encodeURIComponent(token)}` : ''
-  return `${proto}//${location.host}/ws/pvp?username=${encodeURIComponent(username)}${t}`
+  const d = displayName ? `&display_name=${encodeURIComponent(displayName)}` : ''
+  return `${proto}//${location.host}/ws/pvp?username=${encodeURIComponent(username)}${t}${d}`
 }
 
-export default function LivePvP({ username, token, onExit, onRecord, meRecord }) {
+export default function LivePvP({ username, token, displayName, onExit, onRecord, meRecord }) {
   const [status, setStatus] = useState('connecting') // connecting|waiting|drafting|result|left|error
   const [opponent, setOpponent] = useState('')
   const [opponentRecord, setOpponentRecord] = useState(null)
@@ -32,7 +33,7 @@ export default function LivePvP({ username, token, onExit, onRecord, meRecord })
   const connect = useCallback(() => {
     setStatus('connecting'); setResult(null); setFilled([]); setPicksMade(0)
     setOpponentPicks(0); setWaitingForOpp(false); setError('')
-    const ws = new WebSocket(wsUrl(username, token))
+    const ws = new WebSocket(wsUrl(username, token, displayName))
     wsRef.current = ws
     ws.onmessage = (ev) => {
       const m = JSON.parse(ev.data)
@@ -67,7 +68,7 @@ export default function LivePvP({ username, token, onExit, onRecord, meRecord })
     }
     ws.onerror = () => setError('connection error')
     ws.onclose = () => { if (statusRef.current === 'connecting') setStatus('error') }
-  }, [username, token, onRecord])
+  }, [username, token, displayName, onRecord])
   // keep a ref of status for onclose
   const statusRef = useRef(status)
   useEffect(() => { statusRef.current = status }, [status])
@@ -109,13 +110,13 @@ export default function LivePvP({ username, token, onExit, onRecord, meRecord })
       )}
 
       {status === 'intro' && (
-        <MatchIntro me={username} meRecord={meRecord} opponent={opponent} opponentRecord={opponentRecord} />
+        <MatchIntro me={displayName || username} meRecord={meRecord} opponent={(opponentRecord && opponentRecord.display_name) || opponent} opponentRecord={opponentRecord} />
       )}
 
       {status === 'drafting' && view && (
         <>
           <div className="live-banner">
-            ⚔️ Live vs <b>{opponent || 'opponent'}</b>
+            ⚔️ Live vs <b>{(opponentRecord && opponentRecord.display_name) || opponent || 'opponent'}</b>
             {opponentRecord && (
               <span className="opp-rec">
                 {' '}— <span className={`tier-badge ${(opponentRecord.tier || '').toLowerCase().replace(/[^a-z]/g, '')}`}>{opponentRecord.tier}</span>

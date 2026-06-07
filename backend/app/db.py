@@ -66,12 +66,25 @@ def init_db() -> None:
         cols = {r[1] for r in c.execute("PRAGMA table_info(users)")}
         if "rating" not in cols:
             c.execute(f"ALTER TABLE users ADD COLUMN rating INTEGER NOT NULL DEFAULT {rating.START_RATING}")
+        if "display_name" not in cols:
+            c.execute("ALTER TABLE users ADD COLUMN display_name TEXT")
 
 
 # ---- users / records -------------------------------------------------------
 def ensure_user(username: str) -> None:
     with _conn() as c:
         c.execute("INSERT OR IGNORE INTO users(username) VALUES (?)", (username,))
+
+
+def set_display_name(username: str, name: str) -> None:
+    """Set a guest's display label (record key stays the username/guest id).
+    Ignored for registered accounts (their display is the account name)."""
+    name = (name or "").strip()[:24]
+    if not name:
+        return
+    ensure_user(username)
+    with _conn() as c:
+        c.execute("UPDATE users SET display_name = ? WHERE username = ?", (name, username))
 
 
 def _record_dict(row) -> dict:
@@ -82,13 +95,14 @@ def _record_dict(row) -> dict:
     nxt = rating.next_tier(r)
     d["next_tier"] = nxt["name"] if nxt else None
     d["next_tier_at"] = nxt["min"] if nxt else None
+    d["display_name"] = d.get("display_name") or d.get("username")
     return d
 
 
 def get_record(username: str) -> dict:
     with _conn() as c:
         row = c.execute(
-            "SELECT username, wins, losses, ties, rating FROM users WHERE username = ?",
+            "SELECT username, wins, losses, ties, rating, display_name FROM users WHERE username = ?",
             (username,),
         ).fetchone()
     if not row:
@@ -115,7 +129,7 @@ def apply_result(username: str, outcome: str) -> dict:
 def leaderboard(limit: int = 20) -> list[dict]:
     with _conn() as c:
         rows = c.execute(
-            "SELECT username, wins, losses, ties, rating FROM users "
+            "SELECT username, wins, losses, ties, rating, display_name FROM users "
             "WHERE (wins + losses + ties) > 0 "
             "ORDER BY rating DESC, wins DESC, username ASC LIMIT ?",
             (limit,),

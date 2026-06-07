@@ -688,3 +688,15 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   padding: 0;
   text-decoration: underline;
 }
+
+/* ---- guest name ---- */
+.guest-name {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 1rem;
+  margin-bottom: 14px;
+}

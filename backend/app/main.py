@@ -77,6 +77,8 @@ def _authorize_identity(username: str, token: str | None) -> None:
 def create_match(req: NewMatchRequest, authorization: str | None = Header(default=None)) -> dict:
     """Start an offline match -> returns the first draft step (opponent hidden)."""
     _authorize_identity(req.username, _bearer(authorization))
+    if req.display_name and not db.account_exists(req.username):
+        db.set_display_name(req.username, req.display_name)
     return game.new_match(req.username)
 
 
@@ -164,4 +166,7 @@ async def ws_pvp(ws: WebSocket) -> None:
         await ws.send_json({"type": "error", "detail": "log in to play as this account"})
         await ws.close()
         return
+    display_name = ws.query_params.get("display_name")
+    if display_name and not db.account_exists(username):
+        db.set_display_name(username, display_name)
     await live.manager.handle(ws, username)

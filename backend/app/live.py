@@ -160,8 +160,10 @@ class LiveGame:
     async def _finish(self) -> None:
         a_old = db.get_record(self.a.username)["rating"]
         b_old = db.get_record(self.b.username)["rating"]
-        a_out, pa = game.score_lineups(self.a.lineup(), self.b.lineup(), f"{self.b.username}'s squad")
-        _, pb = game.score_lineups(self.b.lineup(), self.a.lineup(), f"{self.a.username}'s squad")
+        a_disp = db.get_record(self.a.username)["display_name"]
+        b_disp = db.get_record(self.b.username)["display_name"]
+        a_out, pa = game.score_lineups(self.a.lineup(), self.b.lineup(), f"{b_disp}'s squad")
+        _, pb = game.score_lineups(self.b.lineup(), self.a.lineup(), f"{a_disp}'s squad")
         b_out = _INVERSE[a_out]
         pa["record"] = db.apply_result(self.a.username, a_out)
         pb["record"] = db.apply_result(self.b.username, b_out)
