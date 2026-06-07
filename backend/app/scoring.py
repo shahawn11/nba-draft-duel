@@ -27,6 +27,11 @@ ADVANCED_WEIGHT = 0.35
 # Final blend between cumulative team total and head-to-head matchup wins.
 TEAM_TOTAL_WEIGHT = 0.70
 MATCHUP_WEIGHT = 0.30
+# Realistic game-score projection.
+MATCHUP_STRENGTH = 5.0    # strength points added per head-to-head matchup won
+GAME_BASE = 106.0         # league-ish baseline points both teams sit near
+GAME_SCALE = 0.22         # how strongly a strength gap turns into a points margin
+GAME_MIN, GAME_MAX = 80, 150
 # Positional fit bonuses/penalties (added to team total, in score points).
 PERFECT_FIT_BONUS = 6.0
 MISSING_POSITION_PENALTY = 4.0
@@ -217,6 +222,12 @@ def compute_matchups(home: TeamScore, away: TeamScore) -> list[MatchupResult]:
     return results
 
 
+def _project_points(strength: float, avg: float) -> int:
+    """Map a team's blended strength onto a realistic NBA points total."""
+    pts = GAME_BASE + (strength - avg) * GAME_SCALE
+    return int(round(max(float(GAME_MIN), min(float(GAME_MAX), pts))))
+
+
 def duel(home_players: list[PlayerStats], away_players: list[PlayerStats]) -> DuelResult:
     home = score_team(home_players)
     away = score_team(away_players)
@@ -225,24 +236,35 @@ def duel(home_players: list[PlayerStats], away_players: list[PlayerStats]) -> Du
     home_wins = sum(1 for m in matchups if m.winner == "home")
     away_wins = sum(1 for m in matchups if m.winner == "away")
 
-    # Matchup component scaled to be comparable to team totals (max 5 wins).
-    # Express matchup edge as a points swing relative to team-total magnitude.
-    matchup_swing = (home_wins - away_wins) * 6.0  # each matchup ~6 pts
+    # Blend team strength with the head-to-head matchup edge into one number.
+    home_strength = home.adjusted_total + home_wins * MATCHUP_STRENGTH
+    away_strength = away.adjusted_total + away_wins * MATCHUP_STRENGTH
 
-    home_final = home.adjusted_total * TEAM_TOTAL_WEIGHT + max(0.0, matchup_swing) * MATCHUP_WEIGHT
-    away_final = away.adjusted_total * TEAM_TOTAL_WEIGHT + max(0.0, -matchup_swing) * MATCHUP_WEIGHT
+    # Project a realistic NBA-style final score: both teams sit near a league
+    # baseline, separated by their relative strength. Round to whole points so
+    # it reads like a real box score (e.g. 112-104).
+    avg = (home_strength + away_strength) / 2.0
+    home_pts = _project_points(home_strength, avg)
+    away_pts = _project_points(away_strength, avg)
 
-    if abs(home_final - away_final) < 1e-6:
-        winner = "tie"
-    elif home_final > away_final:
+    # Avoid an actual tie in a "game" -- nudge the stronger lineup by 1 (OT).
+    if home_pts == away_pts:
+        if home_strength > away_strength:
+            home_pts += 1
+        elif away_strength > home_strength:
+            away_pts += 1
+
+    if home_pts > away_pts:
         winner = "home"
-    else:
+    elif away_pts > home_pts:
         winner = "away"
+    else:
+        winner = "tie"
 
     return DuelResult(
         winner=winner,
-        home_final=home_final,
-        away_final=away_final,
+        home_final=float(home_pts),
+        away_final=float(away_pts),
         home=home,
         away=away,
         matchups=matchups,

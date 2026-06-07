@@ -5,19 +5,21 @@ function Lineup({ title, team, highlight }) {
   return (
     <div className={`lineup ${highlight ? 'highlight' : ''}`}>
       <h3>{title}</h3>
-      <div className="lineup-total">
-        {team.adjusted_total.toFixed(1)}
-        <span className="sub">
-          base {team.base_total.toFixed(1)} · fit {team.fit_adjustment >= 0 ? '+' : ''}
-          {team.fit_adjustment.toFixed(1)}
-        </span>
-      </div>
       <ul className="scored-players">
         {team.players.map((p) => (
           <li key={p.name}>
-            <span className="pos-badge">{p.position}</span>
-            <span className="sp-name">{p.name}</span>
-            <span className="sp-total">{p.total.toFixed(1)}</span>
+            <div className="sp-head">
+              <span className="pos-badge">{p.position}</span>
+              <span className="sp-name">{p.name}</span>
+              <span className="sp-rating" title="player rating">{p.total.toFixed(0)}</span>
+            </div>
+            <div className="sp-stats">
+              <b>{p.ppg}</b> pts · <b>{p.rpg}</b> reb · <b>{p.apg}</b> ast
+              {' · '}{p.spg} stl · {p.bpg} blk
+              {p.team || p.decade ? (
+                <span className="sp-prov"> — {p.decade} {p.team}</span>
+              ) : null}
+            </div>
           </li>
         ))}
       </ul>

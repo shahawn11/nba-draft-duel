@@ -184,16 +184,24 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .lineup h3 { margin: 0 0 6px; }
 .lineup-total { font-size: 1.8rem; font-weight: 800; }
 .lineup-total .sub { display: block; font-size: 0.72rem; font-weight: 400; color: var(--muted); }
-.scored-players { list-style: none; padding: 0; margin: 12px 0 0; }
+.scored-players { list-style: none; padding: 0; margin: 6px 0 0; }
 .scored-players li {
-  display: grid;
-  grid-template-columns: 36px 1fr auto;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 0;
+  padding: 8px 0;
   border-top: 1px solid var(--line);
 }
-.scored-players .sp-total { font-weight: 700; }
+.sp-head { display: flex; align-items: center; gap: 8px; }
+.sp-head .sp-name { flex: 1; font-weight: 600; }
+.sp-head .sp-rating {
+  font-weight: 800;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 8px;
+  font-size: 0.85rem;
+}
+.sp-stats { font-size: 0.8rem; color: var(--muted); margin-top: 3px; }
+.sp-stats b { color: var(--text); }
+.sp-prov { color: var(--muted); }
 .fit-notes { list-style: none; padding: 0; margin: 10px 0 0; color: var(--muted); font-size: 0.78rem; }
 .fit-notes li::before { content: '• '; color: var(--accent); }
 

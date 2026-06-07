@@ -100,6 +100,85 @@ HISTORICAL_POOL: dict[str, list[PlayerStats]] = {
     ],
 }
 
+# --- Pre-1996 legends: a few top teams per decade (curated) -----------------
+# stats.nba.com lacks reliable advanced metrics (and steals/blocks) before the
+# mid-1990s, so the 1960s-1980s come from curated pools instead of the pipeline.
+# Steals/blocks are ~0 pre-1973-74 (not tracked); impact (bpm) is hand-set.
+HISTORICAL_POOL.update({
+    "1960s|Boston Celtics": [
+        _p("Bill Russell", "C", 15.1, 22.7, 4.3, 0.0, 0.0, 8.5, "BOS", "1960s", ("C", "PF")),
+        _p("Bob Cousy", "PG", 17.0, 4.8, 7.8, 0.0, 0.0, 4.5, "BOS", "1960s", ("PG",)),
+        _p("John Havlicek", "SF", 18.0, 6.0, 4.0, 0.0, 0.0, 5.0, "BOS", "1960s", ("SF", "SG")),
+        _p("Sam Jones", "SG", 18.9, 4.9, 2.7, 0.0, 0.0, 4.0, "BOS", "1960s", ("SG",)),
+        _p("Tom Heinsohn", "PF", 18.6, 8.8, 2.0, 0.0, 0.0, 2.5, "BOS", "1960s", ("PF", "SF")),
+        _p("Bill Sharman", "SG", 18.0, 3.8, 3.0, 0.0, 0.0, 3.0, "BOS", "1960s", ("SG", "PG")),
+        _p("K.C. Jones", "PG", 7.6, 3.2, 4.3, 0.0, 0.0, 2.0, "BOS", "1960s", ("PG", "SG")),
+        _p("Frank Ramsey", "SF", 13.0, 5.0, 1.8, 0.0, 0.0, 1.5, "BOS", "1960s", ("SF", "SG")),
+        _p("Tom Sanders", "PF", 9.6, 6.3, 1.1, 0.0, 0.0, 1.0, "BOS", "1960s", ("PF", "SF")),
+        _p("Don Nelson", "SF", 10.2, 5.1, 1.4, 0.0, 0.0, 1.0, "BOS", "1960s", ("SF", "PF")),
+    ],
+    "1960s|Los Angeles Lakers": [
+        _p("Wilt Chamberlain", "C", 24.0, 23.9, 4.1, 0.0, 0.0, 9.0, "LAL", "1960s", ("C",)),
+        _p("Jerry West", "SG", 27.0, 5.8, 6.3, 0.0, 0.0, 7.5, "LAL", "1960s", ("PG", "SG")),
+        _p("Elgin Baylor", "SF", 27.4, 13.5, 4.0, 0.0, 0.0, 7.0, "LAL", "1960s", ("SF", "PF")),
+        _p("Gail Goodrich", "PG", 14.0, 3.0, 4.1, 0.0, 0.0, 3.0, "LAL", "1960s", ("PG", "SG")),
+        _p("Dick Barnett", "SG", 16.0, 3.2, 3.3, 0.0, 0.0, 2.5, "LAL", "1960s", ("SG", "PG")),
+        _p("Rudy LaRusso", "PF", 15.0, 9.0, 2.0, 0.0, 0.0, 2.5, "LAL", "1960s", ("PF", "SF")),
+        _p("Happy Hairston", "PF", 12.0, 10.5, 1.4, 0.0, 0.0, 2.0, "LAL", "1960s", ("PF", "C")),
+        _p("Jim McMillian", "SF", 13.0, 5.2, 2.4, 0.0, 0.0, 2.0, "LAL", "1960s", ("SF",)),
+        _p("LeRoy Ellis", "C", 11.0, 9.0, 1.2, 0.0, 0.0, 1.5, "LAL", "1960s", ("C", "PF")),
+        _p("Mel Counts", "C", 8.0, 6.8, 1.8, 0.0, 0.0, 1.0, "LAL", "1960s", ("C", "PF")),
+    ],
+    "1970s|New York Knicks": [
+        _p("Walt Frazier", "PG", 20.0, 6.2, 6.3, 1.9, 0.2, 6.0, "NYK", "1970s", ("PG", "SG")),
+        _p("Willis Reed", "C", 18.0, 12.0, 2.0, 0.0, 0.0, 5.0, "NYK", "1970s", ("C", "PF")),
+        _p("Earl Monroe", "SG", 17.0, 3.0, 4.0, 1.0, 0.1, 4.0, "NYK", "1970s", ("SG", "PG")),
+        _p("Dave DeBusschere", "PF", 16.0, 11.0, 2.8, 0.7, 0.5, 4.0, "NYK", "1970s", ("PF", "SF")),
+        _p("Bill Bradley", "SF", 12.4, 3.2, 3.4, 0.6, 0.1, 2.5, "NYK", "1970s", ("SF",)),
+        _p("Jerry Lucas", "PF", 11.0, 10.0, 3.3, 0.5, 0.3, 3.0, "NYK", "1970s", ("PF", "C")),
+        _p("Dick Barnett", "SG", 11.0, 2.6, 3.0, 0.0, 0.0, 2.0, "NYK", "1970s", ("SG", "PG")),
+        _p("Cazzie Russell", "SF", 13.0, 4.0, 2.0, 0.0, 0.0, 2.0, "NYK", "1970s", ("SF", "SG")),
+        _p("Phil Jackson", "PF", 7.0, 5.0, 1.2, 0.8, 0.5, 1.0, "NYK", "1970s", ("SF", "PF")),
+        _p("Dean Meminger", "PG", 6.4, 2.2, 3.0, 1.0, 0.1, 1.0, "NYK", "1970s", ("PG", "SG")),
+    ],
+    "1970s|Milwaukee Bucks": [
+        _p("Kareem Abdul-Jabbar", "C", 30.4, 15.3, 4.3, 1.0, 3.0, 9.5, "MIL", "1970s", ("C",)),
+        _p("Oscar Robertson", "PG", 18.0, 6.0, 8.2, 1.0, 0.1, 6.0, "MIL", "1970s", ("PG", "SG")),
+        _p("Bob Dandridge", "SF", 18.6, 7.0, 3.2, 1.2, 0.4, 4.0, "MIL", "1970s", ("SF",)),
+        _p("Jon McGlocklin", "SG", 14.0, 3.0, 3.2, 0.5, 0.1, 2.5, "MIL", "1970s", ("SG", "PG")),
+        _p("Lucius Allen", "PG", 13.0, 3.2, 4.2, 1.3, 0.2, 2.5, "MIL", "1970s", ("PG", "SG")),
+        _p("Bob Boozer", "PF", 11.0, 6.2, 1.6, 0.0, 0.0, 1.5, "MIL", "1970s", ("PF", "SF")),
+        _p("Greg Smith", "PF", 9.0, 7.0, 2.0, 0.5, 0.4, 1.5, "MIL", "1970s", ("PF", "SF")),
+        _p("Curtis Perry", "PF", 8.0, 8.0, 1.3, 0.8, 0.6, 1.0, "MIL", "1970s", ("PF", "C")),
+        _p("Wali Jones", "PG", 9.0, 2.0, 3.2, 0.7, 0.1, 1.0, "MIL", "1970s", ("PG", "SG")),
+        _p("Dick Cunningham", "C", 4.0, 5.5, 0.8, 0.2, 0.4, 0.5, "MIL", "1970s", ("C",)),
+    ],
+    "1980s|Boston Celtics": [
+        _p("Larry Bird", "SF", 25.0, 10.0, 6.3, 1.7, 0.8, 8.0, "BOS", "1980s", ("SF", "PF")),
+        _p("Kevin McHale", "PF", 18.0, 7.4, 1.9, 0.4, 1.9, 5.0, "BOS", "1980s", ("PF", "C")),
+        _p("Robert Parish", "C", 16.5, 10.0, 1.6, 0.9, 1.9, 4.0, "BOS", "1980s", ("C",)),
+        _p("Dennis Johnson", "PG", 13.0, 4.0, 6.4, 1.2, 0.4, 3.0, "BOS", "1980s", ("PG", "SG")),
+        _p("Danny Ainge", "SG", 12.0, 3.0, 4.4, 1.2, 0.2, 3.0, "BOS", "1980s", ("SG", "PG")),
+        _p("Cedric Maxwell", "PF", 13.0, 6.0, 2.4, 0.9, 0.5, 3.0, "BOS", "1980s", ("PF", "SF")),
+        _p("Tiny Archibald", "PG", 12.0, 2.4, 7.2, 1.0, 0.1, 3.0, "BOS", "1980s", ("PG",)),
+        _p("Bill Walton", "C", 7.6, 6.8, 2.1, 0.5, 1.3, 2.5, "BOS", "1980s", ("C", "PF")),
+        _p("Gerald Henderson", "SG", 9.0, 2.0, 3.4, 1.1, 0.1, 1.5, "BOS", "1980s", ("SG", "PG")),
+        _p("Scott Wedman", "SF", 8.0, 3.0, 1.4, 0.6, 0.3, 1.0, "BOS", "1980s", ("SF", "PF")),
+    ],
+    "1980s|Detroit Pistons": [
+        _p("Isiah Thomas", "PG", 20.0, 3.8, 9.6, 1.9, 0.3, 5.0, "DET", "1980s", ("PG",)),
+        _p("Joe Dumars", "SG", 16.0, 2.4, 4.8, 0.9, 0.1, 4.0, "DET", "1980s", ("SG", "PG")),
+        _p("Adrian Dantley", "SF", 20.0, 5.5, 3.0, 0.8, 0.1, 4.0, "DET", "1980s", ("SF", "PF")),
+        _p("Bill Laimbeer", "C", 13.5, 10.5, 2.0, 0.6, 0.7, 3.0, "DET", "1980s", ("C", "PF")),
+        _p("Dennis Rodman", "SF", 9.0, 8.8, 1.0, 0.7, 0.7, 4.0, "DET", "1980s", ("SF", "PF")),
+        _p("Mark Aguirre", "SF", 16.0, 4.0, 3.0, 0.6, 0.2, 3.0, "DET", "1980s", ("SF", "PF")),
+        _p("Vinnie Johnson", "SG", 12.0, 3.0, 3.4, 0.8, 0.1, 2.0, "DET", "1980s", ("SG", "PG")),
+        _p("Rick Mahorn", "PF", 7.0, 7.0, 1.2, 0.6, 0.9, 2.0, "DET", "1980s", ("PF", "C")),
+        _p("James Edwards", "C", 9.0, 4.0, 0.9, 0.3, 0.6, 1.5, "DET", "1980s", ("C",)),
+        _p("John Salley", "PF", 7.0, 5.0, 1.0, 0.6, 1.4, 2.0, "DET", "1980s", ("PF", "C")),
+    ],
+})
+
 
 def random_current_opponent(rng) -> tuple[str, list[PlayerStats]]:
     team = rng.choice(list(CURRENT_STARTERS.keys()))

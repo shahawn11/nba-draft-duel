@@ -87,17 +87,25 @@ def _load_from_db(path: Path) -> dict[str, list[PlayerStats]]:
 
 @lru_cache(maxsize=1)
 def historical_pool() -> dict[str, list[PlayerStats]]:
-    """Draftable pools keyed 'decade|team'. DB-backed if available, else seed."""
+    """Draftable pools keyed 'decade|team'.
+
+    Curated seed pools (1960s-1980s) are merged with pipeline pools from
+    players.db (1996-present); the DB wins on any key conflict (real data
+    over curated). Only pools with a full POOL_SIZE roster are kept.
+    """
+    seed = {k: v for k, v in seed_data.HISTORICAL_POOL.items() if len(v) >= MIN_CANDIDATES}
     if DB_PATH.exists():
-        pool = _load_from_db(DB_PATH)
-        if pool:
-            return pool
-    return seed_data.HISTORICAL_POOL
+        db = _load_from_db(DB_PATH)
+        if db:
+            return {**seed, **db}
+    return seed
 
 
 def source() -> str:
     """Where pools came from -- handy for /health and debugging."""
-    return "players.db" if (DB_PATH.exists() and _load_from_db(DB_PATH)) else "seed"
+    if DB_PATH.exists() and _load_from_db(DB_PATH):
+        return "players.db + seed"
+    return "seed"
 
 
 def current_starters() -> dict[str, list[PlayerStats]]:
