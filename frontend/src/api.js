@@ -21,10 +21,10 @@ async function req(path, options = {}) {
 export const api = {
   newMatch: (username) =>
     req('/match', { method: 'POST', body: JSON.stringify({ username }) }),
-  pick: (matchId, playerName) =>
+  pick: (matchId, playerName, slot) =>
     req(`/match/${matchId}/pick`, {
       method: 'POST',
-      body: JSON.stringify({ player_name: playerName }),
+      body: JSON.stringify({ player_name: playerName, slot }),
     }),
   record: (username) => req(`/record/${encodeURIComponent(username)}`),
 }

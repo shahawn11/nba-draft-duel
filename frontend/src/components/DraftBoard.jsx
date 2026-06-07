@@ -1,23 +1,22 @@
-// Sequential draft: shows the lineup-so-far, the current slot to fill, the
-// randomly revealed decade x team, and that franchise's top-10 (decade-averaged)
-// players. Only players eligible for the current slot are selectable.
+// Sequential draft with free slot choice. Each step reveals a random
+// decade x team and its top-10 (decade-averaged) players. Pick any player and
+// assign them to any OPEN slot they're eligible for (slot buttons on each card).
+// Players with no open eligible slot are shown but locked.
 
 const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
 
-function LineupStrip({ filled, currentSlot }) {
+function LineupStrip({ filled, openSlots }) {
   const bySlot = Object.fromEntries(filled.map((f) => [f.slot, f]))
   return (
     <div className="lineup-strip">
       {SLOTS.map((slot) => {
         const f = bySlot[slot]
-        const isCurrent = slot === currentSlot
-        const cls = ['slot-chip', f && 'done', isCurrent && 'current']
-          .filter(Boolean)
-          .join(' ')
+        const open = openSlots.includes(slot)
+        const cls = ['slot-chip', f && 'done', open && 'open'].filter(Boolean).join(' ')
         return (
           <div className={cls} key={slot}>
             <span className="slot-label">{slot}</span>
-            <span className="slot-name">{f ? f.name : isCurrent ? 'drafting…' : '—'}</span>
+            <span className="slot-name">{f ? f.name : open ? 'open' : '—'}</span>
           </div>
         )
       })}
@@ -25,23 +24,15 @@ function LineupStrip({ filled, currentSlot }) {
   )
 }
 
-function PosBadges({ positions, slot }) {
+function Candidate({ p, onPick, busy }) {
   return (
-    <span className="pos-badges">
-      {positions.map((p) => (
-        <span key={p} className={`pos-badge ${p === slot ? 'match' : ''}`}>{p}</span>
-      ))}
-    </span>
-  )
-}
-
-function Candidate({ p, slot, disabled, onPick, busy }) {
-  const cls = ['candidate', !p.eligible && 'ineligible'].filter(Boolean).join(' ')
-  return (
-    <button className={cls} disabled={disabled || busy} onClick={onPick}>
+    <div className={`candidate ${!p.eligible ? 'ineligible' : ''}`}>
       <div className="cand-top">
-        <PosBadges positions={p.eligible_positions} slot={slot} />
-        {!p.eligible && <span className="locked">can't play {slot}</span>}
+        <span className="pos-badges">
+          {p.eligible_positions.map((pos) => (
+            <span key={pos} className="pos-badge">{pos}</span>
+          ))}
+        </span>
       </div>
       <div className="cand-name">{p.name}</div>
       <div className="cand-stats">
@@ -50,45 +41,44 @@ function Candidate({ p, slot, disabled, onPick, busy }) {
       <div className="cand-stats sub">
         {p.spg} stl · {p.bpg} blk · impact {p.bpm}
       </div>
-    </button>
+      {p.eligible ? (
+        <div className="slot-pick">
+          <span className="slot-pick-label">draft to:</span>
+          {p.eligible_slots.map((s) => (
+            <button key={s} className="slot-btn" disabled={busy} onClick={() => onPick(p.name, s)}>
+              {s}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="locked">no open slot</div>
+      )}
+    </div>
   )
 }
 
 export default function DraftBoard({ view, onPick, busy }) {
   const step = view.current_step
-  const slot = step.slot
-
   return (
     <div className="draft-board">
-      <LineupStrip filled={view.filled} currentSlot={slot} />
+      <LineupStrip filled={view.filled} openSlots={view.open_slots} />
 
       <div className="step-head">
-        <div className="step-count">
-          Pick {view.picks_made + 1} of {view.total_slots}
-        </div>
-        <h2>
-          Draft your <span className="slot-hi">{slot}</span>
-        </h2>
+        <div className="step-count">Pick {view.picks_made + 1} of {view.total_slots}</div>
         <div className="prompt-head">
           <span className="decade">{step.decade}</span>
           <span className="team">{step.team}</span>
         </div>
         <p className="hint">
-          Top 10 of the decade · stats are {step.decade} averages · only{' '}
-          <span className="slot-hi">{slot}</span>-eligible players can be picked
+          Top 10 of the decade · stats are {step.decade} averages · pick a player
+          and assign them to an open slot they can play
+          {' '}({view.open_slots.join(' · ')})
         </p>
       </div>
 
       <div className="candidates">
         {step.candidates.map((p) => (
-          <Candidate
-            key={p.name}
-            p={p}
-            slot={slot}
-            disabled={!p.eligible}
-            busy={busy}
-            onPick={() => onPick(p.name)}
-          />
+          <Candidate key={p.name} p={p} busy={busy} onPick={onPick} />
         ))}
       </div>
     </div>

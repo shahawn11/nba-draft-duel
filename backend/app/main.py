@@ -72,9 +72,9 @@ def get_match(match_id: str) -> dict:
 
 @app.post("/match/{match_id}/pick")
 def submit_pick(match_id: str, req: PickRequest) -> dict:
-    """Draft one player into the current slot. Returns next step or final result."""
+    """Draft a player into a chosen open slot. Returns next step or final result."""
     try:
-        return game.pick(match_id, req.player_name)
+        return game.pick(match_id, req.player_name, req.slot)
     except game.DraftError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

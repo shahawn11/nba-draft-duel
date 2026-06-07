@@ -21,8 +21,9 @@ from .positions import eligible_from_raw
 from .scoring import PlayerStats
 
 DB_PATH = Path(__file__).parent / "data" / "players.db"
-MIN_CANDIDATES = 3      # a (decade, team) pool needs at least this many to be draftable
-MAX_CANDIDATES = 10     # cap candidates shown per prompt
+POOL_SIZE = 10          # every draftable (decade, team) pool shows exactly this many
+MIN_CANDIDATES = POOL_SIZE
+MAX_CANDIDATES = POOL_SIZE
 
 
 def _load_from_db(path: Path) -> dict[str, list[PlayerStats]]:

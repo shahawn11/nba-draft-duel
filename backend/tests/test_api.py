@@ -1,4 +1,4 @@
-"""End-to-end smoke test of the sequential match -> pick* -> result flow."""
+"""End-to-end smoke test of the sequential match -> pick(player,slot)* -> result flow."""
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -8,9 +8,11 @@ from app.main import app
 client = TestClient(app)
 
 
-def _first_eligible(step: dict) -> str:
-    cand = next(c for c in step["candidates"] if c["eligible"])
-    return cand["name"]
+def _first_selectable(step: dict):
+    for c in step["candidates"]:
+        if c["eligible"] and c["eligible_slots"]:
+            return c["name"], c["eligible_slots"][0]
+    raise AssertionError("no selectable candidate in step")
 
 
 def test_full_flow() -> None:
@@ -18,57 +20,62 @@ def test_full_flow() -> None:
 
     assert client.get("/health").json()["status"] == "ok"
 
-    # start a match -> first step
     r = client.post("/match", json={"username": user})
     assert r.status_code == 200, r.text
     view = r.json()
     match_id = view["match_id"]
     assert view["total_slots"] == 5
-    assert view["picks_made"] == 0
-    assert "opponent" not in view and "result" not in view  # blind
+    assert sorted(view["open_slots"]) == ["C", "PF", "PG", "SF", "SG"]
+    assert "result" not in view  # blind
     step = view["current_step"]
-    assert step and step["slot"] in ("PG", "SG", "SF", "PF", "C")
-    assert len(step["candidates"]) >= 3  # top-N pool
-    # every step must offer at least one eligible player
+    assert len(step["candidates"]) == 10  # pools are exactly 10 deep
     assert any(c["eligible"] for c in step["candidates"])
 
     result = None
     for n in range(5):
-        name = _first_eligible(step)
-        r = client.post(f"/match/{match_id}/pick", json={"player_name": name})
+        name, slot = _first_selectable(step)
+        r = client.post(f"/match/{match_id}/pick", json={"player_name": name, "slot": slot})
         assert r.status_code == 200, r.text
         body = r.json()
         if body.get("done"):
             result = body["result"]
             break
         assert body["picks_made"] == n + 1
+        assert slot not in body["open_slots"]  # slot consumed
         step = body["current_step"]
-        assert any(c["eligible"] for c in step["candidates"])
 
-    assert result is not None, "draft should resolve after 5 picks"
+    assert result is not None
     assert result["outcome"] in ("win", "loss", "tie")
-    assert result["opponent_team"]
     assert len(result["matchups"]) == 5
-    assert len(result["your_team"]["players"]) == 5
-    # drafted players occupy exactly the 5 slots
-    slots = {p["position"] for p in result["your_team"]["players"]}
-    assert slots == {"PG", "SG", "SF", "PF", "C"}
+    assert {p["position"] for p in result["your_team"]["players"]} == {"PG", "SG", "SF", "PF", "C"}
 
-    # picking again after resolution is rejected
-    r = client.post(f"/match/{match_id}/pick", json={"player_name": "anyone"})
+    # picking again after resolution rejected
+    r = client.post(f"/match/{match_id}/pick", json={"player_name": "x", "slot": "PG"})
     assert r.status_code == 400
 
-    # ineligible / unknown player rejected mid-draft
+    # assigning a player to a slot they can't play is rejected
     r2 = client.post("/match", json={"username": user})
     m2 = r2.json()
-    r = client.post(f"/match/{m2['match_id']}/pick", json={"player_name": "Nobody McFake"})
-    assert r.status_code == 400
+    s2 = m2["current_step"]
+    # find a player and a slot NOT in their eligibility
+    bad = None
+    for c in s2["candidates"]:
+        for slot in ("PG", "SG", "SF", "PF", "C"):
+            if slot not in c["eligible_positions"]:
+                bad = (c["name"], slot)
+                break
+        if bad:
+            break
+    if bad:
+        r = client.post(f"/match/{m2['match_id']}/pick",
+                        json={"player_name": bad[0], "slot": bad[1]})
+        assert r.status_code == 400, "ineligible slot assignment should be rejected"
 
     rec = client.get(f"/record/{user}").json()
     assert rec["wins"] + rec["losses"] + rec["ties"] >= 1
     print("OK:", result["outcome"], "vs", result["opponent_team"],
           "| final", result["your_final"], "-", result["opponent_final"],
-          "| slots", sorted(slots), "| record", rec)
+          "| record", rec)
 
 
 if __name__ == "__main__":

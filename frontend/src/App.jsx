@@ -28,11 +28,11 @@ export default function App() {
     }
   }
 
-  async function pick(playerName) {
+  async function pick(playerName, slot) {
     setError('')
     setBusy(true)
     try {
-      const res = await api.pick(view.match_id, playerName)
+      const res = await api.pick(view.match_id, playerName, slot)
       if (res.done) {
         setResult(res.result)
         setRecord(res.result.record)

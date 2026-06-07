@@ -1,11 +1,11 @@
 """
-Game logic: 82-0-style sequential blind draft.
+Game logic: 82-0-style sequential blind draft with free slot choice.
 
-You fill five fixed slots (PG/SG/SF/PF/C) one at a time. Each step reveals a
-fresh random decade x team and that franchise's top-10 players for the decade
-(stats are decade averages). You may only place a player in the current slot if
-they're eligible for it; ineligible / already-taken players are shown but not
-selectable. Future steps and the opponent stay hidden until the draft resolves.
+You fill five slots (PG/SG/SF/PF/C). Each step reveals a fresh random
+decade x team and that franchise's top-10 players (decade-averaged stats). You
+pick ANY player and assign them to ANY still-open slot they're eligible for;
+players with no eligible open slot are shown but not selectable. The opponent
+and future steps stay hidden until the draft resolves.
 """
 from __future__ import annotations
 
@@ -14,35 +14,46 @@ import uuid
 
 from . import db, dataset
 from .models import player_from_dict, player_to_dict
-from .positions import SLOTS, can_play
-from .scoring import PlayerStats, duel
+from .positions import SLOTS
+from .scoring import duel
 
 
 def _picked_names(state: dict) -> set[str]:
     return {p["player"]["name"] for p in state["picks"]}
 
 
-def _build_step(rng: random.Random, slot: str, picked: set[str]) -> dict:
-    """Pick a random (decade, team) that has a selectable player for `slot`."""
+def _annotate(p_dict: dict, eligible_positions: list[str], open_slots: list[str],
+              available: bool) -> dict:
+    elig_open = [s for s in open_slots if s in eligible_positions]
+    d = dict(p_dict)
+    d["eligible_slots"] = elig_open if available else []
+    d["eligible"] = available and bool(elig_open)
+    return d
+
+
+def _build_step(rng: random.Random, open_slots: list[str], picked: set[str]) -> dict:
+    """Pick a random (decade, team) with >=1 selectable player for an open slot."""
     pool = dataset.historical_pool()
     keys = list(pool.keys())
     rng.shuffle(keys)
 
-    chosen = None
-    for k in keys:
-        if any(can_play(p.eligible(), slot) and p.name not in picked for p in pool[k]):
-            chosen = k
-            break
-    if chosen is None:                       # safety net (shouldn't happen)
+    def selectable(players) -> bool:
+        return any(
+            p.name not in picked and any(s in p.eligible() for s in open_slots)
+            for p in players
+        )
+
+    chosen = next((k for k in keys if selectable(pool[k])), None)
+    if chosen is None:
         chosen = rng.choice(keys)
 
     decade, team = chosen.split("|", 1)
-    candidates = []
-    for p in pool[chosen]:
-        d = player_to_dict(p)
-        d["eligible"] = can_play(p.eligible(), slot) and (p.name not in picked)
-        candidates.append(d)
-    return {"slot": slot, "decade": decade, "team": team, "candidates": candidates}
+    candidates = [
+        _annotate(player_to_dict(p), list(p.eligible()), open_slots,
+                  p.name not in picked)
+        for p in pool[chosen]
+    ]
+    return {"decade": decade, "team": team, "candidates": candidates}
 
 
 def _public_view(match: dict, state: dict) -> dict:
@@ -51,11 +62,11 @@ def _public_view(match: dict, state: dict) -> dict:
         "username": match["username"],
         "mode": match["mode"],
         "status": match["status"],
-        "total_slots": len(state["slot_order"]),
+        "total_slots": len(SLOTS),
         "picks_made": len(state["picks"]),
+        "open_slots": state["open_slots"],
         "filled": [
-            {"slot": p["slot"], "name": p["player"]["name"],
-             "position": p["player"]["position"]}
+            {"slot": p["slot"], "name": p["player"]["name"]}
             for p in state["picks"]
         ],
         "current_step": state.get("current"),
@@ -67,14 +78,11 @@ def new_match(username: str, seed: int | None = None) -> dict:
     db.ensure_user(username)
 
     opp_team, opponent = dataset.random_current_opponent(rng)
-
-    slot_order = list(SLOTS)
-    rng.shuffle(slot_order)
+    open_slots = list(SLOTS)
     state = {
-        "slot_order": slot_order,
-        "step": 0,
+        "open_slots": open_slots,
         "picks": [],
-        "current": _build_step(rng, slot_order[0], set()),
+        "current": _build_step(rng, open_slots, set()),
     }
 
     match_id = uuid.uuid4().hex[:12]
@@ -93,7 +101,7 @@ class DraftError(ValueError):
     pass
 
 
-def pick(match_id: str, player_name: str) -> dict:
+def pick(match_id: str, player_name: str, slot: str) -> dict:
     match = db.get_match(match_id)
     if not match:
         raise DraftError("match not found")
@@ -102,30 +110,28 @@ def pick(match_id: str, player_name: str) -> dict:
 
     state = match["state_json"]
     current = state["current"]
-    slot = current["slot"]
 
     cand = next((c for c in current["candidates"] if c["name"] == player_name), None)
     if cand is None:
         raise DraftError(f"'{player_name}' is not in the current pool")
-    if not cand.get("eligible"):
-        raise DraftError(f"'{player_name}' cannot play {slot} (or is already drafted)")
+    if player_name in _picked_names(state):
+        raise DraftError(f"'{player_name}' is already drafted")
+    if slot not in state["open_slots"]:
+        raise DraftError(f"slot {slot} is not open")
+    if slot not in cand.get("eligible_positions", []):
+        raise DraftError(f"'{player_name}' cannot play {slot}")
 
-    # Record the pick, forcing the player's effective position to the slot.
-    picked_player = dict(cand)
-    picked_player.pop("eligible", None)
+    picked_player = {k: v for k, v in cand.items() if k not in ("eligible", "eligible_slots")}
     picked_player["position"] = slot
     state["picks"].append({"slot": slot, "player": picked_player})
+    state["open_slots"] = [s for s in state["open_slots"] if s != slot]
 
-    state["step"] += 1
     rng = random.Random()
-
-    if state["step"] < len(state["slot_order"]):
-        next_slot = state["slot_order"][state["step"]]
-        state["current"] = _build_step(rng, next_slot, _picked_names(state))
+    if state["open_slots"]:
+        state["current"] = _build_step(rng, state["open_slots"], _picked_names(state))
         db.update_state(match_id, state)
         return {"done": False, **_public_view(match, state)}
 
-    # All slots filled -> resolve the duel.
     state["current"] = None
     return _resolve(match, state)
 

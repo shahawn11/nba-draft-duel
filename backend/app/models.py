@@ -64,6 +64,7 @@ class NewMatchRequest(BaseModel):
 
 class PickRequest(BaseModel):
     player_name: str = Field(min_length=1)
+    slot: str = Field(min_length=1)   # which open lineup slot to assign the player to
 
 
 class ScoredPlayer(BaseModel):
