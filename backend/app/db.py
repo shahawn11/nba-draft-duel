@@ -51,6 +51,25 @@ _engine = create_engine(
     future=True,
 )
 
+import sys as _sys
+_safe_url = _URL.split("@")[-1] if "@" in _URL else _URL
+print(f"[db] backend={_engine.dialect.name} target={_safe_url}", file=_sys.stderr, flush=True)
+
+
+def backend() -> str:
+    """Active SQL dialect: 'postgresql' or 'sqlite'."""
+    return _engine.dialect.name
+
+
+def ping() -> bool:
+    from sqlalchemy import text
+    try:
+        with _engine.connect() as c:
+            c.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
+
 metadata = MetaData()
 R = rating.START_RATING
 

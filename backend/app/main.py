@@ -53,6 +53,8 @@ def _startup() -> None:
 def health() -> dict:
     return {
         "status": "ok",
+        "db": db.backend(),
+        "db_ready": db.ping(),
         "pool_source": game.dataset.source(),
         "opponent_season": game.dataset.current_season(),
         "starters_source": game.dataset.starters_source(),

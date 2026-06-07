@@ -35,8 +35,8 @@ else
 fi
 echo "==> Using compose: $COMPOSE"
 
-echo "==> Bringing up the stack (build)…"
-$COMPOSE up -d --build
+echo "==> Bringing up the stack (build + force-recreate to avoid stale containers)…"
+$COMPOSE up -d --build --force-recreate
 
 echo "==> Waiting for API health at $API/health …"
 for i in $(seq 1 60); do
@@ -47,6 +47,13 @@ done
 
 echo "==> Confirming the API is using Postgres (not SQLite)…"
 $COMPOSE exec -T api sh -c 'echo "DATABASE_URL=$DATABASE_URL"'
+backend=$(curl -fsS "$API/health" | "$PY" -c 'import sys,json; print(json.load(sys.stdin).get("db"))')
+echo "   /health db backend = $backend"
+if [ "$backend" != "postgresql" ]; then
+  echo "✗ API is NOT on Postgres (got '$backend'). Likely a STALE container running old code."
+  echo "  Fix: $COMPOSE down && $COMPOSE up -d --build --force-recreate   (or: $COMPOSE build --no-cache api)"
+  exit 1
+fi
 $COMPOSE exec -T db psql -U duel -d duel -c "\dt" | grep -E "users|matches|accounts|sessions" \
   && echo "   Postgres tables present"
 
