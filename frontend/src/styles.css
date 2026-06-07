@@ -700,3 +700,4 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   font-size: 1rem;
   margin-bottom: 14px;
 }
+.auth-hint div { margin-bottom: 3px; }

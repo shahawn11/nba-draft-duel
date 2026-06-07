@@ -122,7 +122,7 @@ def _slot_team(team: str, season: str, players: list, has_elig: bool,
                has_height: bool) -> list[PlayerStats] | None:
     """Assign a set of player rows to PG/SG/SF/PF/C. Fills scarce frontcourt
     slots first; a height-aware fallback covers any gap. Returns 5 or None."""
-    FILL_ORDER = ["C", "PF", "SF", "SG", "PG"]
+    FILL_ORDER = ["C", "PF", "SF", "PG", "SG"]
 
     def _height(r) -> float:
         return (r["height_in"] if has_height else 0.0) or 0.0
@@ -136,24 +136,39 @@ def _slot_team(team: str, season: str, players: list, has_elig: bool,
             eligible_positions=elig,
         )
 
-    players = sorted(players, key=lambda r: -(r["mpg"] or 0))
+    def _elig(r) -> tuple:
+        return tuple(p for p in ((r["eligible"] if has_elig else "") or "").split(",") if p) \
+            or eligible_from_raw(None, r["position"])
+
+    # Pick each slot by the stat that defines it, so the right guard plays PG
+    # (most assists) and the scorer plays SG, the biggest body anchors C, etc.
+    SLOT_KEY = {
+        "PG": lambda r: r["apg"] or 0,
+        "SG": lambda r: r["ppg"] or 0,
+        "SF": lambda r: r["mpg"] or 0,
+        "PF": lambda r: (r["rpg"] or 0) + _height(r) / 12,
+        "C": lambda r: _height(r) or (r["rpg"] or 0),
+    }
+
     assigned: dict[str, PlayerStats] = {}
     used: set[str] = set()
     for slot in FILL_ORDER:
+        key = SLOT_KEY.get(slot, lambda r: r["mpg"] or 0)
+        best = None
         for r in players:
-            if r["name"] in used:
+            if r["name"] in used or slot not in _elig(r):
                 continue
-            elig = tuple(p for p in ((r["eligible"] if has_elig else "") or "").split(",") if p) \
-                or eligible_from_raw(None, r["position"])
-            if slot in elig:
-                assigned[slot] = _mk(r, slot, elig)
-                used.add(r["name"])
-                break
+            if best is None or key(r) > key(best):
+                best = r
+        if best is not None:
+            assigned[slot] = _mk(best, slot, _elig(best))
+            used.add(best["name"])
     if len(assigned) < len(SLOTS):
+        ordered = sorted(players, key=lambda r: -(r["mpg"] or 0))
         for slot in FILL_ORDER:
             if slot in assigned:
                 continue
-            remaining = [r for r in players if r["name"] not in used]
+            remaining = [r for r in ordered if r["name"] not in used]
             if not remaining:
                 break
             r = max(remaining, key=_height) if slot in ("C", "PF") else remaining[0]

@@ -45,7 +45,11 @@ export default function AuthModal({ guestId, onClose, onAuth }) {
           <button className={tab === 'signup' ? 'active' : ''} onClick={() => setTab('signup')} type="button">Sign up</button>
         </div>
         {tab === 'signup' && (
-          <p className="hint">Your current guest record &amp; rating will carry over. Username: 3–20 letters/numbers/underscore. Password: 8+ chars with a letter and a number.</p>
+          <div className="hint auth-hint">
+            <div>Your current guest record &amp; rating will carry over.</div>
+            <div>Username: 3–20 letters/numbers/underscore.</div>
+            <div>Password: 8+ chars with a letter and a number.</div>
+          </div>
         )}
         {error && <div className="error">{error}</div>}
         <form onSubmit={submit} className="auth-form">
