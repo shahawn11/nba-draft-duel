@@ -80,6 +80,9 @@ export default function App() {
   }
 
   function goHome() {
+    if (live && !window.confirm('Leave the live match? If a game is in progress, this counts as a forfeit (your opponent wins).')) {
+      return
+    }
     setResult(null)
     setView(null)
     setLive(false)
