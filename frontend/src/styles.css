@@ -604,3 +604,48 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   .confetti { display: none; }
   .promo-card { animation: none; }
 }
+
+/* ---- match-up collision intro ---- */
+.match-intro {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 44px 0;
+  min-height: 240px;
+  overflow: hidden;
+}
+.fighter {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 22px;
+  text-align: center;
+  min-width: 150px;
+}
+.fighter.left { animation: slideFromLeft 0.7s cubic-bezier(0.2, 0.8, 0.3, 1.4) both; border-color: var(--win); }
+.fighter.right { animation: slideFromRight 0.7s cubic-bezier(0.2, 0.8, 0.3, 1.4) both; border-color: var(--loss); }
+.fighter-name { font-weight: 800; font-size: 1.1rem; margin-bottom: 6px; }
+.fighter-rating { font-size: 1.6rem; font-weight: 900; color: var(--accent); margin-top: 6px; }
+.fighter-wlt { color: var(--muted); font-size: 0.8rem; }
+.vs-clash {
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: var(--accent);
+  margin: 0 -10px;
+  z-index: 2;
+  text-shadow: 0 0 18px rgba(255, 122, 0, 0.6);
+  animation: clashPop 0.5s 0.55s both;
+}
+@keyframes slideFromLeft { from { opacity: 0; transform: translateX(-120vw); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideFromRight { from { opacity: 0; transform: translateX(120vw); } to { opacity: 1; transform: translateX(0); } }
+@keyframes clashPop { 0% { opacity: 0; transform: scale(0); } 60% { transform: scale(1.6); } 100% { opacity: 1; transform: scale(1); } }
+
+/* ---- matchups reveal + countdown ---- */
+.reveal-title { text-align: center; margin: 6px 0 14px; }
+.reveal-countdown { text-align: center; margin-top: 18px; color: var(--muted); font-size: 1.1rem; }
+.count-num { display: inline-block; font-size: 2rem; color: var(--accent); animation: countPulse 1s ease; }
+@keyframes countPulse { 0% { transform: scale(1.7); opacity: 0.3; } 100% { transform: scale(1); opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .fighter.left, .fighter.right, .vs-clash, .count-num { animation: none; }
+}

@@ -21,6 +21,7 @@ from .positions import SLOTS
 from . import rating
 
 ROUND_SECONDS = 10
+INTRO_SECONDS = 2.6      # brief pause after match-up so the intro animation plays
 NUM_ROUNDS = len(SLOTS)
 _INVERSE = {"win": "loss", "loss": "win", "tie": "tie"}
 
@@ -71,6 +72,9 @@ class LiveGame:
                            "opponent_record": b_rec, "total_slots": NUM_ROUNDS})
         await self.b.send({"type": "matched", "opponent": self.a.username,
                            "opponent_record": a_rec, "total_slots": NUM_ROUNDS})
+
+        # Let the match-up intro animation play before the first timed round.
+        await asyncio.sleep(INTRO_SECONDS)
 
         try:
             for rnd in range(1, NUM_ROUNDS + 1):

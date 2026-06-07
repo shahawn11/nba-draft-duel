@@ -102,7 +102,7 @@ export default function App() {
         <Leaderboard onClose={() => setShowLeaderboard(false)} highlight={committedName} />
       )}
 
-      {!showLeaderboard && live && <LivePvP username={committedName} onExit={() => setLive(false)} onRecord={setRecord} />}
+      {!showLeaderboard && live && <LivePvP username={committedName} onExit={() => setLive(false)} onRecord={setRecord} meRecord={record} />}
 
       {!showLeaderboard && !live && phase === 'setup' && (
         <div className="setup">

@@ -104,6 +104,48 @@ export default function Results({ result, onPlayAgain }) {
   const bannerClass = tied ? 'tie' : won ? 'win' : 'loss'
   const bannerText = tied ? 'TIE GAME' : won ? 'YOU WIN' : 'YOU LOSE'
 
+  // Reveal sequence: show the positional matchups first, then a 3s countdown,
+  // then the full win/lose screen.
+  const reduceMotion = typeof window !== 'undefined' && window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const [phase, setPhase] = useState(reduceMotion ? 'full' : 'reveal')
+  const [count, setCount] = useState(3)
+  useEffect(() => {
+    if (phase !== 'reveal') return
+    if (count <= 0) { setPhase('full'); return }
+    const id = setTimeout(() => setCount((c) => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [phase, count])
+
+  const matchups = (showTally) => (
+    <div className="matchups">
+      <h3>Positional matchups{showTally ? ` (${result.your_matchup_wins}–${result.opponent_matchup_wins})` : ''}</h3>
+      {result.matchups.map((m, i) => (
+        <div className={`matchup ${m.winner === 'home' ? 'you' : m.winner === 'away' ? 'opp' : 'even'}`} key={m.position} style={{ animationDelay: `${i * 70}ms` }}>
+          <div className="matchup-row">
+            <span className="m-pos">{m.position}</span>
+            <span className="m-home">{m.home_player} · {m.home_score.toFixed(1)}</span>
+            <span className="m-vs">vs</span>
+            <span className="m-away">{m.away_score.toFixed(1)} · {m.away_player}</span>
+          </div>
+          {m.note && <div className="matchup-note">⚠ {m.note}</div>}
+        </div>
+      ))}
+    </div>
+  )
+
+  if (phase === 'reveal') {
+    return (
+      <div className="results">
+        <h2 className="reveal-title">Positional Matchups</h2>
+        {matchups(false)}
+        <div className="reveal-countdown">
+          Final score in <b key={count} className="count-num">{count}</b>…
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="results">
       <div className={`banner ${bannerClass}`}>
@@ -128,20 +170,7 @@ export default function Results({ result, onPlayAgain }) {
         <PromotionOverlay tier={result.record.tier} onDismiss={() => setShowPromo(false)} />
       )}
 
-      <div className="matchups">
-        <h3>Positional matchups ({result.your_matchup_wins}–{result.opponent_matchup_wins})</h3>
-        {result.matchups.map((m, i) => (
-          <div className={`matchup ${m.winner === 'home' ? 'you' : m.winner === 'away' ? 'opp' : 'even'}`} key={m.position} style={{ animationDelay: `${i * 70}ms` }}>
-            <div className="matchup-row">
-              <span className="m-pos">{m.position}</span>
-              <span className="m-home">{m.home_player} · {m.home_score.toFixed(1)}</span>
-              <span className="m-vs">vs</span>
-              <span className="m-away">{m.away_score.toFixed(1)} · {m.away_player}</span>
-            </div>
-            {m.note && <div className="matchup-note">⚠ {m.note}</div>}
-          </div>
-        ))}
-      </div>
+      {matchups(true)}
 
       <div className="lineups">
         <Lineup title="Your 5" team={result.your_team} highlight={won} />

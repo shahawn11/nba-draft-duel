@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import DraftBoard from './DraftBoard.jsx'
 import Results from './Results.jsx'
+import MatchIntro from './MatchIntro.jsx'
 
 const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
 
@@ -9,7 +10,7 @@ function wsUrl(username) {
   return `${proto}//${location.host}/ws/pvp?username=${encodeURIComponent(username)}`
 }
 
-export default function LivePvP({ username, onExit, onRecord }) {
+export default function LivePvP({ username, onExit, onRecord, meRecord }) {
   const [status, setStatus] = useState('connecting') // connecting|waiting|drafting|result|left|error
   const [opponent, setOpponent] = useState('')
   const [opponentRecord, setOpponentRecord] = useState(null)
@@ -36,7 +37,7 @@ export default function LivePvP({ username, onExit, onRecord }) {
       const m = JSON.parse(ev.data)
       switch (m.type) {
         case 'waiting': setStatus('waiting'); break
-        case 'matched': setOpponent(m.opponent); setOpponentRecord(m.opponent_record || null); break
+        case 'matched': setOpponent(m.opponent); setOpponentRecord(m.opponent_record || null); setStatus('intro'); break
         case 'round':
           roundRef.current = m.round
           setStep(m.current_step); setDeadline(m.deadline)
@@ -105,6 +106,10 @@ export default function LivePvP({ username, onExit, onRecord }) {
           <p className="hint">PvP — you'll draft head-to-head on a 10s-per-pick clock.</p>
           <button className="btn-cancel modal-actions" onClick={onExit}>Cancel</button>
         </div>
+      )}
+
+      {status === 'intro' && (
+        <MatchIntro me={username} meRecord={meRecord} opponent={opponent} opponentRecord={opponentRecord} />
       )}
 
       {status === 'drafting' && view && (
