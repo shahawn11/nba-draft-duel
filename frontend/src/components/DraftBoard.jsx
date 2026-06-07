@@ -1,7 +1,6 @@
-// Sequential draft with free slot choice + UX polish:
-//  - click a slot button -> confirmation modal (prevents misclicks)
-//  - candidates fade/stagger in on each new step
-//  - the slot you just filled flashes in the lineup strip
+// Sequential draft with free slot choice + UX polish.
+// Interaction: click a player card -> a modal shows the open slots that player
+// can fill -> click a slot to draft them there. Ineligible players are locked.
 import { useState } from 'react'
 
 const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
@@ -27,11 +26,14 @@ function LineupStrip({ filled, openSlots, lastSlot }) {
   )
 }
 
-function Candidate({ p, index, onChoose, busy }) {
+function Candidate({ p, index, onSelect, busy }) {
+  const eligible = p.eligible
   return (
-    <div
-      className={`candidate ${!p.eligible ? 'ineligible' : ''}`}
+    <button
+      className={`candidate ${eligible ? 'selectable' : 'ineligible'}`}
       style={{ animationDelay: `${index * 30}ms` }}
+      disabled={!eligible || busy}
+      onClick={() => eligible && onSelect(p)}
     >
       <div className="cand-top">
         <span className="pos-badges">
@@ -39,6 +41,7 @@ function Candidate({ p, index, onChoose, busy }) {
             <span key={pos} className="pos-badge">{pos}</span>
           ))}
         </span>
+        {!eligible && <span className="locked">no open slot</span>}
       </div>
       <div className="cand-name">{p.name}</div>
       <div className="cand-stats">
@@ -47,41 +50,35 @@ function Candidate({ p, index, onChoose, busy }) {
       <div className="cand-stats sub">
         {p.spg} stl · {p.bpg} blk · impact {p.bpm}
       </div>
-      {p.eligible ? (
-        <div className="slot-pick">
-          <span className="slot-pick-label">draft to:</span>
-          {p.eligible_slots.map((s) => (
-            <button key={s} className="slot-btn" disabled={busy} onClick={() => onChoose(p, s)}>
-              {s}
-            </button>
-          ))}
+      {eligible && (
+        <div className="cand-cta">
+          Tap to draft → {p.eligible_slots.join(' / ')}
         </div>
-      ) : (
-        <div className="locked">no open slot</div>
       )}
-    </div>
+    </button>
   )
 }
 
-function ConfirmModal({ pending, onConfirm, onCancel, busy }) {
-  const p = pending.player
+function SlotModal({ player, onDraft, onCancel, busy }) {
   return (
     <div className="modal-backdrop" onClick={busy ? undefined : onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="m-assign">Draft</div>
-        <div className="m-player">{p.name}</div>
-        <div className="m-assign">
-          to your <span className="m-slot">{pending.slot}</span>
-        </div>
+        <div className="m-player">{player.name}</div>
         <div className="m-stats">
-          {p.ppg} pts · {p.rpg} reb · {p.apg} ast · impact {p.bpm}
+          {player.ppg} pts · {player.rpg} reb · {player.apg} ast · impact {player.bpm}
+        </div>
+        <div className="m-assign">Choose a slot:</div>
+        <div className="modal-slots">
+          {player.eligible_slots.map((s) => (
+            <button key={s} className="btn-confirm slot-choice" disabled={busy} onClick={() => onDraft(s)}>
+              {busy ? '…' : s}
+            </button>
+          ))}
         </div>
         <div className="modal-actions">
           <button className="btn-cancel" onClick={onCancel} disabled={busy}>
             Cancel
-          </button>
-          <button className="btn-confirm" onClick={onConfirm} disabled={busy}>
-            {busy ? 'Drafting…' : 'Confirm'}
           </button>
         </div>
       </div>
@@ -90,16 +87,14 @@ function ConfirmModal({ pending, onConfirm, onCancel, busy }) {
 }
 
 export default function DraftBoard({ view, onPick, busy }) {
-  const [pending, setPending] = useState(null)
+  const [selected, setSelected] = useState(null)
   const step = view.current_step
   const lastSlot = view.filled.length ? view.filled[view.filled.length - 1].slot : null
-  // remount the candidate grid each step so the entrance animation replays
   const stepKey = `${step.decade}-${step.team}-${view.picks_made}`
 
-  async function confirm() {
-    const { player, slot } = pending
-    await onPick(player.name, slot)
-    setPending(null)
+  async function draft(slot) {
+    await onPick(selected.name, slot)
+    setSelected(null)
   }
 
   return (
@@ -113,24 +108,19 @@ export default function DraftBoard({ view, onPick, busy }) {
           <span className="team">{step.team}</span>
         </div>
         <p className="hint">
-          Top 10 of the decade · stats are {step.decade} averages · pick a player
-          and assign them to an open slot ({view.open_slots.join(' · ')})
+          Top 10 of the decade · stats are {step.decade} averages · tap a player,
+          then pick an open slot ({view.open_slots.join(' · ')})
         </p>
       </div>
 
       <div className="candidates" key={stepKey}>
         {step.candidates.map((p, i) => (
-          <Candidate key={p.name} p={p} index={i} busy={busy} onChoose={(player, slot) => setPending({ player, slot })} />
+          <Candidate key={p.name} p={p} index={i} busy={busy} onSelect={setSelected} />
         ))}
       </div>
 
-      {pending && (
-        <ConfirmModal
-          pending={pending}
-          busy={busy}
-          onConfirm={confirm}
-          onCancel={() => setPending(null)}
-        />
+      {selected && (
+        <SlotModal player={selected} busy={busy} onDraft={draft} onCancel={() => setSelected(null)} />
       )}
     </div>
   )
