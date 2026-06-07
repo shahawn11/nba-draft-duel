@@ -600,8 +600,9 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 }
 .lb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .lb-head h2 { margin: 0; }
+.lb-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .lb-table { width: 100%; border-collapse: collapse; }
-.lb-table th, .lb-table td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+.lb-table th, .lb-table td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .lb-table th { color: var(--muted); font-size: 0.78rem; font-weight: 600; }
 .lb-table .rank { color: var(--muted); width: 28px; }
 .lb-table .lb-name { font-weight: 600; }

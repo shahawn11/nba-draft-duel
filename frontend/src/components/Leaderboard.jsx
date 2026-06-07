@@ -28,6 +28,7 @@ export default function Leaderboard({ onClose, highlight }) {
       {error && <div className="error">{error}</div>}
       {rows && rows.length === 0 && <p className="hint">No games played yet — be the first!</p>}
       {rows && rows.length > 0 && (
+        <div className="lb-scroll">
         <table className="lb-table">
           <thead>
             <tr><th>#</th><th>Player</th><th>Tier</th><th>Rating</th><th>W–L</th></tr>
@@ -49,6 +50,7 @@ export default function Leaderboard({ onClose, highlight }) {
             ))}
           </tbody>
         </table>
+        </div>
       )}
       {!rows && !error && <p className="hint">Loading…</p>}
     </div>
