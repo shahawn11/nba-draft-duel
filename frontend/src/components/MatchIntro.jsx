@@ -1,5 +1,7 @@
 // Shown right after matchmaking, before drafting: both players' name/rating/
 // record slide in from opposite sides and collide in the middle.
+import { useEffect } from 'react'
+import { playClash } from '../sound.js'
 
 function tierCls(tier) {
   return (tier || '').toLowerCase().replace(/[^a-z]/g, '')
@@ -21,6 +23,10 @@ function Fighter({ side, name, record }) {
 }
 
 export default function MatchIntro({ me, meRecord, opponent, opponentRecord }) {
+  useEffect(() => {
+    const id = setTimeout(() => playClash(), 560) // synced to the VS clash pop
+    return () => clearTimeout(id)
+  }, [])
   return (
     <div className="match-intro">
       <Fighter side="left" name={me} record={meRecord} />

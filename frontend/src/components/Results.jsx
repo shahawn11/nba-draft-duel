@@ -1,6 +1,7 @@
 // Results screen: outcome banner, final scores, head-to-head matchups,
 // both scored lineups, and positional-fit notes.
 import { useState, useEffect } from 'react'
+import { playTick, playPromo } from '../sound.js'
 
 function useCountUp(from, to, ms = 1100) {
   const [v, setV] = useState(from)
@@ -112,10 +113,15 @@ export default function Results({ result, onPlayAgain }) {
   const [count, setCount] = useState(3)
   useEffect(() => {
     if (phase !== 'reveal') return
-    if (count <= 0) { setPhase('full'); return }
+    if (count <= 0) { playTick(true); setPhase('full'); return }
+    playTick(false)
     const id = setTimeout(() => setCount((c) => c - 1), 1000)
     return () => clearTimeout(id)
   }, [phase, count])
+
+  useEffect(() => {
+    if (phase === 'full' && result.promoted) playPromo()
+  }, [phase, result.promoted])
 
   const matchups = (showTally) => (
     <div className="matchups">
@@ -151,7 +157,7 @@ export default function Results({ result, onPlayAgain }) {
       <div className={`banner ${bannerClass}`}>
         <span className="banner-text">{bannerText}</span>
         <span className="final-score">
-          {result.your_final.toFixed(1)} – {result.opponent_final.toFixed(1)}
+          {Math.round(result.your_final)} – {Math.round(result.opponent_final)}
         </span>
         <span className="vs-team">vs {result.opponent_team}</span>
         {result.ranked ? (

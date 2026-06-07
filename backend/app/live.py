@@ -21,7 +21,7 @@ from .positions import SLOTS
 from . import rating
 
 ROUND_SECONDS = 10
-INTRO_SECONDS = 2.6      # brief pause after match-up so the intro animation plays
+INTRO_SECONDS = 3.6      # brief pause after match-up so the intro animation plays
 NUM_ROUNDS = len(SLOTS)
 _INVERSE = {"win": "loss", "loss": "win", "tie": "tie"}
 
