@@ -497,3 +497,54 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   to   { opacity: 1; transform: translate(-50%, 0); }
 }
 @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+/* ---- rating + tiers + leaderboard ---- */
+.header-right { display: flex; align-items: center; gap: 14px; }
+.lb-toggle {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lb-toggle:hover { border-color: var(--accent); }
+.rating-line { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+.rating-num { color: var(--accent); }
+
+.tier-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  letter-spacing: 0.3px;
+}
+.tier-badge.amateur { background: #2a3340; color: #c7d2dd; }
+.tier-badge.pro { background: #1f4a3a; color: #6ef0b0; border-color: #2ecc71; }
+.tier-badge.allstar { background: #1f3a5a; color: #7cc0ff; border-color: #3a86ff; }
+.tier-badge.veteran { background: #4a2f5a; color: #d29bff; border-color: #a35bff; }
+.tier-badge.halloffame { background: #5a3a1f; color: #ffcf8a; border-color: var(--accent); }
+.tier-badge.goat { background: linear-gradient(90deg, #b8860b, #ffd700); color: #2a1d00; border-color: #ffd700; }
+
+.leaderboard {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+.lb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.lb-head h2 { margin: 0; }
+.lb-table { width: 100%; border-collapse: collapse; }
+.lb-table th, .lb-table td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+.lb-table th { color: var(--muted); font-size: 0.78rem; font-weight: 600; }
+.lb-table .rank { color: var(--muted); width: 28px; }
+.lb-table .lb-name { font-weight: 600; }
+.lb-table .lb-rating { font-weight: 800; color: var(--accent); }
+.lb-table .lb-wlt { color: var(--muted); }
+.lb-table tr.me { background: rgba(255, 122, 0, 0.10); }
+
+@media (max-width: 520px) {
+  .header-right { flex-direction: column; align-items: flex-end; gap: 6px; }
+}

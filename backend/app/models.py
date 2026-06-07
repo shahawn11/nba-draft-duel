@@ -99,6 +99,10 @@ class Record(BaseModel):
     wins: int
     losses: int
     ties: int
+    rating: int = 1000
+    tier: str = "Amateur"
+    next_tier: str | None = None
+    next_tier_at: int | None = None
 
 
 class ResultOut(BaseModel):

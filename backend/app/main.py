@@ -89,6 +89,11 @@ def record(username: str) -> Record:
     return Record(**db.get_record(username))
 
 
+@app.get("/leaderboard")
+def leaderboard(limit: int = 20) -> dict:
+    return {"leaderboard": db.leaderboard(min(max(limit, 1), 100))}
+
+
 @app.websocket("/ws/pvp")
 async def ws_pvp(ws: WebSocket) -> None:
     """Live real-time PvP: matchmaking + synchronized timed draft."""

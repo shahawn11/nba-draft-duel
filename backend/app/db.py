@@ -11,6 +11,8 @@ import sqlite3
 import time
 from pathlib import Path
 
+from . import rating
+
 DB_PATH = Path(__file__).parent / "data" / "game.db"
 
 SCHEMA = """
@@ -18,7 +20,8 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY,
     wins     INTEGER NOT NULL DEFAULT 0,
     losses   INTEGER NOT NULL DEFAULT 0,
-    ties     INTEGER NOT NULL DEFAULT 0
+    ties     INTEGER NOT NULL DEFAULT 0,
+    rating   INTEGER NOT NULL DEFAULT 1000
 );
 CREATE TABLE IF NOT EXISTS matches (
     id             TEXT PRIMARY KEY,
@@ -44,6 +47,10 @@ def _conn() -> sqlite3.Connection:
 def init_db() -> None:
     with _conn() as c:
         c.executescript(SCHEMA)
+        # Migration: add rating to pre-existing users tables.
+        cols = {r[1] for r in c.execute("PRAGMA table_info(users)")}
+        if "rating" not in cols:
+            c.execute(f"ALTER TABLE users ADD COLUMN rating INTEGER NOT NULL DEFAULT {rating.START_RATING}")
 
 
 # ---- users / records -------------------------------------------------------
@@ -52,24 +59,52 @@ def ensure_user(username: str) -> None:
         c.execute("INSERT OR IGNORE INTO users(username) VALUES (?)", (username,))
 
 
+def _record_dict(row) -> dict:
+    d = dict(row)
+    r = d.get("rating", rating.START_RATING)
+    d["rating"] = r
+    d["tier"] = rating.tier_name(r)
+    nxt = rating.next_tier(r)
+    d["next_tier"] = nxt["name"] if nxt else None
+    d["next_tier_at"] = nxt["min"] if nxt else None
+    return d
+
+
 def get_record(username: str) -> dict:
     with _conn() as c:
         row = c.execute(
-            "SELECT username, wins, losses, ties FROM users WHERE username = ?",
+            "SELECT username, wins, losses, ties, rating FROM users WHERE username = ?",
             (username,),
         ).fetchone()
     if not row:
-        return {"username": username, "wins": 0, "losses": 0, "ties": 0}
-    return dict(row)
+        return _record_dict({"username": username, "wins": 0, "losses": 0,
+                             "ties": 0, "rating": rating.START_RATING})
+    return _record_dict(row)
 
 
 def apply_result(username: str, outcome: str) -> dict:
-    """outcome in {'win','loss','tie'}; returns updated record."""
+    """outcome in {'win','loss','tie'}; updates W/L/T and rating; returns record."""
     col = {"win": "wins", "loss": "losses", "tie": "ties"}[outcome]
     ensure_user(username)
     with _conn() as c:
-        c.execute(f"UPDATE users SET {col} = {col} + 1 WHERE username = ?", (username,))
+        row = c.execute("SELECT rating FROM users WHERE username = ?", (username,)).fetchone()
+        cur = row["rating"] if row and row["rating"] is not None else rating.START_RATING
+        new_rating = rating.apply_outcome(cur, outcome)
+        c.execute(
+            f"UPDATE users SET {col} = {col} + 1, rating = ? WHERE username = ?",
+            (new_rating, username),
+        )
     return get_record(username)
+
+
+def leaderboard(limit: int = 20) -> list[dict]:
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT username, wins, losses, ties, rating FROM users "
+            "ORDER BY rating DESC, wins DESC, username ASC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [_record_dict(r) for r in rows]
 
 
 # ---- matches ---------------------------------------------------------------

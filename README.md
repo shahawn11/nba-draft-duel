@@ -106,7 +106,25 @@ npm run dev                  # http://127.0.0.1:5173  (proxies /api -> :8000)
 | POST | `/match` | start a match → first draft step (opponent hidden) |
 | GET  | `/match/{id}` | inspect a match (current step; result once resolved) |
 | POST | `/match/{id}/pick` | draft `{player_name, slot}` → next step or final result |
-| GET  | `/record/{username}` | current W/L/T record |
+| GET  | `/record/{username}` | current W/L/T + rating & tier |
+| GET  | `/leaderboard` | top players by rating (W/L/T + tier) |
+
+## Rating & tiers
+
+Players start at **1000** (floor 0). Each result moves your rating by an amount
+that depends on your **current tier** — climbing gets slower, slipping costs more:
+
+| Tier | Reached at | Win | Loss |
+|------|-----------|-----|------|
+| Amateur | 0 | +10 | −2 |
+| Pro | 2,000 | +8 | −3 |
+| All-Star | 5,000 | +7 | −4 |
+| Veteran | 10,000 | +6 | −5 |
+| Hall-of-Fame | 25,000 | +5 | −5 |
+| GOAT | 100,000 | +4 | −5 |
+
+Ties don't change rating. Tunable in `app/rating.py`. The header shows your tier
+badge + rating; the 🏆 Leaderboard ranks the top players.
 
 ## Scoring model
 

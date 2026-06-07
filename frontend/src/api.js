@@ -27,4 +27,5 @@ export const api = {
       body: JSON.stringify({ player_name: playerName, slot }),
     }),
   record: (username) => req(`/record/${encodeURIComponent(username)}`),
+  leaderboard: () => req('/leaderboard'),
 }

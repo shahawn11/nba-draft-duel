@@ -3,6 +3,7 @@ import { api } from './api.js'
 import DraftBoard from './components/DraftBoard.jsx'
 import Results from './components/Results.jsx'
 import LivePvP from './components/LivePvP.jsx'
+import Leaderboard from './components/Leaderboard.jsx'
 
 export default function App() {
   const [username, setUsername] = useState('')
@@ -15,6 +16,7 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [live, setLive] = useState(false)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
 
   async function startMatch(name, chosenMode = 'offline') {
     setCommittedName(name)
@@ -64,23 +66,44 @@ export default function App() {
     <div className="app">
       <header>
         <h1>🏀 NBA Draft Duel</h1>
-        {committedName && record && (
-          <div className="record">
-            <span className="who">{committedName}</span>
-            <span className="wlt">
-              <b className="w">{record.wins}W</b> ·{' '}
-              <b className="l">{record.losses}L</b> ·{' '}
-              <b className="t">{record.ties}T</b>
-            </span>
-          </div>
-        )}
+        <div className="header-right">
+          <button
+            className="lb-toggle"
+            onClick={() => setShowLeaderboard((s) => !s)}
+            title="Leaderboard"
+          >
+            🏆 {showLeaderboard ? 'Back' : 'Leaderboard'}
+          </button>
+          {committedName && record && (
+            <div className="record">
+              <span className="who">{committedName}</span>
+              <span className="rating-line">
+                {record.tier && (
+                  <span className={`tier-badge ${(record.tier || '').toLowerCase().replace(/[^a-z]/g, '')}`}>
+                    {record.tier}
+                  </span>
+                )}
+                {record.rating != null && <b className="rating-num">{record.rating}</b>}
+              </span>
+              <span className="wlt">
+                <b className="w">{record.wins}W</b> ·{' '}
+                <b className="l">{record.losses}L</b> ·{' '}
+                <b className="t">{record.ties}T</b>
+              </span>
+            </div>
+          )}
+        </div>
       </header>
 
       {error && <div className="error">{error}</div>}
 
-      {live && <LivePvP username={committedName} onExit={() => setLive(false)} />}
+      {showLeaderboard && (
+        <Leaderboard onClose={() => setShowLeaderboard(false)} highlight={committedName} />
+      )}
 
-      {!live && phase === 'setup' && (
+      {!showLeaderboard && live && <LivePvP username={committedName} onExit={() => setLive(false)} />}
+
+      {!showLeaderboard && !live && phase === 'setup' && (
         <div className="setup">
           <h2>Enter the arena</h2>
           <p className="hint">
@@ -124,11 +147,11 @@ export default function App() {
         </div>
       )}
 
-      {phase === 'drafting' && view && (
+      {!showLeaderboard && phase === 'drafting' && view && (
         <DraftBoard view={view} onPick={pick} busy={busy} />
       )}
 
-      {phase === 'result' && result && (
+      {!showLeaderboard && phase === 'result' && result && (
         <Results result={result} onPlayAgain={() => startMatch(committedName, committedMode)} />
       )}
     </div>
