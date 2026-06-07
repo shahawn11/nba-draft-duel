@@ -115,35 +115,13 @@ def source() -> str:
     return "seed"
 
 
-def _load_current_starters(path: Path) -> dict[str, list[PlayerStats]]:
-    """Build each team's starting 5 from the most recent season in the DB:
-    greedily assign the highest-minutes eligible player to each slot."""
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row
-    try:
-        cols = {r[1] for r in conn.execute("PRAGMA table_info(players)")}
-        if "season" not in cols or "mpg" not in cols:
-            return {}
-        season = conn.execute("SELECT MAX(season) FROM players").fetchone()[0]
-        if not season:
-            return {}
-        has_elig = "eligible" in cols
-        has_height = "height_in" in cols
-        sel = "team, name, position, ppg, rpg, apg, spg, bpg, bpm, mpg"
-        sel += ", eligible" if has_elig else ""
-        sel += ", height_in" if has_height else ""
-        rows = conn.execute(f"SELECT {sel} FROM players WHERE season = ?", (season,)).fetchall()
-    except sqlite3.OperationalError:
-        return {}
-    finally:
-        conn.close()
+_STARTER_COLS = "team, name, position, ppg, rpg, apg, spg, bpg, bpm, mpg"
 
-    by_team: dict[str, list] = defaultdict(list)
-    for r in rows:
-        by_team[r["team"]].append(r)
 
-    # Fill the hard/scarce frontcourt slots first so a forward isn't "used up"
-    # at SG (leaving a guard stranded at PF). Backcourt fills from what's left.
+def _slot_team(team: str, season: str, players: list, has_elig: bool,
+               has_height: bool) -> list[PlayerStats] | None:
+    """Assign a set of player rows to PG/SG/SF/PF/C. Fills scarce frontcourt
+    slots first; a height-aware fallback covers any gap. Returns 5 or None."""
     FILL_ORDER = ["C", "PF", "SF", "SG", "PG"]
 
     def _height(r) -> float:
@@ -158,50 +136,126 @@ def _load_current_starters(path: Path) -> dict[str, list[PlayerStats]]:
             eligible_positions=elig,
         )
 
+    players = sorted(players, key=lambda r: -(r["mpg"] or 0))
+    assigned: dict[str, PlayerStats] = {}
+    used: set[str] = set()
+    for slot in FILL_ORDER:
+        for r in players:
+            if r["name"] in used:
+                continue
+            elig = tuple(p for p in ((r["eligible"] if has_elig else "") or "").split(",") if p) \
+                or eligible_from_raw(None, r["position"])
+            if slot in elig:
+                assigned[slot] = _mk(r, slot, elig)
+                used.add(r["name"])
+                break
+    if len(assigned) < len(SLOTS):
+        for slot in FILL_ORDER:
+            if slot in assigned:
+                continue
+            remaining = [r for r in players if r["name"] not in used]
+            if not remaining:
+                break
+            r = max(remaining, key=_height) if slot in ("C", "PF") else remaining[0]
+            assigned[slot] = _mk(r, slot, (slot,))
+            used.add(r["name"])
+    if len(assigned) == 5:
+        return [assigned[s] for s in SLOTS]
+    return None
+
+
+def _current_season_rows(path: Path):
+    """Return (season, rows-by-player_id, rows-by-team, has_elig, has_height)."""
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(players)")}
+        if "season" not in cols or "mpg" not in cols:
+            return None
+        season = conn.execute("SELECT MAX(season) FROM players").fetchone()[0]
+        if not season:
+            return None
+        has_elig, has_height = "eligible" in cols, "height_in" in cols
+        sel = "player_id, " + _STARTER_COLS
+        sel += ", eligible" if has_elig else ""
+        sel += ", height_in" if has_height else ""
+        rows = conn.execute(f"SELECT {sel} FROM players WHERE season = ?", (season,)).fetchall()
+    except sqlite3.OperationalError:
+        return None
+    finally:
+        conn.close()
+    by_id = {r["player_id"]: r for r in rows}
+    by_team: dict[str, list] = defaultdict(list)
+    for r in rows:
+        by_team[r["team"]].append(r)
+    return season, by_id, by_team, has_elig, has_height
+
+
+def _load_starters_from_lineups(path: Path) -> dict[str, list[PlayerStats]]:
+    """Build starting 5s from the real most-used lineups (starting_lineups table),
+    slotting those exact five players by position."""
+    info = _current_season_rows(path)
+    if not info:
+        return {}
+    season, by_id, _, has_elig, has_height = info
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    try:
+        if not conn.execute("SELECT name FROM sqlite_master WHERE name='starting_lineups'").fetchone():
+            return {}
+        rows = conn.execute("SELECT team, player_id FROM starting_lineups").fetchall()
+    except sqlite3.OperationalError:
+        return {}
+    finally:
+        conn.close()
+
+    team_ids: dict[str, list] = defaultdict(list)
+    for r in rows:
+        team_ids[r["team"]].append(r["player_id"])
+
+    out: dict[str, list[PlayerStats]] = {}
+    for team, ids in team_ids.items():
+        starter_rows = [by_id[i] for i in ids if i in by_id]
+        if len(starter_rows) != 5:
+            continue  # a starter missing from filtered stats -> fall back later
+        slotted = _slot_team(team, season, starter_rows, has_elig, has_height)
+        if slotted:
+            out[team] = slotted
+    return out
+
+
+def _load_current_starters(path: Path) -> dict[str, list[PlayerStats]]:
+    """Derived fallback: build each team's 5 from its highest-minutes players."""
+    info = _current_season_rows(path)
+    if not info:
+        return {}
+    season, _, by_team, has_elig, has_height = info
     out: dict[str, list[PlayerStats]] = {}
     for team, players in by_team.items():
-        players.sort(key=lambda r: -(r["mpg"] or 0))  # minutes => starter proxy
-        assigned: dict[str, PlayerStats] = {}
-        used: set[str] = set()
-        for slot in FILL_ORDER:
-            for r in players:
-                if r["name"] in used:
-                    continue
-                elig = tuple(p for p in ((r["eligible"] if has_elig else "") or "").split(",") if p) \
-                    or eligible_from_raw(None, r["position"])
-                if slot in elig:
-                    assigned[slot] = _mk(r, slot, elig)
-                    used.add(r["name"])
-                    break
-        # Fallback for any slot eligibility couldn't fill (thin/injured roster):
-        # frontcourt slots take the TALLEST remaining player, others the highest-
-        # minutes one -- so a 6'1" guard never lands at PF/C if a bigger body exists.
-        if len(assigned) < len(SLOTS):
-            for slot in FILL_ORDER:
-                if slot in assigned:
-                    continue
-                remaining = [r for r in players if r["name"] not in used]
-                if not remaining:
-                    break
-                if slot in ("C", "PF"):
-                    r = max(remaining, key=_height)
-                else:
-                    r = remaining[0]
-                assigned[slot] = _mk(r, slot, (slot,))
-                used.add(r["name"])
-        if len(assigned) == 5:
-            out[team] = [assigned[s] for s in SLOTS]
+        slotted = _slot_team(team, season, players, has_elig, has_height)
+        if slotted:
+            out[team] = slotted
     return out
 
 
 @lru_cache(maxsize=1)
 def current_starters() -> dict[str, list[PlayerStats]]:
-    """Latest-season starting 5s from the DB; falls back to the curated list."""
+    """Real starting 5s (most-used lineups) when available; derived top-minutes
+    fives fill any gaps; curated list only if there's no DB."""
     if DB_PATH.exists():
-        cs = _load_current_starters(DB_PATH)
-        if cs:
-            return cs
+        real = _load_starters_from_lineups(DB_PATH)
+        derived = _load_current_starters(DB_PATH)
+        if real or derived:
+            return {**derived, **real}  # real lineups win per team
     return seed_data.CURRENT_STARTERS
+
+
+def starters_source() -> str:
+    if DB_PATH.exists() and _load_starters_from_lineups(DB_PATH):
+        return "real lineups"
+    if DB_PATH.exists() and _load_current_starters(DB_PATH):
+        return "derived (top minutes)"
+    return "seed"
 
 
 def current_season() -> str | None:

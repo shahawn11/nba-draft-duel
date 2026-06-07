@@ -49,6 +49,7 @@ def health() -> dict:
         "status": "ok",
         "pool_source": game.dataset.source(),
         "opponent_season": game.dataset.current_season(),
+        "starters_source": game.dataset.starters_source(),
     }
 
 

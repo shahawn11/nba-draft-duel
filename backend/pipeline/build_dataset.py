@@ -92,6 +92,11 @@ CREATE TABLE IF NOT EXISTS position_cache (
     raw         TEXT,
     height_in   REAL
 );
+
+CREATE TABLE IF NOT EXISTS starting_lineups (
+    team       TEXT NOT NULL,   -- full franchise name
+    player_id  INTEGER NOT NULL -- 5 rows per team: the real starting five
+);
 """
 
 
@@ -271,6 +276,58 @@ def build(since: int, out: Path, sleep: float = 0.6, limit: int | None = None,
     print("done.")
 
 
+def build_lineups(out: Path, season: str | None = None) -> None:
+    """Store each team's real starting five = its highest-minutes 5-man unit
+    for the current season, via leaguedashlineups. One API call."""
+    try:
+        from nba_api.stats.endpoints import leaguedashlineups
+    except ImportError:
+        raise SystemExit("nba_api not installed. Run: pip install nba_api pandas")
+
+    conn = init_db(out)
+    cur = conn.cursor()
+    if not season:
+        row = cur.execute("SELECT MAX(season) FROM players").fetchone()
+        season = row[0] if row and row[0] else None
+    if not season:
+        y = time.localtime().tm_year
+        season = f"{y - 1}-{str(y)[-2:]}"
+
+    print(f"[lineups] {season} ...")
+    try:
+        df = leaguedashlineups.LeagueDashLineups(
+            season=season, group_quantity=5,
+            per_mode_detailed="Totals",
+            measure_type_detailed_defense="Base",
+        ).get_data_frames()[0]
+    except Exception as e:
+        raise SystemExit(f"lineups pull failed: {e}")
+
+    # Per team, keep the 5-man lineup that logged the most minutes.
+    best: dict[str, tuple[float, str]] = {}
+    for _, r in df.iterrows():
+        tm = r.get("TEAM_ABBREVIATION")
+        mn = float(r.get("MIN", 0) or 0)
+        gid = str(r.get("GROUP_ID", ""))
+        if tm and (tm not in best or mn > best[tm][0]):
+            best[tm] = (mn, gid)
+
+    cur.execute("DELETE FROM starting_lineups")
+    teams = 0
+    for tm, (mn, gid) in best.items():
+        ids = [x for x in gid.strip("-").split("-") if x.isdigit()]
+        if len(ids) != 5:
+            continue
+        full = full_team_name(tm)
+        for pid in ids:
+            cur.execute("INSERT INTO starting_lineups(team, player_id) VALUES (?,?)",
+                        (full, int(pid)))
+        teams += 1
+    conn.commit()
+    conn.close()
+    print(f"   stored real starting fives for {teams} teams")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--since", type=int, default=1997, help="first season start year")
@@ -279,5 +336,10 @@ if __name__ == "__main__":
     ap.add_argument("--limit", type=int, default=None, help="cap players/season (quick test)")
     ap.add_argument("--min-gp", type=int, default=20)
     ap.add_argument("--min-mpg", type=float, default=12.0)
+    ap.add_argument("--lineups", action="store_true",
+                    help="only (re)build real starting fives for the current season")
     args = ap.parse_args()
-    build(args.since, args.out, args.sleep, args.limit, args.min_gp, args.min_mpg)
+    if args.lineups:
+        build_lineups(args.out)
+    else:
+        build(args.since, args.out, args.sleep, args.limit, args.min_gp, args.min_mpg)

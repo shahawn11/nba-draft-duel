@@ -130,6 +130,17 @@ Once `app/data/players.db` exists, the game auto-switches to it
 (`app/dataset.py`); otherwise it falls back to `seed_data.py`. Check which is
 active via `GET /health` → `pool_source`.
 
+Offline opponents are the **real current starting fives**: run
+
+```bash
+./.venv312/bin/python pipeline/build_dataset.py --lineups   # one API call
+```
+
+to populate `starting_lineups` (each team's highest-minutes 5-man unit via
+`leaguedashlineups`). The game slots those exact five by eligibility + height;
+teams without a stored lineup fall back to a derived top-minutes five.
+`GET /health` → `starters_source` shows which is active.
+
 > **Troubleshooting (this host):** if `import numpy`/`pandas` fails with
 > "import numpy from its source directory", a stray `PYTHONPATH` is leaking the
 > toolbox's site-packages into your venv. Build the venv from a real mise
