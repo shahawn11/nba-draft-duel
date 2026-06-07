@@ -28,11 +28,12 @@ export default function LivePvP({ username, token, displayName, onExit, onRecord
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const wsRef = useRef(null)
+  const terminalRef = useRef(false)   // true once the match has finished (result/left)
   const [nonce, setNonce] = useState(0) // bump to reconnect
 
   const connect = useCallback(() => {
     setStatus('connecting'); setResult(null); setFilled([]); setPicksMade(0)
-    setOpponentPicks(0); setWaitingForOpp(false); setError('')
+    setOpponentPicks(0); setWaitingForOpp(false); setError(''); terminalRef.current = false
     const ws = new WebSocket(wsUrl(username, token, displayName))
     wsRef.current = ws
     ws.onmessage = (ev) => {
@@ -56,18 +57,23 @@ export default function LivePvP({ username, token, displayName, onExit, onRecord
         case 'opponent_progress': setOpponentPicks(m.picks_made); break
         case 'error': setError(m.detail); setWaitingForOpp(false); break
         case 'result':
-          setResult(m.result); setRecord(m.result.record); setStatus('result')
+          terminalRef.current = true
+          setResult(m.result); setRecord(m.result.record); setStatus('result'); setError('')
           if (onRecord && m.result.record) onRecord(m.result.record)
           break
         case 'opponent_left':
-          setRecord(m.record); setStatus('left')
+          terminalRef.current = true
+          setRecord(m.record); setStatus('left'); setError('')
           if (onRecord && m.record) onRecord(m.record)
           break
         default: break
       }
     }
-    ws.onerror = () => setError('connection error')
-    ws.onclose = () => { if (statusRef.current === 'connecting') setStatus('error') }
+    // Mobile browsers fire onerror/onclose on a NORMAL close (e.g. the server
+    // closing after the result). Only surface an error if the match hasn't
+    // already finished.
+    ws.onerror = () => { if (!terminalRef.current) setError('connection error') }
+    ws.onclose = () => { if (!terminalRef.current && statusRef.current === 'connecting') setStatus('error') }
   }, [username, token, displayName, onRecord])
   // keep a ref of status for onclose
   const statusRef = useRef(status)
