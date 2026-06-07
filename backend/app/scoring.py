@@ -124,6 +124,8 @@ class MatchupResult:
     away_score: float
     winner: Literal["home", "away", "tie"]
     note: str = ""
+    home_bonus: float = 0.0
+    away_bonus: float = 0.0
 
 
 @dataclass
@@ -274,12 +276,17 @@ def compute_matchups(home: TeamScore, away: TeamScore) -> list[MatchupResult]:
                     big, small = (h, a) if gap > 0 else (a, h)
                     note = f"{big.player.name} has a size edge over {small.player.name}"
 
-        h_score = h_base + max(0.0, size_adj)
-        a_score = a_base + max(0.0, -size_adj)
+        # Displayed score is each player's base rating (consistent with the
+        # lineup view); the size mismatch is a separate, visible bonus that
+        # decides the head-to-head.
+        h_bonus = max(0.0, size_adj)
+        a_bonus = max(0.0, -size_adj)
+        h_eff = h_base + h_bonus
+        a_eff = a_base + a_bonus
 
-        if abs(h_score - a_score) < 1e-6:
+        if abs(h_eff - a_eff) < 1e-6:
             winner = "tie"
-        elif h_score > a_score:
+        elif h_eff > a_eff:
             winner = "home"
         else:
             winner = "away"
@@ -288,10 +295,12 @@ def compute_matchups(home: TeamScore, away: TeamScore) -> list[MatchupResult]:
                 position=pos,
                 home_player=h.player.name if h else "(none)",
                 away_player=a.player.name if a else "(none)",
-                home_score=h_score,
-                away_score=a_score,
+                home_score=h_base,
+                away_score=a_base,
                 winner=winner,
                 note=note,
+                home_bonus=h_bonus,
+                away_bonus=a_bonus,
             )
         )
     return results

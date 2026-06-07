@@ -1,7 +1,7 @@
 // Results screen: outcome banner, final scores, head-to-head matchups,
 // both scored lineups, and positional-fit notes.
 import { useState, useEffect } from 'react'
-import { playTick, playPromo } from '../sound.js'
+import { playTick, playPromo, playResult } from '../sound.js'
 
 function useCountUp(from, to, ms = 1100) {
   const [v, setV] = useState(from)
@@ -123,6 +123,10 @@ export default function Results({ result, onPlayAgain }) {
     if (phase === 'full' && result.promoted) playPromo()
   }, [phase, result.promoted])
 
+  useEffect(() => {
+    if (phase === 'full') playResult(result.outcome)
+  }, [phase])
+
   const matchups = (showTally) => (
     <div className="matchups">
       <h3>Positional matchups{showTally ? ` (${result.your_matchup_wins}–${result.opponent_matchup_wins})` : ''}</h3>
@@ -130,9 +134,15 @@ export default function Results({ result, onPlayAgain }) {
         <div className={`matchup ${m.winner === 'home' ? 'you' : m.winner === 'away' ? 'opp' : 'even'}`} key={m.position} style={{ animationDelay: `${i * 70}ms` }}>
           <div className="matchup-row">
             <span className="m-pos">{m.position}</span>
-            <span className="m-home">{m.home_player} · {m.home_score.toFixed(1)}</span>
+            <span className="m-home">
+              {m.home_player} · {m.home_score.toFixed(1)}
+              {m.home_bonus > 0 && <span className="size-bonus"> +{m.home_bonus.toFixed(1)}</span>}
+            </span>
             <span className="m-vs">vs</span>
-            <span className="m-away">{m.away_score.toFixed(1)} · {m.away_player}</span>
+            <span className="m-away">
+              {m.away_bonus > 0 && <span className="size-bonus">{m.away_bonus.toFixed(1)}+ </span>}
+              {m.away_score.toFixed(1)} · {m.away_player}
+            </span>
           </div>
           {m.note && <div className="matchup-note">⚠ {m.note}</div>}
         </div>

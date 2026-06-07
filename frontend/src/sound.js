@@ -61,3 +61,24 @@ export function playTick(final = false) {
 export function playPromo() {
   [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.28, 'triangle', 0.22))
 }
+
+export function playWin() {
+  // bright ascending major arpeggio
+  [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.10, 0.42, 'triangle', 0.22))
+}
+
+export function playLoss() {
+  // somber descending tones
+  [392.0, 329.63, 261.63].forEach((f, i) => tone(f, i * 0.17, 0.5, 'sawtooth', 0.16))
+}
+
+export function playTie() {
+  tone(440, 0, 0.32, 'sine', 0.16)
+  tone(440, 0.2, 0.32, 'sine', 0.13)
+}
+
+export function playResult(outcome) {
+  if (outcome === 'win') playWin()
+  else if (outcome === 'loss') playLoss()
+  else playTie()
+}

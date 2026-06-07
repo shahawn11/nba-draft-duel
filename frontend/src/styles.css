@@ -649,3 +649,6 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 @media (prefers-reduced-motion: reduce) {
   .fighter.left, .fighter.right, .vs-clash, .count-num { animation: none; }
 }
+
+/* ---- matchup size bonus ---- */
+.size-bonus { color: var(--accent); font-weight: 800; font-size: 0.78rem; }
