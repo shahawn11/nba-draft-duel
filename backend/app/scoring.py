@@ -27,9 +27,11 @@ CANONICAL_POSITIONS: tuple[Position, ...] = ("PG", "SG", "SF", "PF", "C")
 W_PTS, W_REB, W_AST = 1.0, 1.2, 1.5
 W_STL, W_BLK = 0.0, 0.0   # excluded from rating (see note above)
 # Blend between raw production and the advanced (defensive-inclusive) impact
-# metric. Impact is weighted a bit higher now that defense isn't in production.
-PRODUCTION_WEIGHT = 0.60
-ADVANCED_WEIGHT = 0.40
+# metric. Impact (BPM/PIE) is the only era-fair carrier of defense -- steals/blocks
+# aren't tracked pre-1974 -- so it's weighted equally with production to give
+# defensive value (e.g. Russell, MJ) more pull without penalizing the 1960s.
+PRODUCTION_WEIGHT = 0.50
+ADVANCED_WEIGHT = 0.50
 # Final blend between cumulative team total and head-to-head matchup wins.
 TEAM_TOTAL_WEIGHT = 0.70
 MATCHUP_WEIGHT = 0.30

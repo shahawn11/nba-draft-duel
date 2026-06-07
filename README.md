@@ -145,12 +145,14 @@ badge + rating; the 🏆 Leaderboard ranks the top players.
 Per player:
 ```
 production = pts + 1.2·reb + 1.5·ast           # steals/blocks excluded (see below)
-rating     = 0.60·normalized(production) + 0.40·normalized(impact)
+rating     = 0.50·normalized(production) + 0.50·normalized(impact)
 ```
 - **Impact** is the era-neutral defensive-inclusive metric: PIE-derived for
   modern players, hand-set for curated legends. Steals/blocks are left out of
   `production` because they weren't tracked before 1973-74 — defense flows
   through the impact term instead (they're still shown on cards & box scores).
+  Impact is weighted equally with production (0.50/0.50) so defensive value
+  (e.g. Russell, Jordan) carries real weight without penalizing the 1960s.
 
 Team & game:
 ```
