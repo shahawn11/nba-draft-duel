@@ -114,6 +114,26 @@ echo "==> Verifying the match row landed in Postgres…"
 $COMPOSE exec -T db psql -U duel -d duel -tAc "SELECT count(*) FROM matches;" \
   | awk '{print "   matches rows in Postgres:", $1; if ($1+0 < 1) exit 1}'
 
+echo "==> Validating Redis sessions (signup -> token -> sess:* key in Redis)…"
+suser="sesschk$(date +%s)"
+tok=$(curl -fsS -H "Content-Type: application/json" -d "{\"username\":\"$suser\",\"password\":\"abcd1234\"}" \
+      "$API/auth/signup" | "$PY" -c 'import sys,json; print(json.load(sys.stdin).get("token",""))')
+[ -n "$tok" ] && echo "   signup issued a token" || { echo "✗ signup did not return a token"; exit 1; }
+who=$(curl -fsS -H "Authorization: Bearer $tok" "$API/auth/me" \
+      | "$PY" -c 'import sys,json; print(json.load(sys.stdin).get("username",""))')
+echo "   /auth/me with token -> ${who:-<none>}"
+[ "$who" = "$suser" ] || { echo "✗ token did not resolve to the user"; exit 1; }
+if $COMPOSE exec -T redis redis-cli --scan --pattern 'sess:*' | grep -q '^sess:'; then
+  echo "   Redis session key present ✓ (HTTP tier is stateless)"
+else
+  echo "✗ no sess:* key in Redis — sessions aren't using Redis (check REDIS_URL on the api service)"
+  exit 1
+fi
+# logout should remove the session key
+curl -fsS -X POST -H "Authorization: Bearer $tok" "$API/auth/logout" >/dev/null
+code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $tok" "$API/auth/me")
+[ "$code" = "401" ] && echo "   logout invalidated the token ✓" || echo "   (note: post-logout /auth/me returned $code)"
+
 echo "==> Checking rate limiting (signup rule = 5/min -> expect a 429)…"
 codes=""
 for i in $(seq 1 7); do
