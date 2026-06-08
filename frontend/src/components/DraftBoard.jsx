@@ -3,6 +3,8 @@
 // can fill -> click a slot to draft them there. Ineligible players are locked.
 import { useState, useEffect } from 'react'
 import { startMusic, stopMusic } from '../music.js'
+import TierBadge from './TierBadge.jsx'
+import { tierClass } from '../tiers.js'
 
 const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
 
@@ -43,25 +45,51 @@ function LineupStrip({ filled, openSlots, lastSlot }) {
   )
 }
 
-function Candidate({ p, index, onSelect, busy }) {
+function BudgetMeter({ budget, spent, remaining }) {
+  if (budget == null) return null
+  const used = Math.max(0, Math.min(100, (spent / budget) * 100))
+  const low = remaining <= 28          // can only afford a cheapest (D) player
+  const tight = remaining <= 56 && !low
+  return (
+    <div className="budget-meter">
+      <div className="budget-row">
+        <span className="budget-cap">💰 Salary cap</span>
+        <span className={`budget-left ${low ? 'low' : tight ? 'tight' : ''}`}>
+          <b>{remaining}</b> left <span className="budget-of">/ {budget}</span>
+        </span>
+      </div>
+      <div className="budget-track">
+        <div className={`budget-fill ${low ? 'low' : tight ? 'tight' : ''}`} style={{ width: `${used}%` }} />
+      </div>
+    </div>
+  )
+}
+
+function Candidate({ p, index, onSelect, busy, openSlots }) {
   const eligible = p.eligible
+  const fitsOpenSlot = (p.eligible_positions || []).some((pos) => openSlots.includes(pos))
+  // Why is this card locked? over-budget vs no open slot vs already drafted.
+  const lockReason = p.taken
+    ? '✓ already drafted'
+    : (!p.affordable && fitsOpenSlot)
+      ? `💰 over budget ($${p.cost})`
+      : 'no open slot'
   return (
     <button
-      className={`candidate ${eligible ? 'selectable' : 'ineligible'}`}
+      className={`candidate tier-card ${tierClass(p.tier)} ${eligible ? 'selectable' : 'ineligible'} ${!eligible && !p.taken && !p.affordable && fitsOpenSlot ? 'overbudget' : ''}`}
       style={{ animationDelay: `${index * 30}ms` }}
       disabled={!eligible || busy}
       onClick={() => eligible && onSelect(p)}
     >
       <div className="cand-top">
+        <TierBadge tier={p.tier} cost={p.cost} />
         <span className="pos-badges">
           {p.eligible_positions.map((pos) => (
             <span key={pos} className="pos-badge">{pos}</span>
           ))}
         </span>
         {p.height_in ? <span className="cand-height">{Math.floor(p.height_in / 12)}'{p.height_in % 12}"</span> : null}
-        {!eligible && (
-          <span className="locked">{p.taken ? '✓ already drafted' : 'no open slot'}</span>
-        )}
+        {!eligible && <span className="locked">{lockReason}</span>}
       </div>
       <div className="cand-name">{p.name}</div>
       <div className="cand-stats">
@@ -72,7 +100,7 @@ function Candidate({ p, index, onSelect, busy }) {
       </div>
       {eligible && (
         <div className="cand-cta">
-          Tap to draft → {p.eligible_slots.join(' / ')}
+          Tap to draft (${p.cost}) → {p.eligible_slots.join(' / ')}
         </div>
       )}
     </button>
@@ -84,11 +112,13 @@ function SlotModal({ player, onDraft, onCancel, busy }) {
     <div className="modal-backdrop" onClick={busy ? undefined : onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="m-assign">Draft</div>
-        <div className="m-player">{player.name}</div>
+        <div className="m-player">
+          <TierBadge tier={player.tier} cost={player.cost} /> {player.name}
+        </div>
         <div className="m-stats">
           {player.ppg} pts · {player.rpg} reb · {player.apg} ast · impact {player.bpm}
         </div>
-        <div className="m-assign">Choose a slot:</div>
+        <div className="m-assign">Choose a slot (costs ${player.cost}):</div>
         <div className="modal-slots">
           {player.eligible_slots.map((s) => (
             <button key={s} className="btn-confirm slot-choice" disabled={busy} onClick={() => onDraft(s)}>
@@ -125,6 +155,8 @@ export default function DraftBoard({ view, onPick, busy, deadline, waiting, oppo
     <div className="draft-board">
       <LineupStrip filled={view.filled} openSlots={view.open_slots} lastSlot={lastSlot} />
 
+      <BudgetMeter budget={view.budget} spent={view.spent} remaining={view.remaining} />
+
       {deadline ? <Timer deadline={deadline} key={stepKey + '-t'} /> : null}
 
       <div className="step-head" key={stepKey + '-head'}>
@@ -146,7 +178,8 @@ export default function DraftBoard({ view, onPick, busy, deadline, waiting, oppo
 
       <div className="candidates" key={stepKey}>
         {step.candidates.map((p, i) => (
-          <Candidate key={p.name} p={p} index={i} busy={busy || waiting} onSelect={setSelected} />
+          <Candidate key={p.name} p={p} index={i} busy={busy || waiting}
+                     onSelect={setSelected} openSlots={view.open_slots} />
         ))}
       </div>
 

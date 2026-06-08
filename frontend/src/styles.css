@@ -913,3 +913,108 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 @media (max-width: 560px) {
   .ap-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ===== Salary-cap tiers + budget ======================================== */
+/* Tier pill: S gold (animated flame), A amethyst (shiny), B silver,
+   C bronze, D plain. Shown on draft cards, matchups, and scored lineups. */
+.tier-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  line-height: 1;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.tier-pill.sm { font-size: 0.62rem; padding: 1px 5px; gap: 2px; }
+.tier-pill .tier-letter { font-weight: 900; letter-spacing: 0.3px; }
+.tier-pill .tier-cost { font-weight: 700; opacity: 0.85; }
+
+/* D — plain */
+.tier-D { background: var(--line); color: var(--text); }
+/* C — bronze */
+.tier-C {
+  background: linear-gradient(135deg, #7a4a22, #b5793f);
+  color: #fff3e6; border-color: #caa06b;
+}
+/* B — silver */
+.tier-B {
+  background: linear-gradient(135deg, #8a929c, #cfd6de);
+  color: #1b1f26; border-color: #eef3f9;
+}
+/* A — amethyst, shiny (sweeping highlight) */
+.tier-A {
+  background: linear-gradient(135deg, #6a2fb0, #a766e6 55%, #c79bff);
+  color: #fff; border-color: #d9b6ff;
+  box-shadow: 0 0 6px rgba(167, 102, 230, 0.5);
+}
+.tier-A::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.6) 50%, transparent 65%);
+  transform: translateX(-130%);
+  animation: tierShine 2.8s ease-in-out infinite;
+}
+@keyframes tierShine { 0% { transform: translateX(-130%); } 60%, 100% { transform: translateX(130%); } }
+/* S — gold, pulsing, with a flickering flame */
+.tier-S {
+  background: linear-gradient(135deg, #b8860b, #ffd34d 45%, #ff9d12);
+  color: #3a2400; border-color: #ffe39a;
+  animation: tierGoldPulse 1.9s ease-in-out infinite;
+}
+@keyframes tierGoldPulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(255, 180, 40, 0.5); }
+  50% { box-shadow: 0 0 13px rgba(255, 150, 20, 0.9); }
+}
+.tier-flame {
+  width: 9px; height: 11px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: linear-gradient(180deg, #fff3b0, #ff9d12 55%, #ff5722);
+  box-shadow: 0 0 5px #ff8a1e;
+  transform-origin: bottom center;
+  animation: flameFlicker 0.5s ease-in-out infinite alternate;
+}
+.tier-pill.sm .tier-flame { width: 7px; height: 9px; }
+@keyframes flameFlicker {
+  0%   { transform: scaleY(1) scaleX(1) rotate(-3deg); opacity: 0.9; }
+  100% { transform: scaleY(1.2) scaleX(0.9) rotate(3deg); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tier-A::after, .tier-S, .tier-flame { animation: none; }
+  .tier-A::after { display: none; }
+}
+
+/* Left-edge accent stripe on a draft card, colored by tier. */
+.candidate.tier-card.tier-S { box-shadow: inset 3px 0 0 #ffce4d; }
+.candidate.tier-card.tier-A { box-shadow: inset 3px 0 0 #b07bf0; }
+.candidate.tier-card.tier-B { box-shadow: inset 3px 0 0 #c9d2db; }
+.candidate.tier-card.tier-C { box-shadow: inset 3px 0 0 #c89058; }
+.candidate.tier-card.tier-D { box-shadow: inset 3px 0 0 #3a4350; }
+.candidate.overbudget { opacity: 0.5; }
+.candidate.overbudget .locked { color: #ffc04d; }
+
+/* Budget meter above the candidate grid. */
+.budget-meter { margin: 4px 0 10px; }
+.budget-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 0.82rem; margin-bottom: 4px;
+}
+.budget-cap { color: var(--muted); font-weight: 600; }
+.budget-left b { font-size: 1rem; color: var(--win); }
+.budget-left.tight b { color: var(--tie); }
+.budget-left.low b { color: var(--loss); }
+.budget-of { color: var(--muted); font-size: 0.75rem; }
+.budget-track { height: 7px; background: var(--line); border-radius: 5px; overflow: hidden; }
+.budget-fill {
+  height: 100%; border-radius: 5px;
+  background: linear-gradient(90deg, #2ecc71, #7ed957);
+  transition: width 0.4s ease;
+}
+.budget-fill.tight { background: linear-gradient(90deg, #f1c40f, #ffb14d); }
+.budget-fill.low { background: linear-gradient(90deg, #e67e22, #e74c3c); }

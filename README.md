@@ -44,6 +44,16 @@ Rules: five slots (PG/SG/SF/PF/C); a player can only go in a slot they're
 eligible for (most are single-slot, true combos are multi); a player already
 drafted can't be picked again even if they reappear from another team/decade.
 
+**Salary cap.** Every player has a **tier** (by rating) and a flat **cost**:
+**S** 80+ ($80, gold) · **A** 70–79 ($62, amethyst) · **B** 60–69 ($50, silver) ·
+**C** 50–59 ($38, bronze) · **D** <50 ($28). You build your five under a **250
+budget**, so you can't stack superstars — drafting is budget management, not just
+"take the best name". Costs are flat *within* a tier, so the higher-rated player
+in a tier is free upside. Enforcement is a **hard cap with a pick-time
+feasibility guard**: a player is greyed out if drafting them would leave you
+unable to fill your remaining slots within budget (no over-spend, no stranding).
+The draft UI shows each player's tier/cost and a live remaining-budget meter.
+
 **PvP** (`WebSocket /ws/pvp?username=…`): two players are matched from a queue
 and draft simultaneously on a **10s-per-pick clock** (auto-pick on timeout).
 After five rounds both lineups are scored head-to-head and **both records

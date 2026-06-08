@@ -24,6 +24,9 @@ export default function LivePvP({ username, token, displayName, onExit, onRecord
   const [picksMade, setPicksMade] = useState(0)
   const [opponentPicks, setOpponentPicks] = useState(0)
   const [waitingForOpp, setWaitingForOpp] = useState(false)
+  const [budget, setBudget] = useState(null)
+  const [spent, setSpent] = useState(0)
+  const [remaining, setRemaining] = useState(null)
   const roundRef = useRef(0)
   const [result, setResult] = useState(null)
   const [record, setRecord] = useState(null)
@@ -47,11 +50,16 @@ export default function LivePvP({ username, token, displayName, onExit, onRecord
           roundRef.current = m.round
           setStep(m.current_step); setDeadline(m.deadline)
           setPicksMade(m.picks_made); setWaitingForOpp(false); setStatus('drafting')
+          if (m.budget != null) setBudget(m.budget)
+          if (m.spent != null) setSpent(m.spent)
+          if (m.remaining != null) setRemaining(m.remaining)
           break
         case 'picked_ok':
         case 'auto_picked':
           setFilled(m.filled || []); if (m.picks_made != null) setPicksMade(m.picks_made)
           setWaitingForOpp(true)
+          if (m.spent != null) setSpent(m.spent)
+          if (m.remaining != null) setRemaining(m.remaining)
           if (m.type === 'auto_picked' && m.player) {
             setToast(`⏱ Time! Auto-drafted ${m.player}${m.slot ? ` at ${m.slot}` : ''}`)
           }
@@ -106,6 +114,7 @@ export default function LivePvP({ username, token, displayName, onExit, onRecord
   const view = step && {
     current_step: step, filled, open_slots: openSlots,
     picks_made: picksMade, total_slots: SLOTS.length,
+    budget, spent, remaining,
   }
 
   return (

@@ -61,6 +61,56 @@ def streak_bonus(win_streak: int) -> int:
     return min(3, win_streak - 2)   # 3->1, 4->2, 5+->3
 
 
+# ---------------------------------------------------------------------------
+# Salary cap (draft economy)
+#
+# Every draftable player has a TIER, derived from their 0-100 player rating
+# (scoring.score_player().total), and a flat COST within that tier. A fixed
+# team BUDGET makes stacking superstars impossible while keeping them worth it:
+#   * flat-within-tier  -> the higher-rated player in the same tier is FREE
+#                          upside (pull Jokić over a peer S and you just win
+#                          that pick at the same cost).
+#   * mild-convex gaps   -> a star is a real spend, never a trap or a steal.
+# Enforcement is a HARD cap with a PICK-TIME FEASIBILITY guard: you can't draft
+# a player if doing so would leave you unable to fill your remaining slots at
+# the cheapest cost. (No "grace" overage — that lets you stack 3 stars.)
+#
+# Numbers locked via blind-draft simulation (budget-planner beats a careless
+# spender ~61%; 5 stars impossible; S drafted ~1/3 of games).
+CAP_BUDGET = 250
+
+# (id, label, min player-rating inclusive, flat cost). Descending by min.
+CAP_TIERS: list[dict] = [
+    {"id": "S", "label": "S", "min": 80, "cost": 80},
+    {"id": "A", "label": "A", "min": 70, "cost": 62},
+    {"id": "B", "label": "B", "min": 60, "cost": 50},
+    {"id": "C", "label": "C", "min": 50, "cost": 38},
+    {"id": "D", "label": "D", "min": 0,  "cost": 28},
+]
+
+CHEAPEST_COST = min(t["cost"] for t in CAP_TIERS)   # floor used by feasibility
+
+
+def player_tier(player_rating: float) -> dict:
+    """Tier dict for a player's 0-100 rating (S/A/B/C/D)."""
+    for t in CAP_TIERS:
+        if player_rating >= t["min"]:
+            return t
+    return CAP_TIERS[-1]
+
+
+def player_cost(player_rating: float) -> int:
+    return player_tier(player_rating)["cost"]
+
+
+def is_affordable(spent: int, cost: int, slots_left: int,
+                  budget: int = CAP_BUDGET) -> bool:
+    """Pick-time feasibility: can we take this `cost` for one of `slots_left`
+    open slots and still fill the remaining (slots_left-1) at the cheapest cost
+    without exceeding the budget?"""
+    return spent + cost + (slots_left - 1) * CHEAPEST_COST <= budget
+
+
 def tier_for(rating: int) -> dict:
     cur = TIERS[0]
     for t in TIERS:

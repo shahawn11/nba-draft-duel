@@ -12,27 +12,56 @@ from __future__ import annotations
 import random
 import uuid
 
-from . import db, dataset, teams
+from . import db, dataset, teams, rating
 from .models import player_from_dict, player_to_dict
 from .positions import SLOTS
-from .scoring import duel, roll_status, HOT_STAT_MULT, SLUMP_STAT_MULT
+from .scoring import duel, roll_status, score_player, HOT_STAT_MULT, SLUMP_STAT_MULT
 
 
 def _picked_names(state: dict) -> set[str]:
     return {p["player"]["name"] for p in state["picks"]}
 
 
-def _annotate(p_dict: dict, eligible_positions: list[str], open_slots: list[str],
-              available: bool) -> dict:
+def _spent(picks: list[dict]) -> int:
+    """Total salary-cap cost of the players drafted so far."""
+    return sum(int(p["player"].get("cost", 0)) for p in picks)
+
+
+def _player_rating(p) -> float:
+    """A player's intrinsic 0-100 rating (drives their cap tier/cost)."""
+    try:
+        return score_player(p).total
+    except Exception:
+        return 0.0
+
+
+def _annotate(p, open_slots: list[str], picked: set[str], spent: int) -> dict:
+    """Build a candidate dict with cap tier/cost + selectability. A candidate is
+    selectable only if it isn't already drafted, can fill an open slot, AND is
+    affordable under the remaining budget (pick-time feasibility guard)."""
+    d = player_to_dict(p)
+    eligible_positions = d["eligible_positions"]
+    available = p.name not in picked
     elig_open = [s for s in open_slots if s in eligible_positions]
-    d = dict(p_dict)
-    d["eligible_slots"] = elig_open if available else []
-    d["eligible"] = available and bool(elig_open)
-    d["taken"] = not available   # already drafted earlier in this match
+
+    r = _player_rating(p)
+    tier = rating.player_tier(r)
+    cost = tier["cost"]
+    affordable = rating.is_affordable(spent, cost, len(open_slots))
+
+    d["rating_value"] = round(r, 1)
+    d["tier"] = tier["id"]
+    d["cost"] = cost
+    d["affordable"] = affordable
+    d["taken"] = not available
+    selectable = available and affordable and bool(elig_open)
+    d["eligible_slots"] = elig_open if selectable else []
+    d["eligible"] = selectable
     return d
 
 
-def _build_step(rng: random.Random, open_slots: list[str], picked: set[str]) -> dict:
+def _build_step(rng: random.Random, open_slots: list[str], picked: set[str],
+                spent: int = 0) -> dict:
     """Pick a random (decade, team) with >=1 selectable player for an open slot."""
     pool = dataset.historical_pool()
     keys = list(pool.keys())
@@ -49,15 +78,31 @@ def _build_step(rng: random.Random, open_slots: list[str], picked: set[str]) -> 
         chosen = rng.choice(keys)
 
     decade, team = chosen.split("|", 1)
-    candidates = [
-        _annotate(player_to_dict(p), list(p.eligible()), open_slots,
-                  p.name not in picked)
-        for p in pool[chosen]
-    ]
-    return {"decade": decade, "team": teams.era_team_name(team, decade), "candidates": candidates}
+    candidates = [_annotate(p, open_slots, picked, spent) for p in pool[chosen]]
+
+    # Feasibility fallback: if the random pool offers no AFFORDABLE+eligible
+    # option for an open slot, force the cheapest position-eligible candidate
+    # selectable so the draft can never soft-lock. (Rare; never lets a planner
+    # stack stars — it only fires when no cheap option was offered.)
+    if not any(c["eligible"] for c in candidates):
+        forced = [c for c in candidates
+                  if not c["taken"]
+                  and any(s in c["eligible_positions"] for s in open_slots)]
+        if forced:
+            cheapest = min(forced, key=lambda c: c["cost"])
+            cheapest["affordable"] = True
+            cheapest["forced"] = True
+            cheapest["eligible_slots"] = [s for s in open_slots
+                                          if s in cheapest["eligible_positions"]]
+            cheapest["eligible"] = True
+
+    return {"decade": decade, "team": teams.era_team_name(team, decade),
+            "budget": rating.CAP_BUDGET, "spent": spent,
+            "remaining": rating.CAP_BUDGET - spent, "candidates": candidates}
 
 
 def _public_view(match: dict, state: dict) -> dict:
+    spent = _spent(state["picks"])
     return {
         "match_id": match["id"],
         "username": match["username"],
@@ -66,8 +111,12 @@ def _public_view(match: dict, state: dict) -> dict:
         "total_slots": len(SLOTS),
         "picks_made": len(state["picks"]),
         "open_slots": state["open_slots"],
+        "budget": rating.CAP_BUDGET,
+        "spent": spent,
+        "remaining": rating.CAP_BUDGET - spent,
         "filled": [
-            {"slot": p["slot"], "name": p["player"]["name"]}
+            {"slot": p["slot"], "name": p["player"]["name"],
+             "cost": p["player"].get("cost"), "tier": p["player"].get("tier")}
             for p in state["picks"]
         ],
         "current_step": state.get("current"),
@@ -121,15 +170,24 @@ def pick(match_id: str, player_name: str, slot: str) -> dict:
         raise DraftError(f"slot {slot} is not open")
     if slot not in cand.get("eligible_positions", []):
         raise DraftError(f"'{player_name}' cannot play {slot}")
+    if not cand.get("eligible") or slot not in cand.get("eligible_slots", []):
+        raise DraftError(
+            f"'{player_name}' is not selectable at {slot} "
+            f"(over budget — costs {cand.get('cost')}, "
+            f"{state and rating.CAP_BUDGET - _spent(state['picks'])} left)"
+        )
 
-    picked_player = {k: v for k, v in cand.items() if k not in ("eligible", "eligible_slots")}
+    picked_player = {k: v for k, v in cand.items()
+                     if k not in ("eligible", "eligible_slots", "affordable",
+                                  "taken", "forced")}
     picked_player["position"] = slot
     state["picks"].append({"slot": slot, "player": picked_player})
     state["open_slots"] = [s for s in state["open_slots"] if s != slot]
 
     rng = random.Random()
     if state["open_slots"]:
-        state["current"] = _build_step(rng, state["open_slots"], _picked_names(state))
+        state["current"] = _build_step(rng, state["open_slots"],
+                                       _picked_names(state), _spent(state["picks"]))
         db.update_state(match_id, state)
         return {"done": False, **_public_view(match, state)}
 
@@ -224,6 +282,8 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
                     "team": teams.era_team_name(s.player.team, s.player.decade),
                     "decade": s.player.decade,
                     "height_in": s.player.height_in,
+                    "tier": rating.player_tier(_player_rating(s.player))["id"],
+                    "cost": rating.player_cost(_player_rating(s.player)),
                     "rating": round(s.total - team.status_deltas.get(s.player.name, 0.0), 1),
                     "delta": round(delta_by_pos.get(s.player.position, 0.0), 1),
                     "status_delta": round(team.status_deltas.get(s.player.name, 0.0), 1),

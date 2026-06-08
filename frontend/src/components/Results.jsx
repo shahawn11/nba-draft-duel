@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { playTick, playPromo, playResult } from '../sound.js'
 import Avatar, { AVATAR_BY_ID } from './Avatar.jsx'
+import TierBadge from './TierBadge.jsx'
 
 function useCountUp(from, to, ms = 1100) {
   const [v, setV] = useState(from)
@@ -108,6 +109,7 @@ function Lineup({ title, team, highlight }) {
           <li key={p.name}>
             <div className="sp-head">
               <span className="pos-badge">{p.position}</span>
+              {p.tier && <TierBadge tier={p.tier} cost={p.cost} size="sm" />}
               <span className="sp-name">{p.name}</span>
               {p.status === 'hot' && <span className="status-badge hot" title="Hot — rating +10">🔥 Hot</span>}
               {p.status === 'slump' && <span className="status-badge slump" title="Slump — rating −10">🥶 Slump</span>}
@@ -138,6 +140,10 @@ function Lineup({ title, team, highlight }) {
 export default function Results({ result, onPlayAgain }) {
   const won = result.outcome === 'win'
   const tied = result.outcome === 'tie'
+  // Map player name -> tier so the positional matchups can show a tier pill.
+  const tierByName = {}
+  for (const p of (result.your_team?.players || [])) tierByName[p.name] = p.tier
+  for (const p of (result.opponent_team_scored?.players || [])) tierByName[p.name] = p.tier
   const ranked = result.ranked
   const newRating = result.record ? result.record.rating : 0
   const oldRating = newRating - (result.rating_change || 0)
@@ -184,11 +190,13 @@ export default function Results({ result, onPlayAgain }) {
           <div className="matchup-row">
             <span className="m-pos">{m.position}</span>
             <span className="m-home">
-              {m.home_player} · <MatchScore base={m.home_score} delta={m.home_delta} statusDelta={m.home_status_delta} />
+              {tierByName[m.home_player] && <TierBadge tier={tierByName[m.home_player]} size="sm" />}
+              {' '}{m.home_player} · <MatchScore base={m.home_score} delta={m.home_delta} statusDelta={m.home_status_delta} />
             </span>
             <span className="m-vs">vs</span>
             <span className="m-away">
               <MatchScore base={m.away_score} delta={m.away_delta} statusDelta={m.away_status_delta} /> · {m.away_player}
+              {' '}{tierByName[m.away_player] && <TierBadge tier={tierByName[m.away_player]} size="sm" />}
             </span>
           </div>
           {m.note && <div className="matchup-note">⚠ {m.note}</div>}

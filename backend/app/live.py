@@ -83,7 +83,7 @@ class LiveGame:
         for p in (self.a, self.b):
             p.open_slots = list(SLOTS)
             p.picks = []
-            p.step = game._build_step(self.rng, p.open_slots, set())
+            p.step = game._build_step(self.rng, p.open_slots, set(), 0)
         a_rec = self.a.record()
         b_rec = self.b.record()
         await self.a.send({"type": "matched", "opponent": self.b.username,
@@ -99,12 +99,14 @@ class LiveGame:
                 deadline = time.time() + ROUND_SECONDS
                 for p in (self.a, self.b):
                     await p.send({"type": "round", "round": rnd, "deadline": deadline,
-                                  "current_step": p.step, "picks_made": len(p.picks)})
+                                  "current_step": p.step, "picks_made": len(p.picks),
+                                  **self._budget(p)})
                 await asyncio.gather(self._collect(self.a, deadline, rnd),
                                      self._collect(self.b, deadline, rnd))
                 if rnd < NUM_ROUNDS:
                     for p in (self.a, self.b):
-                        p.step = game._build_step(self.rng, p.open_slots, p.picked_names())
+                        p.step = game._build_step(self.rng, p.open_slots,
+                                                  p.picked_names(), game._spent(p.picks))
         except PlayerLeft as left:
             await self._handle_left(left.player)
             return
@@ -112,12 +114,17 @@ class LiveGame:
         await self._finish()
 
     # ---- per-player round collection ----
+    def _budget(self, p: Player) -> dict:
+        s = game._spent(p.picks)
+        return {"budget": rating.CAP_BUDGET, "spent": s,
+                "remaining": rating.CAP_BUDGET - s}
+
     async def _send_autopick(self, p: Player, other: Player) -> None:
         self._autopick(p)
         ap = p.picks[-1] if p.picks else None
         await p.send({"type": "auto_picked", "filled": self._filled(p),
                       "player": ap["player"]["name"] if ap else None,
-                      "slot": ap["slot"] if ap else None})
+                      "slot": ap["slot"] if ap else None, **self._budget(p)})
         await other.send({"type": "opponent_progress", "picks_made": len(p.picks)})
 
     async def _collect(self, p: Player, deadline: float, rnd: int) -> None:
@@ -150,7 +157,7 @@ class LiveGame:
                 ok, err = self._apply(p, msg.get("player_name"), msg.get("slot"))
                 if ok:
                     await p.send({"type": "picked_ok", "filled": self._filled(p),
-                                  "picks_made": len(p.picks)})
+                                  "picks_made": len(p.picks), **self._budget(p)})
                     await other.send({"type": "opponent_progress", "picks_made": len(p.picks)})
                     return
                 await p.send({"type": "error", "detail": err})
@@ -167,7 +174,11 @@ class LiveGame:
             return False, f"slot {slot} is not open"
         if slot not in cand.get("eligible_positions", []):
             return False, f"'{name}' cannot play {slot}"
-        player = {k: v for k, v in cand.items() if k not in ("eligible", "eligible_slots")}
+        if not cand.get("eligible") or slot not in cand.get("eligible_slots", []):
+            return False, f"'{name}' is over budget for {slot}"
+        player = {k: v for k, v in cand.items()
+                  if k not in ("eligible", "eligible_slots", "affordable",
+                               "taken", "forced")}
         player["position"] = slot
         p.picks.append({"slot": slot, "player": player})
         p.open_slots = [s for s in p.open_slots if s != slot]
