@@ -962,36 +962,25 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   animation: tierShine 2.8s ease-in-out infinite;
 }
 @keyframes tierShine { 0% { transform: translateX(-130%); } 60%, 100% { transform: translateX(130%); } }
-/* S — gold, pulsing, with a flickering flame */
+/* S = Diamond: bright icy gradient with a shiny sweep (no flame) */
 .tier-S {
-  background: linear-gradient(135deg, #b8860b, #ffd34d 45%, #ff9d12);
-  color: #3a2400; border-color: #ffe39a;
-  animation: tierGoldPulse 1.9s ease-in-out infinite;
+  background: linear-gradient(135deg, #5fd6ff, #d8f6ff 45%, #9fe3ff);
+  color: #07303f; border-color: #e6fbff;
+  box-shadow: 0 0 7px rgba(120, 220, 255, 0.7);
 }
-@keyframes tierGoldPulse {
-  0%, 100% { box-shadow: 0 0 5px rgba(255, 180, 40, 0.5); }
-  50% { box-shadow: 0 0 13px rgba(255, 150, 20, 0.9); }
-}
-.tier-flame {
-  width: 9px; height: 11px;
-  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  background: linear-gradient(180deg, #fff3b0, #ff9d12 55%, #ff5722);
-  box-shadow: 0 0 5px #ff8a1e;
-  transform-origin: bottom center;
-  animation: flameFlicker 0.5s ease-in-out infinite alternate;
-}
-.tier-pill.sm .tier-flame { width: 7px; height: 9px; }
-@keyframes flameFlicker {
-  0%   { transform: scaleY(1) scaleX(1) rotate(-3deg); opacity: 0.9; }
-  100% { transform: scaleY(1.2) scaleX(0.9) rotate(3deg); opacity: 1; }
+.tier-S::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.8) 50%, transparent 65%);
+  transform: translateX(-130%);
+  animation: tierShine 2.6s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .tier-A::after, .tier-S, .tier-flame { animation: none; }
-  .tier-A::after { display: none; }
+  .tier-A::after, .tier-S::after { animation: none; display: none; }
 }
 
 /* Left-edge accent stripe on a draft card, colored by tier. */
-.candidate.tier-card.tier-S { box-shadow: inset 3px 0 0 #ffce4d; }
+.candidate.tier-card.tier-S { box-shadow: inset 3px 0 0 #8fe6ff; }
 .candidate.tier-card.tier-A { box-shadow: inset 3px 0 0 #b07bf0; }
 .candidate.tier-card.tier-B { box-shadow: inset 3px 0 0 #c9d2db; }
 .candidate.tier-card.tier-C { box-shadow: inset 3px 0 0 #c89058; }
@@ -1018,3 +1007,14 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 }
 .budget-fill.tight { background: linear-gradient(90deg, #f1c40f, #ffb14d); }
 .budget-fill.low { background: linear-gradient(90deg, #e67e22, #e74c3c); }
+
+/* Peak-season callout (rating/tier are based on the player's best season in
+   the decade; the main stat line still shows the decade average). */
+.cand-peak {
+  font-size: 0.7rem;
+  color: #ffd27a;
+  margin-top: 2px;
+}
+.cand-peak b { color: #ffe3a8; }
+.m-peak { font-size: 0.82rem; color: #ffd27a; margin: 2px 0 4px; }
+.sp-peak { font-size: 0.68rem; color: var(--muted); margin-top: 1px; }

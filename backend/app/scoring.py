@@ -15,6 +15,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
+from . import rating
+
 Position = Literal["PG", "SG", "SF", "PF", "C"]
 CANONICAL_POSITIONS: tuple[Position, ...] = ("PG", "SG", "SF", "PF", "C")
 
@@ -101,6 +103,25 @@ class PlayerStats:
     # Slots this player may be drafted into (PG/SG/SF/PF/C). Empty => single
     # slot equal to `position`. Genuine combos list multiple.
     eligible_positions: tuple[str, ...] = ()
+    # Display-only stats. Scoring/rating use the fields above, which hold a
+    # 50/50 BLEND of the player's peak season and decade average (the blend
+    # tempers one-year spikes like a single MVP season). `decade_*` is the
+    # games-weighted decade average and `peak_*` the single best season; both
+    # are shown on the card. `peak_season` labels the peak year. All default to
+    # 0/"" for curated seed players (where the single curated line is used).
+    decade_ppg: float = 0.0
+    decade_rpg: float = 0.0
+    decade_apg: float = 0.0
+    decade_spg: float = 0.0
+    decade_bpg: float = 0.0
+    peak_ppg: float = 0.0
+    peak_rpg: float = 0.0
+    peak_apg: float = 0.0
+    peak_bpm: float = 0.0
+    peak_season: str = ""
+    # Manual rating override (0-100). 0 = none; when set, score_player returns
+    # this as the player's total (a curated correction for formula outliers).
+    rating_override: float = 0.0
 
     def eligible(self) -> tuple[str, ...]:
         return self.eligible_positions if self.eligible_positions else (self.position,)
@@ -194,6 +215,12 @@ def score_player(p: PlayerStats) -> PlayerScore:
     prod = _normalize_production(p.production())
     adv = _normalize_advanced(p.bpm)
     total = prod * PRODUCTION_WEIGHT + adv * ADVANCED_WEIGHT
+    if p.rating_override:
+        total = p.rating_override   # curated correction (drives tier + duel)
+    # Round a score sitting in the top point of a tier UP to the tier floor
+    # (79.x -> 80, 69.x -> 70, ...), so the NUMBER itself rounds -- not just the
+    # tier badge -- in both the displayed rating and in-duel strength.
+    total = rating.tier_round(total)
     return PlayerScore(player=p, production=prod, advanced=adv, total=total)
 
 

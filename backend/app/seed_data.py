@@ -116,6 +116,20 @@ HISTORICAL_POOL: dict[str, list[PlayerStats]] = {
         _p("Luc Longley", "C", 7.9, 5.1, 1.8, 0.4, 0.9, 0.5, "CHI", "1990s", ("C",)),
         _p("John Paxson", "PG", 7.0, 1.4, 3.4, 0.9, 0.1, 0.5, "CHI", "1990s", ("PG",)),
     ],
+    "1980s|Chicago Bulls": [
+        # MJ & Pippen are enriched from real 1980s data + rating overrides; the
+        # rest are curated 1980s Bulls (early-decade and mid/late-decade mix).
+        _p("Michael Jordan", "SG", 32.6, 5.8, 5.0, 2.7, 0.9, 9.5, "CHI", "1980s", ("SG", "SF")),
+        _p("Scottie Pippen", "SF", 14.4, 6.0, 3.5, 1.8, 0.7, 4.0, "CHI", "1980s", ("SF", "PF")),
+        _p("Horace Grant", "PF", 9.3, 7.2, 1.4, 0.9, 0.9, 2.0, "CHI", "1980s", ("PF", "C")),
+        _p("Charles Oakley", "PF", 12.4, 12.1, 2.4, 1.0, 0.5, 2.5, "CHI", "1980s", ("PF", "C")),
+        _p("Artis Gilmore", "C", 17.0, 9.5, 2.0, 0.5, 2.0, 4.0, "CHI", "1980s", ("C",)),
+        _p("Reggie Theus", "SG", 18.5, 3.2, 5.5, 1.3, 0.2, 3.0, "CHI", "1980s", ("SG", "PG")),
+        _p("Orlando Woolridge", "SF", 17.0, 4.6, 2.0, 0.7, 0.9, 3.0, "CHI", "1980s", ("SF", "PF")),
+        _p("Dave Corzine", "C", 9.0, 6.5, 2.0, 0.5, 0.9, 1.0, "CHI", "1980s", ("C",)),
+        _p("Quintin Dailey", "SG", 15.1, 2.6, 2.7, 0.7, 0.2, 1.0, "CHI", "1980s", ("SG",)),
+        _p("John Paxson", "PG", 9.0, 1.6, 4.2, 0.8, 0.1, 1.0, "CHI", "1980s", ("PG",)),
+    ],
     "1980s|Los Angeles Lakers": [
         _p("Magic Johnson", "PG", 19.5, 7.3, 11.4, 1.8, 0.4, 9.0, "LAL", "1980s", ("PG", "SF")),
         _p("Kareem Abdul-Jabbar", "C", 21.5, 7.2, 3.0, 0.7, 2.4, 6.0, "LAL", "1980s", ("C",)),

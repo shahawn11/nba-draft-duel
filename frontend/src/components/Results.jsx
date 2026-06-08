@@ -116,6 +116,7 @@ function Lineup({ title, team, highlight }) {
               {p.height_in ? <span className="sp-ht">{Math.floor(p.height_in / 12)}'{p.height_in % 12}"</span> : null}
               <span className="sp-rating" title="final rating">{(p.rating + (p.delta || 0)).toFixed(1)}</span>
             </div>
+            {p.peak_season && <div className="sp-peak">⭐ rated on peak {p.peak_season}</div>}
             <div className="sp-stats">
               <b>{p.game?.pts ?? 0}</b> pts · <b>{p.game?.reb ?? 0}</b> reb · <b>{p.game?.ast ?? 0}</b> ast
               {' · '}{p.game?.stl ?? 0} stl · {p.game?.blk ?? 0} blk

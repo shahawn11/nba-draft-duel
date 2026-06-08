@@ -22,6 +22,18 @@ def player_to_dict(p: PlayerStats) -> dict:
         "bpm": p.bpm,
         "height_in": p.height_in,
         "eligible_positions": list(p.eligible()),
+        # display-only decade averages + peak season the rating is based on
+        "decade_ppg": p.decade_ppg,
+        "decade_rpg": p.decade_rpg,
+        "decade_apg": p.decade_apg,
+        "decade_spg": p.decade_spg,
+        "decade_bpg": p.decade_bpg,
+        "peak_ppg": p.peak_ppg,
+        "peak_rpg": p.peak_rpg,
+        "peak_apg": p.peak_apg,
+        "peak_bpm": p.peak_bpm,
+        "peak_season": p.peak_season,
+        "rating_override": p.rating_override,
     }
 
 
@@ -40,6 +52,17 @@ def player_from_dict(d: dict) -> PlayerStats:
         bpm=d.get("bpm", 0.0),
         height_in=d.get("height_in", 0.0),
         eligible_positions=tuple(d.get("eligible_positions", []) or []),
+        decade_ppg=d.get("decade_ppg", 0.0),
+        decade_rpg=d.get("decade_rpg", 0.0),
+        decade_apg=d.get("decade_apg", 0.0),
+        decade_spg=d.get("decade_spg", 0.0),
+        decade_bpg=d.get("decade_bpg", 0.0),
+        peak_ppg=d.get("peak_ppg", 0.0),
+        peak_rpg=d.get("peak_rpg", 0.0),
+        peak_apg=d.get("peak_apg", 0.0),
+        peak_bpm=d.get("peak_bpm", 0.0),
+        peak_season=d.get("peak_season", ""),
+        rating_override=d.get("rating_override", 0.0),
     )
 
 

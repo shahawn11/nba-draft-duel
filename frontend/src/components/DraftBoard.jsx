@@ -92,12 +92,29 @@ function Candidate({ p, index, onSelect, busy, openSlots }) {
         {!eligible && <span className="locked">{lockReason}</span>}
       </div>
       <div className="cand-name">{p.name}</div>
-      <div className="cand-stats">
-        <b>{p.ppg}</b> pts · <b>{p.rpg}</b> reb · <b>{p.apg}</b> ast
-      </div>
-      <div className="cand-stats sub">
-        {p.spg} stl · {p.bpg} blk · impact {p.bpm}
-      </div>
+      {(() => {
+        const hasPeak = !!p.peak_season
+        const ppg = hasPeak ? p.decade_ppg : p.ppg
+        const rpg = hasPeak ? p.decade_rpg : p.rpg
+        const apg = hasPeak ? p.decade_apg : p.apg
+        const spg = hasPeak ? p.decade_spg : p.spg
+        const bpg = hasPeak ? p.decade_bpg : p.bpg
+        return (
+          <>
+            <div className="cand-stats">
+              <b>{ppg}</b> pts · <b>{rpg}</b> reb · <b>{apg}</b> ast
+            </div>
+            <div className="cand-stats sub">
+              {spg} stl · {bpg} blk{hasPeak ? '' : ` · impact ${p.bpm}`}
+            </div>
+            {hasPeak && (
+              <div className="cand-peak" title="Tier/cost use a 50/50 blend of this peak season and the decade average">
+                ⭐ Peak {p.peak_season}: <b>{p.peak_ppg}</b>/{p.peak_rpg}/{p.peak_apg} · impact {p.peak_bpm}
+              </div>
+            )}
+          </>
+        )
+      })()}
       {eligible && (
         <div className="cand-cta">
           Tap to draft (${p.cost}) → {p.eligible_slots.join(' / ')}
@@ -116,8 +133,12 @@ function SlotModal({ player, onDraft, onCancel, busy }) {
           <TierBadge tier={player.tier} cost={player.cost} /> {player.name}
         </div>
         <div className="m-stats">
-          {player.ppg} pts · {player.rpg} reb · {player.apg} ast · impact {player.bpm}
+          {player.peak_season ? player.decade_ppg : player.ppg} pts · {player.peak_season ? player.decade_rpg : player.rpg} reb · {player.peak_season ? player.decade_apg : player.apg} ast
+          {!player.peak_season && <> · impact {player.bpm}</>}
         </div>
+        {player.peak_season && (
+          <div className="m-peak">⭐ Peak {player.peak_season}: <b>{player.peak_ppg}</b>/{player.peak_rpg}/{player.peak_apg} · impact {player.peak_bpm}</div>
+        )}
         <div className="m-assign">Choose a slot (costs ${player.cost}):</div>
         <div className="modal-slots">
           {player.eligible_slots.map((s) => (

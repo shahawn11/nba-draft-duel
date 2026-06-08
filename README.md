@@ -45,7 +45,7 @@ eligible for (most are single-slot, true combos are multi); a player already
 drafted can't be picked again even if they reappear from another team/decade.
 
 **Salary cap.** Every player has a **tier** (by rating) and a flat **cost**:
-**S** 80+ ($80, gold) · **A** 70–79 ($62, amethyst) · **B** 60–69 ($50, silver) ·
+**S** 80+ ($80, 💎 Diamond) · **A** 70–79 ($62, amethyst) · **B** 60–69 ($50, silver) ·
 **C** 50–59 ($38, bronze) · **D** <50 ($28). You build your five under a **250
 budget**, so you can't stack superstars — drafting is budget management, not just
 "take the best name". Costs are flat *within* a tier, so the higher-rated player

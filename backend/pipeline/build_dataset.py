@@ -65,6 +65,12 @@ TEAM_ABBREV_TO_FULL: dict[str, str] = {
     "KCK": "Sacramento Kings", "SAS": "San Antonio Spurs",
     "TOR": "Toronto Raptors", "UTA": "Utah Jazz", "WAS": "Washington Wizards",
     "WSB": "Washington Wizards",
+    # PlayerCareerStats (per-player endpoint) uses some legacy abbreviations that
+    # differ from the league-dash endpoint -- alias them to the same franchise.
+    "PHL": "Philadelphia 76ers", "SAN": "San Antonio Spurs",
+    "GOS": "Golden State Warriors", "UTH": "Utah Jazz",
+    "BUF": "Los Angeles Clippers", "PHO": "Phoenix Suns",
+    "GOW": "Golden State Warriors", "NOJ": "Utah Jazz",
 }
 
 SCHEMA = """

@@ -81,7 +81,7 @@ CAP_BUDGET = 250
 
 # (id, label, min player-rating inclusive, flat cost). Descending by min.
 CAP_TIERS: list[dict] = [
-    {"id": "S", "label": "S", "min": 80, "cost": 80},
+    {"id": "S", "label": "Diamond", "min": 80, "cost": 80},
     {"id": "A", "label": "A", "min": 70, "cost": 62},
     {"id": "B", "label": "B", "min": 60, "cost": 50},
     {"id": "C", "label": "C", "min": 50, "cost": 38},
@@ -91,10 +91,65 @@ CAP_TIERS: list[dict] = [
 CHEAPEST_COST = min(t["cost"] for t in CAP_TIERS)   # floor used by feasibility
 
 
-def player_tier(player_rating: float) -> dict:
-    """Tier dict for a player's 0-100 rating (S/A/B/C/D)."""
+# Manual rating overrides (0-100 scale), keyed by (player, decade, team) so only
+# the player's prime stint is corrected -- other teams/decades keep their real
+# formula rating (e.g. Westbrook's Houston year, Love's Cavs years, Wade's Bulls
+# cameo stay as computed). The override sets the score DIRECTLY, so tier, cost,
+# and in-duel strength all agree. Team is the full franchise name (pool key).
+RATING_OVERRIDES: dict[tuple[str, str, str], float] = {
+    # Too high -> lowered (prime team only)
+    ("Russell Westbrook", "2010s", "Oklahoma City Thunder"): 82.0,
+    ("Kevin Love", "2010s", "Minnesota Timberwolves"): 78.0,
+    # Too low -> raised
+    ("Stephen Curry", "2010s", "Golden State Warriors"): 80.0,
+    ("Kobe Bryant", "2000s", "Los Angeles Lakers"): 80.0,
+    ("Scottie Pippen", "1990s", "Chicago Bulls"): 70.0,
+    ("John Stockton", "1990s", "Utah Jazz"): 70.0,
+    # All-time greats (tunable)
+    ("Michael Jordan", "1990s", "Chicago Bulls"): 92.0,
+    ("Michael Jordan", "1980s", "Chicago Bulls"): 88.0,
+    ("LeBron James", "2010s", "Miami Heat"): 92.0,           # peak
+    ("LeBron James", "2010s", "Cleveland Cavaliers"): 88.0,  # 2nd Cleveland stint
+    ("Dwyane Wade", "2000s", "Miami Heat"): 88.0,
+    ("Dwyane Wade", "2010s", "Miami Heat"): 78.0,
+    # Buried by the formula (shooters/defenders: no 3-pt / defense credit) -> raised
+    ("Klay Thompson", "2010s", "Golden State Warriors"): 62.0,
+    ("Reggie Miller", "1990s", "Indiana Pacers"): 63.0,
+    ("Ray Allen", "2000s", "Milwaukee Bucks"): 63.0,
+    ("Dikembe Mutombo", "1990s", "Denver Nuggets"): 63.0,
+    ("Tony Parker", "2000s", "San Antonio Spurs"): 63.0,
+    ("Chauncey Billups", "2000s", "Detroit Pistons"): 62.0,
+    ("Manu Ginobili", "2000s", "San Antonio Spurs"): 61.0,
+    ("Steve Nash", "2000s", "Phoenix Suns"): 72.0,
+    ("George Gervin", "1980s", "San Antonio Spurs"): 72.0,
+    ("Ben Wallace", "2000s", "Detroit Pistons"): 63.0,   # 4x DPOY (defense uncounted)
+}
+
+
+# Players to force into a (decade, team) draft pool even if they miss the
+# scoring-based top-10 -- e.g. elite defenders who never scored much. Pair with
+# a RATING_OVERRIDES entry so their rating reflects their real value.
+POOL_FORCE_INCLUDE: dict[tuple[str, str], list[str]] = {
+    ("2000s", "Detroit Pistons"): ["Ben Wallace"],
+}
+
+
+def tier_round(player_rating: float) -> float:
+    """Round a rating that sits in the top point of a tier UP into the next one,
+    so a 59.x lands B, 69.x lands A, 79.x lands S (and 49.x lands C). Avoids the
+    "just missed the tier" feel for borderline stars (e.g. Carmelo 59.1, a
+    Finals-MVP Kawhi season at 69.5)."""
     for t in CAP_TIERS:
-        if player_rating >= t["min"]:
+        if t["min"] - 1.0 <= player_rating < t["min"]:
+            return float(t["min"])
+    return player_rating
+
+
+def player_tier(player_rating: float) -> dict:
+    """Tier dict for a player's 0-100 rating (S/A/B/C/D), boundary-rounded."""
+    r = tier_round(player_rating)
+    for t in CAP_TIERS:
+        if r >= t["min"]:
             return t
     return CAP_TIERS[-1]
 

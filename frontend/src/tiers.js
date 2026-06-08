@@ -4,7 +4,7 @@
 //   S — gold, animated flame   A — amethyst (shiny)
 //   B — silver                 C — bronze                 D — plain
 export const TIERS = {
-  S: { label: 'S', cost: 80, name: 'Superstar' },
+  S: { label: '💎', cost: 80, name: 'Diamond' },
   A: { label: 'A', cost: 62, name: 'All-Star' },
   B: { label: 'B', cost: 50, name: 'Starter' },
   C: { label: 'C', cost: 38, name: 'Rotation' },

@@ -13,20 +13,27 @@ from __future__ import annotations
 
 import sqlite3
 from collections import defaultdict
+from dataclasses import replace
 from functools import lru_cache
 from pathlib import Path
 
 from . import seed_data
 from .positions import SLOTS, eligible_from_raw
-from .scoring import PlayerStats
+from .scoring import PlayerStats, score_player
+from . import rating
 
 DB_PATH = Path(__file__).parent / "data" / "players.db"
 POOL_SIZE = 10          # every draftable (decade, team) pool shows exactly this many
 MIN_CANDIDATES = POOL_SIZE
 MAX_CANDIDATES = POOL_SIZE
+PEAK_MIN_GP = 25        # a season needs this many games to qualify as the "peak"
 
 
-def _load_from_db(path: Path) -> dict[str, list[PlayerStats]]:
+def _blended_by_key(path: Path) -> dict[str, dict[str, tuple[float, PlayerStats]]]:
+    """Per (decade|team, player): a PlayerStats whose scoring stats are a 50/50
+    blend of the player's peak season and decade average, plus display fields
+    (decade_*, peak_*). Returns key -> {name: (notability, PlayerStats)}; no
+    roster-size filter (so it also feeds seed-pool enrichment for pre-1996)."""
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     try:
@@ -36,76 +43,183 @@ def _load_from_db(path: Path) -> dict[str, list[PlayerStats]]:
         has_elig = "eligible" in cols
         has_gp = "gp" in cols
         has_height = "height_in" in cols
+        has_season = "season" in cols
         sel = "decade, team, name, position, ppg, rpg, apg, spg, bpg, bpm"
         sel += ", eligible" if has_elig else ""
         sel += ", gp" if has_gp else ""
         sel += ", height_in" if has_height else ""
+        sel += ", season" if has_season else ""
         rows = conn.execute(f"SELECT {sel} FROM players").fetchall()
     except sqlite3.OperationalError:
         return {}
     finally:
         conn.close()
 
-    # Aggregate each player's DECADE AVERAGE for a franchise (games-weighted).
-    # key -> name -> accumulator
-    agg: dict[str, dict[str, dict]] = defaultdict(dict)
+    # Collect every (decade, team) player's individual SEASON rows.
+    by_player: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
     for r in rows:
         key = f"{r['decade']}|{r['team']}"
-        w = float(r["gp"]) if has_gp and r["gp"] else 1.0
-        a = agg[key].get(r["name"])
-        if a is None:
-            a = {
-                "w": 0.0, "ppg": 0.0, "rpg": 0.0, "apg": 0.0, "spg": 0.0,
-                "bpg": 0.0, "bpm": 0.0, "position": r["position"],
-                "eligible": (r["eligible"] if has_elig else "") or "",
-                "height_in": (r["height_in"] if has_height else 0.0) or 0.0,
-            }
-            agg[key][r["name"]] = a
-        a["w"] += w
-        for s in ("ppg", "rpg", "apg", "spg", "bpg", "bpm"):
-            a[s] += (r[s] or 0) * w
+        by_player[key][r["name"]].append({
+            "ppg": r["ppg"] or 0.0, "rpg": r["rpg"] or 0.0, "apg": r["apg"] or 0.0,
+            "spg": r["spg"] or 0.0, "bpg": r["bpg"] or 0.0, "bpm": r["bpm"] or 0.0,
+            "gp": float(r["gp"]) if has_gp and r["gp"] else 1.0,
+            "position": r["position"],
+            "eligible": (r["eligible"] if has_elig else "") or "",
+            "height_in": (r["height_in"] if has_height else 0.0) or 0.0,
+            "season": (r["season"] if has_season else "") or "",
+        })
 
-    pool: dict[str, list[PlayerStats]] = {}
-    for key, namemap in agg.items():
+    out: dict[str, dict[str, tuple[float, PlayerStats]]] = {}
+    for key, namemap in by_player.items():
         decade, team = key.split("|", 1)
-        cands: list[PlayerStats] = []
-        for name, a in namemap.items():
-            w = a["w"] or 1.0
-            elig = tuple(p for p in a["eligible"].split(",") if p) or \
-                eligible_from_raw(None, a["position"])
-            cands.append(PlayerStats(
-                name=name, position=a["position"],
-                ppg=round(a["ppg"] / w, 1), rpg=round(a["rpg"] / w, 1),
-                apg=round(a["apg"] / w, 1), spg=round(a["spg"] / w, 1),
-                bpg=round(a["bpg"] / w, 1), bpm=round(a["bpm"] / w, 2),
-                team=team, season=decade, decade=decade,
-                height_in=a["height_in"],
-                eligible_positions=elig,
-            ))
-        # "Top 10" = most notable players: scoring-led with a light impact nudge.
-        # Pure PIE/impact buried high scorers like Klay Thompson behind forgettable
-        # role players, so we lead with points.
-        cands.sort(key=lambda p: p.ppg + 0.5 * p.bpm, reverse=True)
-        cands = cands[:MAX_CANDIDATES]
-        if len(cands) >= MIN_CANDIDATES:
-            pool[key] = cands
+        per_name: dict[str, tuple[float, PlayerStats]] = {}
+        for name, seasons in namemap.items():
+            wtot = sum(s["gp"] for s in seasons) or 1.0
+            def avg(stat: str) -> float:
+                return sum(s[stat] * s["gp"] for s in seasons) / wtot
+            d_ppg, d_rpg, d_apg = avg("ppg"), avg("rpg"), avg("apg")
+            d_spg, d_bpg = avg("spg"), avg("bpg")
+
+            sample = seasons[0]
+            elig = tuple(p for p in sample["eligible"].split(",") if p) or \
+                eligible_from_raw(None, sample["position"])
+
+            def mk_from_stats(ppg, rpg, apg, spg, bpg, bpm, *, peak_label: str) -> PlayerStats:
+                return PlayerStats(
+                    name=name, position=sample["position"],
+                    ppg=round(ppg, 1), rpg=round(rpg, 1), apg=round(apg, 1),
+                    spg=round(spg, 1), bpg=round(bpg, 1), bpm=round(bpm, 2),
+                    team=team, season=peak_label, decade=decade,
+                    height_in=sample["height_in"], eligible_positions=elig,
+                    decade_ppg=round(d_ppg, 1), decade_rpg=round(d_rpg, 1),
+                    decade_apg=round(d_apg, 1), decade_spg=round(d_spg, 1),
+                    decade_bpg=round(d_bpg, 1),
+                    peak_season=peak_label,
+                )
+
+            def score_of(s: dict) -> float:
+                return score_player(mk_from_stats(
+                    s["ppg"], s["rpg"], s["apg"], s["spg"], s["bpg"], s["bpm"],
+                    peak_label="")).total
+
+            qualifying = [s for s in seasons if s["gp"] >= PEAK_MIN_GP] or seasons
+            pk = max(qualifying, key=score_of)
+
+            def blend(stat: str, peak_val: float) -> float:
+                return 0.5 * peak_val + 0.5 * avg(stat)
+            player = mk_from_stats(
+                blend("ppg", pk["ppg"]), blend("rpg", pk["rpg"]),
+                blend("apg", pk["apg"]), blend("spg", pk["spg"]),
+                blend("bpg", pk["bpg"]), blend("bpm", pk["bpm"]),
+                peak_label=pk["season"],
+            )
+            player = replace(
+                player,
+                peak_ppg=round(pk["ppg"], 1), peak_rpg=round(pk["rpg"], 1),
+                peak_apg=round(pk["apg"], 1), peak_bpm=round(pk["bpm"], 2),
+            )
+            notability = d_ppg + 0.5 * avg("bpm")
+            per_name[name] = (notability, player)
+        out[key] = per_name
+    return out
+
+
+# Stat/display fields copied when a seed player is enriched from real DB data
+# (their curated position / eligibility / height / team identity are kept).
+_INJECT_FIELDS = (
+    "ppg", "rpg", "apg", "spg", "bpg", "bpm", "season",
+    "decade_ppg", "decade_rpg", "decade_apg", "decade_spg", "decade_bpg",
+    "peak_ppg", "peak_rpg", "peak_apg", "peak_bpm", "peak_season",
+)
+
+
+def _select_pool(key: str, per_name: dict[str, tuple[float, PlayerStats]]) -> list[PlayerStats]:
+    """The decade's top-N by notability, with any POOL_FORCE_INCLUDE players
+    guaranteed a slot (dropping the lowest-notability non-forced member to keep
+    the pool size). Lets elite non-scorers (e.g. Ben Wallace) be draftable."""
+    decade, team = key.split("|", 1)
+    forced = set(rating.POOL_FORCE_INCLUDE.get((decade, team), []))
+    ranked = sorted(per_name.values(), key=lambda t: t[0], reverse=True)  # (notability, ps)
+    top = ranked[:MAX_CANDIDATES]
+    have = {ps.name for _, ps in top}
+    missing = [per_name[n] for n in forced if n in per_name and n not in have]
+    if missing:
+        # Drop the lowest-notability non-forced members to make room.
+        keep = [t for t in top if t[1].name in forced]
+        droppable = [t for t in top if t[1].name not in forced]
+        room = MAX_CANDIDATES - len(keep) - len(missing)
+        keep += sorted(droppable, key=lambda t: t[0], reverse=True)[:max(0, room)]
+        top = keep + missing
+    return [ps for _, ps in top]
+
+
+def _load_from_db(path: Path) -> dict[str, list[PlayerStats]]:
+    """Full (decade|team) pools from players.db: the decade's top-N most notable
+    players (plus force-includes), each rated on the peak/decade blend."""
+    pool: dict[str, list[PlayerStats]] = {}
+    for key, per_name in _blended_by_key(path).items():
+        if len(per_name) >= MIN_CANDIDATES:
+            pool[key] = _select_pool(key, per_name)
     return pool
+
+
+def _enrich_seed(seed: dict[str, list[PlayerStats]],
+                 blended: dict[str, dict[str, tuple[float, PlayerStats]]]) -> dict[str, list[PlayerStats]]:
+    """Overlay real peak/decade stats onto curated seed players that have pulled
+    data (e.g. pre-1990 legends). Keeps the seed player's position, eligibility,
+    height and team; only the stats + peak/decade display fields are injected."""
+    enriched: dict[str, list[PlayerStats]] = {}
+    for key, players in seed.items():
+        by_name = blended.get(key, {})
+        new_list = []
+        for p in players:
+            entry = by_name.get(p.name)
+            if entry:
+                ov = entry[1]
+                new_list.append(replace(p, **{f: getattr(ov, f) for f in _INJECT_FIELDS}))
+            else:
+                new_list.append(p)
+        enriched[key] = new_list
+    return enriched
 
 
 @lru_cache(maxsize=1)
 def historical_pool() -> dict[str, list[PlayerStats]]:
     """Draftable pools keyed 'decade|team'.
 
-    Curated seed pools (1960s-1980s) are merged with pipeline pools from
-    players.db (1996-present); the DB wins on any key conflict (real data
-    over curated). Only pools with a full POOL_SIZE roster are kept.
+    Curated seed pools (1960s-1980s) are ENRICHED with real peak/decade stats
+    for any player we pulled (pre-1990 legends), then merged with the full
+    pipeline pools from players.db (1996-present); the DB wins on any key
+    conflict. Only pools with a full POOL_SIZE roster are kept.
     """
     seed = {k: v for k, v in seed_data.HISTORICAL_POOL.items() if len(v) >= MIN_CANDIDATES}
     if DB_PATH.exists():
-        db = _load_from_db(DB_PATH)
-        if db:
-            return {**seed, **db}
-    return seed
+        blended = _blended_by_key(DB_PATH)
+        if blended:
+            db = {
+                key: _select_pool(key, per_name)
+                for key, per_name in blended.items()
+                if len(per_name) >= MIN_CANDIDATES
+            }
+            enriched = _enrich_seed(seed, blended)
+            return _apply_overrides({**enriched, **db})
+    return _apply_overrides(seed)
+
+
+def _apply_overrides(pools: dict[str, list[PlayerStats]]) -> dict[str, list[PlayerStats]]:
+    """Apply curated (player, decade, team) rating overrides. Matches on the pool
+    KEY's decade+team (always the full franchise name), so it works whether the
+    player's own team field is an abbreviation (seed) or full name (DB)."""
+    ov = rating.RATING_OVERRIDES
+    if not ov:
+        return pools
+    out: dict[str, list[PlayerStats]] = {}
+    for key, players in pools.items():
+        decade, team = key.split("|", 1)
+        out[key] = [replace(p, rating_override=ov[(p.name, decade, team)])
+                    if (p.name, decade, team) in ov else p
+                    for p in players]
+    return out
 
 
 def source() -> str:
