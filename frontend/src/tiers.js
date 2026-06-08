@@ -9,6 +9,7 @@ export const TIERS = {
   B: { label: 'B', cost: 50, name: 'Starter' },
   C: { label: 'C', cost: 38, name: 'Rotation' },
   D: { label: 'D', cost: 28, name: 'Role player' },
+  E: { label: '–', cost: 18, name: 'Bench' },
 }
 
 export function tierMeta(tier) {

@@ -85,7 +85,8 @@ CAP_TIERS: list[dict] = [
     {"id": "A", "label": "A", "min": 70, "cost": 62},
     {"id": "B", "label": "B", "min": 60, "cost": 50},
     {"id": "C", "label": "C", "min": 50, "cost": 38},
-    {"id": "D", "label": "D", "min": 0,  "cost": 28},
+    {"id": "D", "label": "D", "min": 35, "cost": 28},
+    {"id": "E", "label": "E", "min": 0,  "cost": 18},
 ]
 
 CHEAPEST_COST = min(t["cost"] for t in CAP_TIERS)   # floor used by feasibility
@@ -138,9 +139,9 @@ def tier_round(player_rating: float) -> float:
     """Round a rating that sits in the top point of a tier UP into the next one,
     so a 59.x lands B, 69.x lands A, 79.x lands S (and 49.x lands C). Avoids the
     "just missed the tier" feel for borderline stars (e.g. Carmelo 59.1, a
-    Finals-MVP Kawhi season at 69.5)."""
+    Finals-MVP Kawhi season at 69.5). Not applied at the low D/E boundary."""
     for t in CAP_TIERS:
-        if t["min"] - 1.0 <= player_rating < t["min"]:
+        if t["min"] >= 50 and t["min"] - 1.0 <= player_rating < t["min"]:
             return float(t["min"])
     return player_rating
 

@@ -939,6 +939,8 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 
 /* D — plain */
 .tier-D { background: var(--line); color: var(--text); }
+/* E — plain (lowest tier, no name/color; same look as D) */
+.tier-E { background: var(--line); color: var(--text); }
 /* C — bronze */
 .tier-C {
   background: linear-gradient(135deg, #7a4a22, #b5793f);
@@ -990,6 +992,7 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .candidate.tier-card.tier-B { box-shadow: inset 3px 0 0 #c9d2db; }
 .candidate.tier-card.tier-C { box-shadow: inset 3px 0 0 #c89058; }
 .candidate.tier-card.tier-D { box-shadow: inset 3px 0 0 #3a4350; }
+.candidate.tier-card.tier-E { box-shadow: inset 3px 0 0 #3a4350; }
 .candidate.overbudget { opacity: 0.5; }
 .candidate.overbudget .locked { color: #ffc04d; }
 
