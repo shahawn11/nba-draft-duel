@@ -955,7 +955,7 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   color: #fff; border-color: #d9b6ff;
   box-shadow: 0 0 6px rgba(167, 102, 230, 0.5);
 }
-.tier-A::after {
+.tier-pill.tier-A::after {
   content: '';
   position: absolute; inset: 0;
   border-radius: inherit;
@@ -971,7 +971,7 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   color: #042430; border-color: #e6fbff;
   box-shadow: 0 0 7px rgba(120, 220, 255, 0.6);
 }
-.tier-S::after {
+.tier-pill.tier-S::after {
   content: '';
   position: absolute; inset: 0;
   border-radius: inherit;
@@ -981,7 +981,7 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   animation: tierShine 2.6s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .tier-A::after, .tier-S::after { animation: none; display: none; }
+  .tier-pill.tier-A::after, .tier-pill.tier-S::after { animation: none; display: none; }
 }
 
 /* Left-edge accent stripe on a draft card, colored by tier. */
@@ -998,6 +998,10 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .candidate.tier-card.tier-A.selectable:hover { border-color: #c79bff; background: rgba(167, 102, 230, 0.13); }
 .candidate.tier-card.tier-B.selectable:hover { border-color: #d7dee6; background: rgba(180, 192, 204, 0.12); }
 .candidate.tier-card.tier-C.selectable:hover { border-color: #caa06b; background: rgba(181, 121, 63, 0.14); }
+/* Tier cards have dark text on their light tint; the hover bg dims, so flip the
+   name (and inherited text) to white to keep it readable. */
+.candidate.tier-card.selectable:hover { color: #eaf2f9; }
+.candidate.tier-card.selectable:hover .cand-name { color: #fff; }
 
 /* Budget meter above the candidate grid. */
 .budget-meter { margin: 4px 0 10px; }
