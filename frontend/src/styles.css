@@ -330,7 +330,7 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .cand-stats { font-size: 0.82rem; color: var(--text); }
 .cand-stats b { color: var(--text); }
 .cand-stats.sub { color: var(--muted); font-size: 0.72rem; }
-.candidate.ineligible { opacity: 0.4; cursor: not-allowed; }
+.candidate.ineligible { opacity: 0.5; filter: grayscale(0.85); cursor: not-allowed; }
 .candidate.ineligible:hover { border-color: var(--line); }
 
 /* ---- free slot choice ---- */
@@ -929,12 +929,13 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   border: 1px solid transparent;
   position: relative;
   overflow: hidden;
+  isolation: isolate;
   white-space: nowrap;
   vertical-align: middle;
 }
 .tier-pill.sm { font-size: 0.62rem; padding: 1px 5px; gap: 2px; }
-.tier-pill .tier-letter { font-weight: 900; letter-spacing: 0.3px; }
-.tier-pill .tier-cost { font-weight: 700; opacity: 0.85; }
+.tier-pill .tier-letter { font-weight: 900; letter-spacing: 0.3px; position: relative; z-index: 2; }
+.tier-pill .tier-cost { font-weight: 800; opacity: 0.95; position: relative; z-index: 2; }
 
 /* D — plain */
 .tier-D { background: var(--line); color: var(--text); }
@@ -957,22 +958,26 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .tier-A::after {
   content: '';
   position: absolute; inset: 0;
-  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.6) 50%, transparent 65%);
-  transform: translateX(-130%);
+  border-radius: inherit;
+  z-index: 1;
+  background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.45) 50%, transparent 60%);
+  transform: translateX(-120%);
   animation: tierShine 2.8s ease-in-out infinite;
 }
-@keyframes tierShine { 0% { transform: translateX(-130%); } 60%, 100% { transform: translateX(130%); } }
-/* S = Diamond: bright icy gradient with a shiny sweep (no flame) */
+@keyframes tierShine { 0% { transform: translateX(-120%); } 60%, 100% { transform: translateX(120%); } }
+/* S = Diamond: bright icy gradient with a subtle contained sheen (no flame) */
 .tier-S {
-  background: linear-gradient(135deg, #5fd6ff, #d8f6ff 45%, #9fe3ff);
-  color: #07303f; border-color: #e6fbff;
-  box-shadow: 0 0 7px rgba(120, 220, 255, 0.7);
+  background: linear-gradient(135deg, #57c8f5, #cdeeff 45%, #8ad4f5);
+  color: #042430; border-color: #e6fbff;
+  box-shadow: 0 0 7px rgba(120, 220, 255, 0.6);
 }
 .tier-S::after {
   content: '';
   position: absolute; inset: 0;
-  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.8) 50%, transparent 65%);
-  transform: translateX(-130%);
+  border-radius: inherit;
+  z-index: 1;
+  background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.5) 50%, transparent 60%);
+  transform: translateX(-120%);
   animation: tierShine 2.6s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -987,6 +992,12 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .candidate.tier-card.tier-D { box-shadow: inset 3px 0 0 #3a4350; }
 .candidate.overbudget { opacity: 0.5; }
 .candidate.overbudget .locked { color: #ffc04d; }
+
+/* Hover tint matches the card's tier (overrides the default orange hover). */
+.candidate.tier-card.tier-S.selectable:hover { border-color: #8fe6ff; background: rgba(120, 220, 255, 0.12); }
+.candidate.tier-card.tier-A.selectable:hover { border-color: #c79bff; background: rgba(167, 102, 230, 0.13); }
+.candidate.tier-card.tier-B.selectable:hover { border-color: #d7dee6; background: rgba(180, 192, 204, 0.12); }
+.candidate.tier-card.tier-C.selectable:hover { border-color: #caa06b; background: rgba(181, 121, 63, 0.14); }
 
 /* Budget meter above the candidate grid. */
 .budget-meter { margin: 4px 0 10px; }

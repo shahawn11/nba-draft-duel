@@ -62,20 +62,26 @@ def _annotate(p, open_slots: list[str], picked: set[str], spent: int) -> dict:
 
 def _build_step(rng: random.Random, open_slots: list[str], picked: set[str],
                 spent: int = 0) -> dict:
-    """Pick a random (decade, team) with >=1 selectable player for an open slot."""
+    """Pick a random (decade, team) that offers >=1 selectable player the drafter
+    can actually AFFORD for an open slot, so a round is never all over-budget."""
     pool = dataset.historical_pool()
     keys = list(pool.keys())
     rng.shuffle(keys)
+    slots_left = len(open_slots)
 
-    def selectable(players) -> bool:
-        return any(
-            p.name not in picked and any(s in p.eligible() for s in open_slots)
-            for p in players
-        )
+    def pos_ok(p) -> bool:
+        return p.name not in picked and any(s in p.eligible() for s in open_slots)
 
-    chosen = next((k for k in keys if selectable(pool[k])), None)
+    def affordable_ok(p) -> bool:
+        return pos_ok(p) and rating.is_affordable(
+            spent, rating.player_cost(_player_rating(p)), slots_left)
+
+    # Prefer a pool with an affordable, eligible, undrafted player; fall back to
+    # position-eligible only if (essentially never) none exists.
+    chosen = next((k for k in keys if any(affordable_ok(p) for p in pool[k])), None)
     if chosen is None:
-        chosen = rng.choice(keys)
+        chosen = next((k for k in keys if any(pos_ok(p) for p in pool[k])), None) \
+            or rng.choice(keys)
 
     decade, team = chosen.split("|", 1)
     candidates = [_annotate(p, open_slots, picked, spent) for p in pool[chosen]]
