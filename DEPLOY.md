@@ -1,5 +1,8 @@
 # Deploying 5v5 Duel
 
+**Live:** https://5v5duel.com · API https://api.5v5duel.com
+(Frontend on Cloudflare Pages; API + Postgres + Redis on Railway.)
+
 ## Local prod-parity stack
 ```bash
 docker compose up --build
@@ -52,7 +55,7 @@ provides Postgres + Redis as one-click plugins.
 4. **Wire env vars** on the API service (Variables tab) using reference variables:
    - `DATABASE_URL = ${{Postgres.DATABASE_URL}}`
    - `REDIS_URL = ${{Redis.REDIS_URL}}`
-   - `ALLOWED_ORIGINS = https://yourdomain.com`
+   - `ALLOWED_ORIGINS = https://5v5duel.com`
    - `TRUST_PROXY = true`
    - `SESSION_TTL_SECONDS = 2592000`
    - (leave `GAME_DB_PATH` unset — Postgres is used once `DATABASE_URL` is set)
@@ -60,8 +63,8 @@ provides Postgres + Redis as one-click plugins.
    Verify: `curl https://<url>/health` → expect `"db":"postgresql","db_ready":true`.
 6. **Keep live PvP on one replica** (`numReplicas: 1` in railway.json). Scale the
    HTTP load via Cloudflare caching + vertical sizing; multi-replica WS needs Phase 1b.
-7. **Frontend → Cloudflare Pages** with `VITE_API=https://<railway-url>` (see below).
-8. **Domain**: point `api.yourdomain.com` at Railway (custom domain in service
+7. **Frontend → Cloudflare Pages** with `VITE_API=https://api.5v5duel.com` (see below).
+8. **Domain**: point `api.5v5duel.com` at Railway (custom domain in service
    settings), apex/`www` at Cloudflare Pages.
 
 CI is optional — Railway auto-deploys on push once the repo is connected. A
@@ -72,15 +75,15 @@ CLI-based GitHub Actions alternative lives at `.github/workflows/deploy-railway.
 1. **Build & push** the image to your registry (GHCR/Docker Hub):
    `docker build -t <registry>/duel-api ./backend && docker push ...`
 2. **Run** on your container host (Fly.io / Railway / Render / a VM) with env:
-   - `ALLOWED_ORIGINS=https://yourdomain.com`
+   - `ALLOWED_ORIGINS=https://5v5duel.com`
    - `REDIS_URL=redis://<managed-redis>:6379/0`
    - `DATABASE_URL=postgresql://...` (after the PG migration)
    - `TRUST_PROXY=true` (Cloudflare forwards the client IP)
    - `GAME_DB_PATH=/data/game.db` (mount a volume) — temporary until PG
 3. **Frontend** (Cloudflare Pages):
    - Build command `npm run build`, output dir `dist`, root `frontend/`.
-   - Set build env **`VITE_API=https://api.yourdomain.com`** — both REST and the
-     PvP WebSocket (`wss://api.yourdomain.com/ws/pvp`) derive from it.
+   - Set build env **`VITE_API=https://api.5v5duel.com`** — both REST and the
+     PvP WebSocket (`wss://api.5v5duel.com/ws/pvp`) derive from it.
    - `frontend/public/_redirects` ships an SPA fallback (`/* /index.html 200`).
    - Put the app on your apex/`www` domain; the API on `api.` subdomain.
 4. **Cloudflare**:
@@ -88,7 +91,7 @@ CLI-based GitHub Actions alternative lives at `.github/workflows/deploy-railway.
    - **WAF rate-limiting rules** as a coarse first layer (per-IP); the app's
      Redis limiter is the fine-grained second layer.
    - WebSockets: enabled by default on proxied records (needed for `/ws/pvp`).
-   - Set the API behind a subdomain (e.g. `api.yourdomain.com`).
+   - Set the API behind a subdomain (e.g. `api.5v5duel.com`).
 
 ## Scaling note
 Phase 0 = one API container + managed Postgres + Redis behind Cloudflare. To run

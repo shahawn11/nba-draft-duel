@@ -1,5 +1,8 @@
 # 5v5 Duel
 
+**▶ Play: [5v5duel.com](https://5v5duel.com)**
+
+
 A draft-battler inspired by [82-0.com](https://www.82-0.com/). You fill a
 starting five **one slot at a time** — each pick reveals a random
 **decade × NBA team** and that franchise's **10 best players for the decade**;
