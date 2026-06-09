@@ -89,7 +89,7 @@ CAP_BUDGET = 250
 # infeasible while a full team is always affordable. Descending by min rating.
 # (id, label, min player-rating inclusive, flat cost, duel multiplier)
 CAP_TIERS: list[dict] = [
-    {"id": "goat",     "label": "GOAT",     "min": 98, "cost": 82, "mult": 1.27},
+    {"id": "goat",     "label": "GOAT",     "min": 98, "cost": 82, "mult": 1.30},
     {"id": "diamond",  "label": "Diamond",  "min": 96, "cost": 75, "mult": 1.20},
     {"id": "amethyst", "label": "Amethyst", "min": 93, "cost": 63, "mult": 1.10},
     {"id": "sapphire", "label": "Sapphire", "min": 88, "cost": 54, "mult": 1.06},
