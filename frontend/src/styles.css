@@ -1060,6 +1060,10 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   position: relative;
   overflow: hidden;
   border-color: #ffe07a;
+  /* Unlike the other tier cards (which keep their bright gradient background
+     and dark text), the GOAT card uses a DARK tinted panel — so its text must
+     be light. This overrides the bare .tier-goat dark color via specificity. */
+  color: var(--text);
   background:
     radial-gradient(120% 80% at 50% -10%, rgba(255, 226, 130, 0.18), transparent 60%),
     var(--panel-2);
