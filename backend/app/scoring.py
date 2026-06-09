@@ -243,6 +243,8 @@ class MatchupResult:
     away_delta: float = 0.0
     home_sim: float = 0.0     # simulated duel score this game (decides the matchup)
     away_sim: float = 0.0
+    home_sim_delta: float = 0.0  # duel-score points from bonuses/penalties (signed)
+    away_sim_delta: float = 0.0
 
 
 @dataclass
@@ -486,33 +488,46 @@ def duel_power(rating_value: float, eff_adjust: float = 0.0) -> float:
 
     Layer #1 (stretch): de-compress the rating off DUEL_FLOOR so a 2-point
     rating edge becomes a meaningful gap -- mildly, not blown out.
-    Layer #4 (tier): amplify by the player's tier multiplier so a true elite is
-    decisively valuable. Tier is taken from the player's TRUE base rating, so a
-    hot game doesn't bump someone into a higher tier.
-    `eff_adjust` is the signed rating-point matchup adjustment (positional fit +
-    size/height mismatch + hot/slump), folded in before stretching.
+    Layer #4 (tier): amplify ONLY the player's intrinsic rating by his tier
+    multiplier, so a true elite is decisively valuable. Tier is taken from the
+    TRUE base rating, so a bonus never bumps someone into a higher tier.
+
+    `eff_adjust` (positional fit + size/height mismatch) is a matchup
+    bonus/penalty. It is added AFTER the tier multiply -- stretched to the duel
+    scale but NOT tier-amplified -- so the same +2 fit edge is worth the same
+    duel points to a GOAT and to a role player. This keeps high tiers from
+    compounding their multiplier on top of situational bonuses.
     """
     tier_m = rating.tier_mult(rating_value)
-    base = max(0.0, rating_value + eff_adjust - DUEL_FLOOR)
-    return base * DUEL_STRETCH * tier_m
+    intrinsic = max(0.0, rating_value - DUEL_FLOOR) * DUEL_STRETCH * tier_m
+    bonus = eff_adjust * DUEL_STRETCH    # tier-independent
+    return max(0.0, intrinsic + bonus)
 
 
-def _sim_score(rng, rating_value: float, eff_adjust: float, status: str | None) -> float:
-    """One player's simulated duel score for the night.
+def _sim_score(rng, rating_value: float, eff_adjust: float,
+               status: str | None) -> tuple[float, float]:
+    """One player's simulated duel score for the night, plus the portion of it
+    attributable to bonuses/penalties.
 
     Layer #3 (variance): a PROPORTIONAL swing -- the score moves by a random
     PERCENTAGE of the player's expected power, so a star's good/bad night is a
     bigger point swing than a role player's, but everyone varies by the same
     relative amount. Hot/Slump (rare) then FURTHER multiplies the score up/down
     on top of the normal swing -- the career-night / ice-cold game.
+
+    Returns (score, bonus_delta) where bonus_delta is how many duel-score points
+    the player gained/lost vs a clean baseline (no fit/size adjust, no hot/slump)
+    under the SAME random swing -- i.e. the net effect of bonuses & penalties.
     """
-    expected = duel_power(rating_value, eff_adjust)
-    score = expected * (1.0 + rng.gauss(0.0, SIM_REL_SIGMA))
+    swing = 1.0 + rng.gauss(0.0, SIM_REL_SIGMA)
+    score = duel_power(rating_value, eff_adjust) * swing
+    baseline = max(0.0, duel_power(rating_value, 0.0) * swing)
     if status == "hot":
         score *= HOT_SIM_MULT
     elif status == "slump":
         score *= SLUMP_SIM_MULT
-    return max(0.0, score)
+    score = max(0.0, score)
+    return score, round(score - baseline, 1)
 
 
 # How far a player's box-score line can stretch from his per-game averages on a
@@ -557,16 +572,18 @@ def duel(home_players: list[PlayerStats], away_players: list[PlayerStats],
     for m in matchups:
         if m.home_player != "(none)":
             h_exp = duel_power(m.home_score, m.home_delta)
-            h_sim = _sim_score(rng, m.home_score, m.home_delta,
-                               home_status.get(m.home_player))
+            h_sim, h_sim_delta = _sim_score(rng, m.home_score, m.home_delta,
+                                            home_status.get(m.home_player))
             home_perf[m.home_player] = _perf_factor(h_sim, h_exp)
+            m.home_sim_delta = h_sim_delta
         else:
             h_sim = 0.0
         if m.away_player != "(none)":
             a_exp = duel_power(m.away_score, m.away_delta)
-            a_sim = _sim_score(rng, m.away_score, m.away_delta,
-                               away_status.get(m.away_player))
+            a_sim, a_sim_delta = _sim_score(rng, m.away_score, m.away_delta,
+                                            away_status.get(m.away_player))
             away_perf[m.away_player] = _perf_factor(a_sim, a_exp)
+            m.away_sim_delta = a_sim_delta
         else:
             a_sim = 0.0
         m.home_sim = round(h_sim, 1)

@@ -189,7 +189,9 @@ export default function DraftBoard({ view, onPick, busy, deadline, waiting, oppo
       </div>
 
       <div className="candidates" key={stepKey}>
-        {step.candidates.map((p, i) => (
+        {[...step.candidates]
+          .sort((a, b) => (b.rating_value || 0) - (a.rating_value || 0))
+          .map((p, i) => (
           <Candidate key={p.name} p={p} index={i} busy={busy || waiting}
                      onSelect={setSelected} openSlots={view.open_slots} />
         ))}

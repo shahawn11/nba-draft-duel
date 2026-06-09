@@ -28,18 +28,16 @@ function useCountUp(from, to, ms = 1100) {
 
 const CONFETTI_COLORS = ['#ff7a00', '#2ecc71', '#3a86ff', '#ffd700', '#e74c3c', '#a35bff']
 
-function MatchScore({ base, delta, statusDelta }) {
-  const eff = base + (delta || 0)
-  const sd = statusDelta || 0
-  const fit = Math.round(((delta || 0) - sd) * 10) / 10   // fit + size portion
-  const cls = delta > 0 ? 'up' : delta < 0 ? 'down' : ''
+function MatchScore({ sim, delta, status }) {
+  const d = delta || 0
+  const cls = d > 0 ? 'up' : d < 0 ? 'down' : ''
   return (
-    <span className={`mscore ${cls}`}>
-      {eff.toFixed(1)}
-      {fit > 0 && <span className="mdelta"> ↑+{fit.toFixed(1)}</span>}
-      {fit < 0 && <span className="mdelta"> ↓{Math.abs(fit).toFixed(1)}</span>}
-      {sd > 0 && <span className="status-chip hot" title="Hot — rating +10">🔥 +{sd.toFixed(0)}</span>}
-      {sd < 0 && <span className="status-chip slump" title="Slump — rating −10">🥶 {sd.toFixed(0)}</span>}
+    <span className={`mscore ${cls}`} title="duel score (with bonus/penalty)">
+      {(sim || 0).toFixed(1)}
+      {d > 0 && <span className="mdelta"> ↑+{d.toFixed(1)}</span>}
+      {d < 0 && <span className="mdelta"> ↓{Math.abs(d).toFixed(1)}</span>}
+      {status === 'hot' && <span className="status-chip hot" title="Hot — big game">🔥</span>}
+      {status === 'slump' && <span className="status-chip slump" title="Slump — cold game">🥶</span>}
     </span>
   )
 }
@@ -111,10 +109,10 @@ function Lineup({ title, team, highlight }) {
               <span className="pos-badge">{p.position}</span>
               {p.tier && <TierBadge tier={p.tier} cost={p.cost} size="sm" />}
               <span className="sp-name">{p.name}</span>
-              {p.status === 'hot' && <span className="status-badge hot" title="Hot — rating +10">🔥 Hot</span>}
-              {p.status === 'slump' && <span className="status-badge slump" title="Slump — rating −10">🥶 Slump</span>}
+              {p.status === 'hot' && <span className="status-badge hot" title="Hot — big game">🔥 Hot</span>}
+              {p.status === 'slump' && <span className="status-badge slump" title="Slump — cold game">🥶 Slump</span>}
               {p.height_in ? <span className="sp-ht">{Math.floor(p.height_in / 12)}'{p.height_in % 12}"</span> : null}
-              <span className="sp-rating" title="final rating">{(p.rating + (p.delta || 0)).toFixed(1)}</span>
+              <span className="sp-rating" title="duel score">{(p.duel_score ?? 0).toFixed(1)}</span>
             </div>
             <div className="sp-stats">
               <b>{p.game?.pts ?? 0}</b> pts · <b>{p.game?.reb ?? 0}</b> reb · <b>{p.game?.ast ?? 0}</b> ast
@@ -191,11 +189,11 @@ export default function Results({ result, onPlayAgain }) {
             <span className="m-pos">{m.position}</span>
             <span className="m-home">
               {tierByName[m.home_player] && <TierBadge tier={tierByName[m.home_player]} size="sm" />}
-              {' '}{m.home_player} · <MatchScore base={m.home_score} delta={m.home_delta} statusDelta={m.home_status_delta} />
+              {' '}{m.home_player} · <MatchScore sim={m.home_sim} delta={m.home_sim_delta} status={m.home_status} />
             </span>
             <span className="m-vs">vs</span>
             <span className="m-away">
-              <MatchScore base={m.away_score} delta={m.away_delta} statusDelta={m.away_status_delta} /> · {m.away_player}
+              <MatchScore sim={m.away_sim} delta={m.away_sim_delta} status={m.away_status} /> · {m.away_player}
               {' '}{tierByName[m.away_player] && <TierBadge tier={tierByName[m.away_player]} size="sm" />}
             </span>
           </div>

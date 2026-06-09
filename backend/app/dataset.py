@@ -19,7 +19,7 @@ from pathlib import Path
 
 from . import seed_data
 from .positions import SLOTS, eligible_from_raw
-from .scoring import PlayerStats, score_player
+from .scoring import PlayerStats, score_player, final_overall
 from . import rating
 
 DB_PATH = Path(__file__).parent / "data" / "players.db"
@@ -224,18 +224,28 @@ def historical_pool() -> dict[str, list[PlayerStats]]:
 
 
 def _apply_overrides(pools: dict[str, list[PlayerStats]]) -> dict[str, list[PlayerStats]]:
-    """Apply curated (player, decade, team) rating overrides. Matches on the pool
-    KEY's decade+team (always the full franchise name), so it works whether the
-    player's own team field is an abbreviation (seed) or full name (DB)."""
+    """Stamp each player's final rating, keyed by the pool KEY's decade+team
+    (ALWAYS the full franchise name -- so it works whether the player's own team
+    field is an abbreviation (pre-1996 seed) or a full name (DB)). Precedence:
+      1. curated 2K+BBRef blended overall (k2_final_ratings.json), else
+      2. legacy formula override (rating.RATING_OVERRIDES), else
+      3. leave the player to the live formula.
+    Stamping as rating_override guarantees the blend reaches score_player even
+    for seed players whose team field is an abbreviation the JSON can't key on."""
     ov = rating.RATING_OVERRIDES
-    if not ov:
-        return pools
     out: dict[str, list[PlayerStats]] = {}
     for key, players in pools.items():
         decade, team = key.split("|", 1)
-        out[key] = [replace(p, rating_override=ov[(p.name, decade, team)])
-                    if (p.name, decade, team) in ov else p
-                    for p in players]
+        new: list[PlayerStats] = []
+        for p in players:
+            blend = final_overall(p.name, decade, team)
+            if blend is not None:
+                new.append(replace(p, rating_override=blend))
+            elif (p.name, decade, team) in ov:
+                new.append(replace(p, rating_override=ov[(p.name, decade, team)]))
+            else:
+                new.append(p)
+        out[key] = new
     return out
 
 
