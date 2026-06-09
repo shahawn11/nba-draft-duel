@@ -38,6 +38,7 @@ def player_to_dict(p: PlayerStats) -> dict:
         "three_pa": p.three_pa,
         "three_pct": p.three_pct,
         "rating_override": p.rating_override,
+        "current_form": p.current_form,
     }
 
 
@@ -71,6 +72,7 @@ def player_from_dict(d: dict) -> PlayerStats:
         three_pa=d.get("three_pa", 0.0),
         three_pct=d.get("three_pct", 0.0),
         rating_override=d.get("rating_override", 0.0),
+        current_form=d.get("current_form", False),
     )
 
 
