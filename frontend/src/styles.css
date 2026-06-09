@@ -330,6 +330,14 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .cand-stats { font-size: 0.82rem; color: var(--text); }
 .cand-stats b { color: var(--text); }
 .cand-stats.sub { color: var(--muted); font-size: 0.72rem; }
+/* Tier cards can have a LIGHT background (Gold/Silver/Diamond) where the default
+   off-white/muted stat text is unreadable. Inherit the card's per-tier text
+   color (dark on light tiers, light on dark tiers) so stats stay legible for
+   strategizing; keep sub/height slightly softened via opacity, not a fixed gray. */
+.candidate.tier-card .cand-stats,
+.candidate.tier-card .cand-stats b { color: inherit; }
+.candidate.tier-card .cand-stats.sub,
+.candidate.tier-card .cand-height { color: inherit; opacity: 0.78; }
 .candidate.ineligible { opacity: 0.5; filter: grayscale(0.85); cursor: not-allowed; }
 .candidate.ineligible:hover { border-color: var(--line); }
 
