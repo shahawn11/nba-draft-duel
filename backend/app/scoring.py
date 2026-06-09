@@ -174,11 +174,9 @@ SG_PASSFIRST_APG = 4.5
 # Bonus side (NEW, the strategic lever): hitting a slot's SIGNATURE quality earns
 # a STEPPED bonus -- multiple cutoffs so even a lower-minutes player who clears
 # the first tier is still rewarded, while elite production is worth much more.
-# The signature is a value FUNCTION of the player. SF rewards all-around
-# VERSATILITY (pts+reb+ast) with EACH category capped (pts<=22, reb<=10, ast<=10)
-# so a one-dimensional high scorer can't game it -- real reb/ast production is
-# required to climb the tiers. Highest tier met wins.
-# slot -> (value_fn, [(threshold, bonus, label), ...] descending)
+# The signature is a value FUNCTION of the player, scored against stepped
+# cutoffs (highest met wins). SF is handled separately (SF_VERSATILITY_TIERS)
+# because it requires a minimum in ALL THREE of pts/reb/ast.
 FIT_BONUS_TIERS: dict[str, tuple] = {
     "PG": (lambda p: p.apg or 0.0, [
         (10.0, 3.0, "court maestro"),
@@ -188,10 +186,6 @@ FIT_BONUS_TIERS: dict[str, tuple] = {
         (26.0, 3.0, "flamethrower"),
         (22.0, 2.0, "bucket-getter"),
         (18.0, 1.0, "scoring guard")]),
-    "SF": (lambda p: min(p.ppg or 0.0, 22.0) + min(p.rpg or 0.0, 10.0) + min(p.apg or 0.0, 10.0), [
-        (40.0, 3.0, "point forward"),
-        (34.0, 2.0, "two-way force"),
-        (25.0, 1.0, "do-it-all wing")]),    # ~15/5/5 balanced role wing
     "PF": (lambda p: p.rpg or 0.0, [
         (11.0, 3.0, "the enforcer"),
         (9.0, 2.0, "glass cleaner"),
@@ -201,6 +195,14 @@ FIT_BONUS_TIERS: dict[str, tuple] = {
         (12.0, 2.0, "glass dominator"),
         (9.0, 1.0, "rebounding center")]),
 }
+# SF rewards genuine all-around VERSATILITY: a player must clear the minimum in
+# EVERY category (pts, reb, ast) -- so a one-dimensional scorer earns nothing.
+# (min_pts, min_reb, min_ast, bonus, label) -- highest fully-met tier wins.
+SF_VERSATILITY_TIERS: list[tuple] = [
+    (25.0, 7.0, 7.0, 3.0, "point forward"),
+    (20.0, 5.0, 5.0, 2.0, "two-way force"),
+    (15.0, 4.0, 4.0, 1.0, "do-it-all wing"),
+]
 # Stat-stuffing bonuses (slot-independent, stack on top of the signature bonus):
 # a player who averages a double/triple-double is valuable anywhere.
 DOUBLE_DOUBLE_BONUS = 1.0   # >=10 in two of pts/reb/ast (does NOT stack with TD)
@@ -458,6 +460,15 @@ def evaluate_fit(players: list[PlayerStats]) -> tuple[float, list[str], dict]:
             v = value_fn(p)
             for thresh, bonus, label in tiers:   # descending -> highest met wins
                 if v >= thresh:
+                    delta += bonus
+                    notes.append(f"{p.name} — {label} (+{bonus:.1f})")
+                    break
+
+        # --- SF versatility: must clear the minimum in ALL THREE categories ---
+        if p.position == "SF":
+            pp, rr, aa = (p.ppg or 0.0), (p.rpg or 0.0), (p.apg or 0.0)
+            for mp, mr, ma, bonus, label in SF_VERSATILITY_TIERS:
+                if pp >= mp and rr >= mr and aa >= ma:
                     delta += bonus
                     notes.append(f"{p.name} — {label} (+{bonus:.1f})")
                     break
