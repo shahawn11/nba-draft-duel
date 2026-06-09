@@ -1053,36 +1053,58 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 }
 
 /* Left-edge accent stripe on a draft card, colored by tier. */
-/* GOAT draft card — legendary: a rotating gold light-sweep, gold aura glow,
-   and a faint gold tint so it reads clearly above a Gold card (which is just
-   the panel + a stripe). */
+/* GOAT draft card — legendary: three layered animations — a breathing gold
+   halo (pulsing glow + shimmering border), a slow rotating light beam, and a
+   periodic diagonal flash sweep. Clearly a class above a Gold card. */
 .candidate.tier-card.tier-goat {
   position: relative;
   overflow: hidden;
   border-color: #ffe07a;
-  box-shadow: 0 0 16px rgba(255, 200, 0, 0.40), inset 0 0 24px rgba(255, 215, 0, 0.10);
   background:
     radial-gradient(120% 80% at 50% -10%, rgba(255, 226, 130, 0.18), transparent 60%),
     var(--panel-2);
+  animation: goatGlow 2.8s ease-in-out infinite;
 }
+@keyframes goatGlow {
+  0%, 100% { box-shadow: 0 0 12px rgba(255, 200, 0, 0.32), inset 0 0 20px rgba(255, 215, 0, 0.07);
+             border-color: #ffe07a; }
+  50%      { box-shadow: 0 0 26px rgba(255, 218, 0, 0.62), inset 0 0 28px rgba(255, 215, 0, 0.15);
+             border-color: #fff3ad; }
+}
+/* rotating light beam */
 .candidate.tier-card.tier-goat::before {
   content: '';
   position: absolute;
   inset: -60%;
   z-index: 0;
   background: conic-gradient(from 0deg,
-    transparent 0 62%,
-    rgba(255, 228, 140, 0.42) 73%,
-    rgba(255, 255, 255, 0.55) 78%,
-    rgba(255, 228, 140, 0.42) 83%,
+    transparent 0 60%,
+    rgba(255, 228, 140, 0.45) 72%,
+    rgba(255, 255, 255, 0.65) 78%,
+    rgba(255, 228, 140, 0.45) 84%,
     transparent 92%);
   animation: goatSweep 4.5s linear infinite;
   pointer-events: none;
 }
+/* periodic diagonal flash across the whole card */
+.candidate.tier-card.tier-goat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(115deg, transparent 42%, rgba(255, 250, 210, 0.55) 50%, transparent 58%);
+  transform: translateX(-130%);
+  animation: goatFlash 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
 .candidate.tier-card.tier-goat > * { position: relative; z-index: 1; }
 @keyframes goatSweep { to { transform: rotate(1turn); } }
+@keyframes goatFlash { 0% { transform: translateX(-130%); } 55%, 100% { transform: translateX(130%); } }
 @media (prefers-reduced-motion: reduce) {
+  .candidate.tier-card.tier-goat { animation: none;
+    box-shadow: 0 0 16px rgba(255, 215, 0, 0.45), inset 0 0 22px rgba(255, 215, 0, 0.10); }
   .candidate.tier-card.tier-goat::before { animation: none; opacity: 0.5; }
+  .candidate.tier-card.tier-goat::after { animation: none; opacity: 0; }
 }
 .candidate.tier-card.tier-diamond  { box-shadow: inset 3px 0 0 #8fe6ff; }
 .candidate.tier-card.tier-amethyst { box-shadow: inset 3px 0 0 #b07bf0; }
@@ -1095,7 +1117,7 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .candidate.overbudget .locked { color: #ffc04d; }
 
 /* Hover tint matches the card's tier (overrides the default orange hover). */
-.candidate.tier-card.tier-goat.selectable:hover     { border-color: #fff0a0; box-shadow: 0 0 24px rgba(255, 210, 0, 0.62), inset 0 0 26px rgba(255, 215, 0, 0.15); }
+.candidate.tier-card.tier-goat.selectable:hover     { animation-duration: 1.5s; }
 .candidate.tier-card.tier-diamond.selectable:hover  { border-color: #8fe6ff; background: rgba(120, 220, 255, 0.12); }
 .candidate.tier-card.tier-amethyst.selectable:hover { border-color: #c79bff; background: rgba(167, 102, 230, 0.13); }
 .candidate.tier-card.tier-sapphire.selectable:hover { border-color: #9cc4ff; background: rgba(70, 130, 230, 0.14); }
