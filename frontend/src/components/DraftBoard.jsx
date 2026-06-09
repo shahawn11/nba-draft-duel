@@ -1,7 +1,7 @@
 // Sequential draft with free slot choice + UX polish.
 // Interaction: click a player card -> a modal shows the open slots that player
 // can fill -> click a slot to draft them there. Ineligible players are locked.
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { startMusic, stopMusic } from '../music.js'
 import TierBadge from './TierBadge.jsx'
 import { tierClass } from '../tiers.js'
@@ -15,7 +15,13 @@ function Timer({ deadline }) {
     return () => clearInterval(id)
   }, [])
   const left = Math.max(0, Math.ceil(deadline - now))
-  const pct = Math.max(0, Math.min(100, (left / 10) * 100))
+  // Measure the bar against the FULL round length (largest `left` seen since
+  // this Timer mounted, i.e. the start of the round) so it begins full and ticks
+  // down each second -- works for any round clock, not a hardcoded 10s.
+  const totalRef = useRef(0)
+  if (left > totalRef.current) totalRef.current = left
+  const total = totalRef.current || 1
+  const pct = Math.max(0, Math.min(100, (left / total) * 100))
   return (
     <div className="timer">
       <div className="timer-bar" style={{ width: `${pct}%` }} />
