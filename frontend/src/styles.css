@@ -943,16 +943,16 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .tier-E { background: var(--line); color: var(--text); }
 /* C — bronze */
 .tier-C {
-  background: linear-gradient(135deg, #b9772f, #f4d2a6 48%, #cf924a);
-  color: #3d2109; border-color: #f7dcb4;
-  box-shadow: 0 0 5px rgba(210, 150, 80, 0.5);
+  background: linear-gradient(135deg, #6e3f1c, #c87a39 50%, #8c5226);
+  color: #fff2e2; border-color: #cf8f55;
+  box-shadow: 0 0 5px rgba(170, 100, 45, 0.5);
 }
 .tier-pill.tier-C::after {
   content: '';
   position: absolute; inset: 0;
   border-radius: inherit;
   z-index: 1;
-  background: linear-gradient(115deg, transparent 40%, rgba(255,245,225,0.5) 50%, transparent 60%);
+  background: linear-gradient(115deg, transparent 42%, rgba(255,230,200,0.32) 50%, transparent 58%);
   transform: translateX(-120%);
   animation: tierShine 3.4s ease-in-out infinite;
 }
@@ -1010,7 +1010,7 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .candidate.tier-card.tier-S { box-shadow: inset 3px 0 0 #8fe6ff; }
 .candidate.tier-card.tier-A { box-shadow: inset 3px 0 0 #b07bf0; }
 .candidate.tier-card.tier-B { box-shadow: inset 3px 0 0 #7fb0e6; }
-.candidate.tier-card.tier-C { box-shadow: inset 3px 0 0 #e6a861; }
+.candidate.tier-card.tier-C { box-shadow: inset 3px 0 0 #c87a39; }
 .candidate.tier-card.tier-D { box-shadow: inset 3px 0 0 #3a4350; }
 .candidate.tier-card.tier-E { box-shadow: inset 3px 0 0 #3a4350; }
 .candidate.overbudget { opacity: 0.5; }
@@ -1020,7 +1020,7 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .candidate.tier-card.tier-S.selectable:hover { border-color: #8fe6ff; background: rgba(120, 220, 255, 0.12); }
 .candidate.tier-card.tier-A.selectable:hover { border-color: #c79bff; background: rgba(167, 102, 230, 0.13); }
 .candidate.tier-card.tier-B.selectable:hover { border-color: #9cc4ee; background: rgba(120, 170, 230, 0.14); }
-.candidate.tier-card.tier-C.selectable:hover { border-color: #eab874; background: rgba(225, 160, 90, 0.16); }
+.candidate.tier-card.tier-C.selectable:hover { border-color: #d18f54; background: rgba(190, 115, 55, 0.16); }
 /* Tier cards have dark text on their light tint; the hover bg dims, so flip the
    name (and inherited text) to white to keep it readable. */
 .candidate.tier-card.selectable:hover { color: #eaf2f9; }
