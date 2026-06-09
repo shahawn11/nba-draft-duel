@@ -171,30 +171,38 @@ MAX_FIT_PENALTY = 1.0       # cap on per-player fit penalty (penalties stay ligh
 # otherwise he's just a limited scorer at the slot.
 SG_PASSFIRST_APG = 4.5
 
-# Bonus side (NEW, the strategic lever): hitting a slot's SIGNATURE stat earns a
-# STEPPED bonus -- multiple cutoffs so even a lower-minutes player who clears the
-# first tier is still rewarded, while elite production is worth much more. The
-# bonus is a flat duel-score nudge (tier-independent, like fit), computed on the
-# signature stat alone (so e.g. an undersized but elite-rebounding PF still earns
-# the rebounding bonus on top of any height penalty). Highest tier met wins.
-# slot -> (signature stat, [(threshold, bonus, label), ...] descending)
-FIT_BONUS_TIERS: dict[str, tuple[str, list]] = {
-    "PG": ("apg", [(10.0, 3.0, "elite floor general"),
-                   (8.0, 2.0, "floor general"),
-                   (6.0, 1.0, "true point guard")]),
-    "SG": ("ppg", [(26.0, 3.0, "elite scorer"),
-                   (22.0, 2.0, "go-to scorer"),
-                   (18.0, 1.0, "scoring guard")]),
-    "SF": ("ppg", [(25.0, 3.0, "elite wing scorer"),
-                   (20.0, 2.0, "go-to wing"),
-                   (16.0, 1.0, "scoring wing")]),
-    "PF": ("rpg", [(11.0, 3.0, "elite rebounder"),
-                   (9.0, 2.0, "strong rebounder"),
-                   (7.0, 1.0, "rebounding forward")]),
-    "C":  ("rpg", [(14.0, 3.0, "elite rebounder"),
-                   (12.0, 2.0, "dominant on the glass"),
-                   (9.0, 1.0, "rebounding center")]),
+# Bonus side (NEW, the strategic lever): hitting a slot's SIGNATURE quality earns
+# a STEPPED bonus -- multiple cutoffs so even a lower-minutes player who clears
+# the first tier is still rewarded, while elite production is worth much more.
+# The signature is a value FUNCTION of the player (SF rewards all-around
+# versatility = pts+reb+ast, not pure scoring). Highest tier met wins.
+# slot -> (value_fn, [(threshold, bonus, label), ...] descending)
+FIT_BONUS_TIERS: dict[str, tuple] = {
+    "PG": (lambda p: p.apg or 0.0, [
+        (10.0, 3.0, "court maestro"),
+        (8.0, 2.0, "elite floor general"),
+        (6.0, 1.0, "true point guard")]),
+    "SG": (lambda p: p.ppg or 0.0, [
+        (26.0, 3.0, "flamethrower"),
+        (22.0, 2.0, "bucket-getter"),
+        (18.0, 1.0, "scoring guard")]),
+    "SF": (lambda p: (p.ppg or 0.0) + (p.rpg or 0.0) + (p.apg or 0.0), [
+        (44.0, 3.0, "point forward"),
+        (36.0, 2.0, "two-way force"),
+        (28.0, 1.0, "do-it-all wing")]),
+    "PF": (lambda p: p.rpg or 0.0, [
+        (11.0, 3.0, "the enforcer"),
+        (9.0, 2.0, "glass cleaner"),
+        (7.0, 1.0, "rebounding forward")]),
+    "C": (lambda p: p.rpg or 0.0, [
+        (14.0, 3.0, "the brick wall"),
+        (12.0, 2.0, "glass dominator"),
+        (9.0, 1.0, "rebounding center")]),
 }
+# Stat-stuffing bonuses (slot-independent, stack on top of the signature bonus):
+# a player who averages a double/triple-double is valuable anywhere.
+DOUBLE_DOUBLE_BONUS = 1.5   # >=10 in two of pts/reb/ast
+TRIPLE_DOUBLE_BONUS = 3.0   # >=10 in all three (rare -- a jackpot)
 # Size/physical mismatch at a matchup. Uses real height (inches) when both
 # players have it, else falls back to a rebounding proxy. Weighted to matter --
 # player matchups are the focus, especially for PvP.
@@ -441,16 +449,25 @@ def evaluate_fit(players: list[PlayerStats]) -> tuple[float, list[str], dict]:
                         bad_label = "limited scorer at SG"
                     notes.append(f"{p.name} — {bad_label} ({detail}) (-{pen:.1f})")
 
-        # --- Bonus (stepped): clearing a signature-stat cutoff earns a bonus ---
+        # --- Bonus (stepped): clearing a signature-quality cutoff earns a bonus ---
         sig = FIT_BONUS_TIERS.get(p.position)
         if sig:
-            sig_attr, tiers = sig
-            v = getattr(p, sig_attr) or 0.0
+            value_fn, tiers = sig
+            v = value_fn(p)
             for thresh, bonus, label in tiers:   # descending -> highest met wins
                 if v >= thresh:
                     delta += bonus
                     notes.append(f"{p.name} — {label} (+{bonus:.1f})")
                     break
+
+        # --- Stat-stuffing bonus (slot-independent): double / triple-double ---
+        n10 = sum(1 for s in (p.ppg, p.rpg, p.apg) if (s or 0.0) >= 10.0)
+        if n10 >= 3:
+            delta += TRIPLE_DOUBLE_BONUS
+            notes.append(f"{p.name} — triple-double machine (+{TRIPLE_DOUBLE_BONUS:.1f})")
+        elif n10 == 2:
+            delta += DOUBLE_DOUBLE_BONUS
+            notes.append(f"{p.name} — double-double threat (+{DOUBLE_DOUBLE_BONUS:.1f})")
 
         if abs(delta) >= 0.05:
             adjustment += delta
