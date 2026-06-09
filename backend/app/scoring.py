@@ -49,6 +49,37 @@ def final_overall(name: str, decade: str, team: str) -> float | None:
         return None
     return _final_ratings().get(f"{name}|{decade}|{team}")
 
+
+# ---- Current-form blend (offline-mode opponents) ---------------------------
+# Active players are rated by CURRENT FORM -- their NBA 2K "current" card blended
+# 50/50 with this season's BBRef -- rather than the decade/peak blend used for
+# the draftable history. Keyed by players.db display name; gated to the current
+# season so it ONLY affects current-NBA opponents, never the draft pool.
+_CURRENT_RATINGS_PATH = os.path.join(os.path.dirname(__file__), "data", "current_ratings.json")
+_CURRENT_RATINGS: dict[str, float] | None = None
+_CURRENT_SEASON: str | None = None
+
+
+def _current_ratings() -> dict[str, float]:
+    global _CURRENT_RATINGS, _CURRENT_SEASON
+    if _CURRENT_RATINGS is None:
+        try:
+            with open(_CURRENT_RATINGS_PATH) as f:
+                data = json.load(f)
+            _CURRENT_SEASON = data.pop("__season__", None)
+            _CURRENT_RATINGS = {k: float(v) for k, v in data.items()}
+        except (OSError, ValueError):
+            _CURRENT_RATINGS, _CURRENT_SEASON = {}, None
+    return _CURRENT_RATINGS
+
+
+def current_overall(name: str) -> float | None:
+    """Current-form blended overall for an active player, or None if unlisted.
+    Gating to offline opponents is done by the caller via PlayerStats.current_form."""
+    if not name:
+        return None
+    return _current_ratings().get(name)
+
 # ---- Tunable weights -------------------------------------------------------
 # Box-score composite. Steals & blocks are intentionally NOT scored here: they
 # weren't tracked before 1973-74, so counting them would unfairly penalize
@@ -205,6 +236,10 @@ class PlayerStats:
     # Manual rating override (0-100). 0 = none; when set, score_player returns
     # this as the player's total (a curated correction for formula outliers).
     rating_override: float = 0.0
+    # True only for current-NBA offline opponents: rate by CURRENT FORM (the
+    # current-form blend keyed by name), never the decade/peak blend. Draft-pool
+    # players leave this False so their rating path is unchanged.
+    current_form: bool = False
 
     def eligible(self) -> tuple[str, ...]:
         return self.eligible_positions if self.eligible_positions else (self.position,)
@@ -307,6 +342,13 @@ def _normalize_advanced(bpm: float) -> float:
 def score_player(p: PlayerStats) -> PlayerScore:
     prod = _normalize_production(p.production())
     adv = _normalize_advanced(p.bpm)
+    # Current-NBA opponents (offline mode): rate by CURRENT FORM -- the player's
+    # 2K current card blended with this season's BBRef. Flagged at build time,
+    # so draft-pool combos (current_form=False) fall through to the decade blend.
+    if p.current_form:
+        cf = current_overall(p.name)
+        if cf is not None:
+            return PlayerScore(player=p, production=prod, advanced=adv, total=cf)
     # Primary source: the curated 2K+BBRef blended overall for this exact
     # (player, decade, team). Already final (overrides + era-cap baked in), so
     # it is used as-is -- no formula, no tier-rounding.

@@ -394,19 +394,71 @@ def _load_current_starters(path: Path) -> dict[str, list[PlayerStats]]:
     return out
 
 
+_CURATED_COLS = ("ppg rpg apg spg bpg bpm ts_pct dbpm height_in three_pa three_pct")
+
+
+def _load_curated_starters(path: Path) -> dict[str, list[PlayerStats]]:
+    """Authoritative curated current-NBA fives (app/current_fives.py): each named
+    player is placed in his listed slot and flagged current_form=True so scoring
+    uses the current-form blend. Stats come from his most-recent season row (so
+    a star who missed the current season still gets a sensible statline)."""
+    from .current_fives import CURATED_STARTING_FIVES
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    try:
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(players)")}
+        if not {"name", "season", "ppg"} <= cols:
+            return {}
+        sel = "name, position, season, height_in, " + ", ".join(_CURATED_COLS.split())
+        season = conn.execute("SELECT MAX(season) FROM players").fetchone()[0]
+        # most-recent row per player (ascending order -> last write wins)
+        rows = conn.execute(f"SELECT {sel} FROM players ORDER BY season").fetchall()
+    except sqlite3.OperationalError:
+        return {}
+    finally:
+        conn.close()
+    latest: dict[str, sqlite3.Row] = {r["name"]: r for r in rows}
+
+    def _mk(name: str, slot: str, team: str) -> PlayerStats | None:
+        r = latest.get(name)
+        if r is None:
+            return None
+        g = lambda k: (r[k] if k in r.keys() else 0) or 0
+        return PlayerStats(
+            name=name, position=slot,
+            ppg=g("ppg"), rpg=g("rpg"), apg=g("apg"), spg=g("spg"), bpg=g("bpg"),
+            bpm=g("bpm"), ts_pct=g("ts_pct"), dbpm=g("dbpm"),
+            three_pa=g("three_pa"), three_pct=g("three_pct"),
+            team=team, season=season, height_in=g("height_in"),
+            eligible_positions=(slot,), current_form=True,
+        )
+
+    out: dict[str, list[PlayerStats]] = {}
+    for team, five in CURATED_STARTING_FIVES.items():
+        built = [_mk(name, slot, team) for name, slot in five]
+        if all(built) and len(built) == 5:
+            out[team] = built  # already in PG/SG/SF/PF/C order
+    return out
+
+
 @lru_cache(maxsize=1)
 def current_starters() -> dict[str, list[PlayerStats]]:
-    """Real starting 5s (most-used lineups) when available; derived top-minutes
-    fives fill any gaps; curated list only if there's no DB."""
+    """Curated, healthy current-NBA fives (current_fives.py) are authoritative.
+    Falls back to derived top-minutes / most-used lineups for any team the
+    curated list misses, then to the seed list if there's no DB."""
     if DB_PATH.exists():
-        real = _load_starters_from_lineups(DB_PATH)
+        curated = _load_curated_starters(DB_PATH)
         derived = _load_current_starters(DB_PATH)
-        if real or derived:
-            return {**derived, **real}  # real lineups win per team
+        real = _load_starters_from_lineups(DB_PATH)
+        merged = {**derived, **real, **curated}  # curated wins per team
+        if merged:
+            return merged
     return seed_data.CURRENT_STARTERS
 
 
 def starters_source() -> str:
+    if DB_PATH.exists() and _load_curated_starters(DB_PATH):
+        return "curated fives"
     if DB_PATH.exists() and _load_starters_from_lineups(DB_PATH):
         return "real lineups"
     if DB_PATH.exists() and _load_current_starters(DB_PATH):
