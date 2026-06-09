@@ -23,6 +23,7 @@ ALIAS = {
     "metta world peace": "ron artest",
     "nene": "nene hilario",
     "clifford robinson": "cliff robinson",
+    "alexandre sarr": "alex sarr",   # 2K lists his full first name
 }
 
 

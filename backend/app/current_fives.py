@@ -27,7 +27,7 @@ CURATED_STARTING_FIVES: dict[str, list[tuple[str, str]]] = {
         ("Sam Hauser", "PF"), ("Nikola Vučević", "C"),
     ],
     "Brooklyn Nets": [
-        ("Egor Dëmin", "PG"), ("Terance Mann", "SG"), ("Michael Porter Jr.", "SF"),
+        ("Egor Dëmin", "PG"), ("Cam Thomas", "SG"), ("Michael Porter Jr.", "SF"),
         ("Noah Clowney", "PF"), ("Nic Claxton", "C"),
     ],
     "Charlotte Hornets": [
@@ -39,11 +39,11 @@ CURATED_STARTING_FIVES: dict[str, list[tuple[str, str]]] = {
         ("Patrick Williams", "PF"), ("Jalen Smith", "C"),
     ],
     "Cleveland Cavaliers": [
-        ("James Harden", "PG"), ("Donovan Mitchell", "SG"), ("Jaylon Tyson", "SF"),
+        ("James Harden", "PG"), ("Donovan Mitchell", "SG"), ("Max Strus", "SF"),  # Strus *
         ("Evan Mobley", "PF"), ("Jarrett Allen", "C"),
     ],
     "Dallas Mavericks": [
-        ("Ryan Nembhard", "PG"), ("Max Christie", "SG"), ("Cooper Flagg", "SF"),
+        ("Kyrie Irving", "PG"), ("Max Christie", "SG"), ("Cooper Flagg", "SF"),  # Irving *
         ("P.J. Washington", "PF"), ("Daniel Gafford", "C"),
     ],
     "Denver Nuggets": [
@@ -51,8 +51,8 @@ CURATED_STARTING_FIVES: dict[str, list[tuple[str, str]]] = {
         ("Aaron Gordon", "PF"), ("Nikola Jokić", "C"),
     ],
     "Detroit Pistons": [
-        ("Cade Cunningham", "PG"), ("Ausar Thompson", "SG"), ("Tobias Harris", "SF"),
-        ("Isaiah Stewart", "PF"), ("Jalen Duren", "C"),
+        ("Cade Cunningham", "PG"), ("Duncan Robinson", "SG"), ("Ausar Thompson", "SF"),
+        ("Tobias Harris", "PF"), ("Jalen Duren", "C"),
     ],
     "Golden State Warriors": [
         ("Stephen Curry", "PG"), ("Brandin Podziemski", "SG"), ("Jimmy Butler III", "SF"),

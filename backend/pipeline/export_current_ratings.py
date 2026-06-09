@@ -92,11 +92,17 @@ def main():
     latest: dict[str, sqlite3.Row] = {}
     for r in rows:
         latest[r["name"]] = r   # ordered ascending -> last write is most recent
+    # current + prior season -> the curated fallback only applies to recent
+    # players (so retired legends in k2_curated aren't pulled in as "current").
+    recent_seasons = set(sorted({r["season"] for r in rows}, reverse=True)[:2])
 
     out: dict[str, float] = {"__season__": season}
     n_blend = n_inject = n_bbonly = 0
     for name, row in latest.items():
-        card = idx.get(kr.ALIAS.get(kr.norm(name), kr.norm(name)), {}).get("current", 0)
+        d = idx.get(kr.ALIAS.get(kr.norm(name), kr.norm(name)), {})
+        card = d.get("current", 0)
+        if not card and row["season"] in recent_seasons:
+            card = d.get("curated", 0)   # hand-set fallback (recent players only)
         played = name in current_names
         if not card and not played:
             continue   # retired / no data
