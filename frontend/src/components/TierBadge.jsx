@@ -1,10 +1,11 @@
-// Tier pill: a small colored badge showing a player's salary-cap tier.
-// S-tier renders an animated gold flame; A is shiny amethyst; B silver,
-// C bronze, D plain. Pass `cost` to append the $cost, `size="sm"` for compact.
+// Tier pill: a small colored badge showing a player's tier (goat / diamond /
+// amethyst / sapphire / gold / silver / bronze / unranked). The tier id is
+// taken straight from the backend payload (lowercase). Pass `cost` to append
+// the $cost, `size="sm"` for compact.
 import { tierClass, tierMeta } from '../tiers.js'
 
 export default function TierBadge({ tier, cost, size, title }) {
-  const t = (tier || 'D').toUpperCase()
+  const t = tier || 'unranked'
   const meta = tierMeta(t)
   return (
     <span

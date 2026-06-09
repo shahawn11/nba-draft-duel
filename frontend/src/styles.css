@@ -915,8 +915,9 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 }
 
 /* ===== Salary-cap tiers + budget ======================================== */
-/* Tier pill: S gold (animated flame), A amethyst (shiny), B silver,
-   C bronze, D plain. Shown on draft cards, matchups, and scored lineups. */
+/* Tier pill: 8 named tiers on the blended overall — goat (legendary gold),
+   diamond (icy), amethyst (purple), sapphire (blue), gold, silver, bronze,
+   unranked (plain). Shown on draft cards, matchups, and scored lineups. */
 .tier-pill {
   display: inline-flex;
   align-items: center;
@@ -937,17 +938,15 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 .tier-pill .tier-letter { font-weight: 900; letter-spacing: 0.3px; position: relative; z-index: 2; }
 .tier-pill .tier-cost { font-weight: 800; opacity: 0.95; position: relative; z-index: 2; }
 
-/* D — plain */
-.tier-D { background: var(--line); color: var(--text); }
-/* E — plain (lowest tier, no name/color; same look as D) */
-.tier-E { background: var(--line); color: var(--text); }
-/* C — bronze */
-.tier-C {
+/* unranked — plain (lowest band, no color) */
+.tier-unranked { background: var(--line); color: var(--text); }
+/* bronze — copper */
+.tier-bronze {
   background: linear-gradient(135deg, #6e3f1c, #c87a39 50%, #8c5226);
   color: #fff2e2; border-color: #cf8f55;
   box-shadow: 0 0 5px rgba(170, 100, 45, 0.5);
 }
-.tier-pill.tier-C::after {
+.tier-pill.tier-bronze::after {
   content: '';
   position: absolute; inset: 0;
   border-radius: inherit;
@@ -956,13 +955,13 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   transform: translateX(-120%);
   animation: tierShine 3.4s ease-in-out infinite;
 }
-/* B — silver (bright cool steel; kept distinct from greyed-out cards) */
-.tier-B {
+/* silver — bright cool steel (kept distinct from greyed-out cards) */
+.tier-silver {
   background: linear-gradient(135deg, #8fb0d6, #eef5fc 48%, #aec3dc);
   color: #14202e; border-color: #ffffff;
   box-shadow: 0 0 5px rgba(150, 185, 225, 0.55);
 }
-.tier-pill.tier-B::after {
+.tier-pill.tier-silver::after {
   content: '';
   position: absolute; inset: 0;
   border-radius: inherit;
@@ -971,13 +970,43 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   transform: translateX(-120%);
   animation: tierShine 3.2s ease-in-out infinite;
 }
-/* A — amethyst, shiny (sweeping highlight) */
-.tier-A {
+/* gold — warm classic gold medal */
+.tier-gold {
+  background: linear-gradient(135deg, #b8860b, #ffe79a 50%, #d4a017);
+  color: #2a1d00; border-color: #ffe07a;
+  box-shadow: 0 0 6px rgba(212, 160, 23, 0.55);
+}
+.tier-pill.tier-gold::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  z-index: 1;
+  background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.45) 50%, transparent 60%);
+  transform: translateX(-120%);
+  animation: tierShine 3.0s ease-in-out infinite;
+}
+/* sapphire — deep blue gem */
+.tier-sapphire {
+  background: linear-gradient(135deg, #1c4f9e, #5b97f0 52%, #2b6fd6);
+  color: #eaf3ff; border-color: #9cc4ff;
+  box-shadow: 0 0 6px rgba(70, 130, 230, 0.55);
+}
+.tier-pill.tier-sapphire::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  z-index: 1;
+  background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.45) 50%, transparent 60%);
+  transform: translateX(-120%);
+  animation: tierShine 2.9s ease-in-out infinite;
+}
+/* amethyst — purple, shiny */
+.tier-amethyst {
   background: linear-gradient(135deg, #6a2fb0, #a766e6 55%, #c79bff);
   color: #fff; border-color: #d9b6ff;
   box-shadow: 0 0 6px rgba(167, 102, 230, 0.5);
 }
-.tier-pill.tier-A::after {
+.tier-pill.tier-amethyst::after {
   content: '';
   position: absolute; inset: 0;
   border-radius: inherit;
@@ -987,13 +1016,13 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   animation: tierShine 2.8s ease-in-out infinite;
 }
 @keyframes tierShine { 0% { transform: translateX(-120%); } 60%, 100% { transform: translateX(120%); } }
-/* S = Diamond: bright icy gradient with a subtle contained sheen (no flame) */
-.tier-S {
+/* diamond — bright icy gradient with a contained sheen */
+.tier-diamond {
   background: linear-gradient(135deg, #57c8f5, #cdeeff 45%, #8ad4f5);
   color: #042430; border-color: #e6fbff;
   box-shadow: 0 0 7px rgba(120, 220, 255, 0.6);
 }
-.tier-pill.tier-S::after {
+.tier-pill.tier-diamond::after {
   content: '';
   position: absolute; inset: 0;
   border-radius: inherit;
@@ -1002,25 +1031,47 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   transform: translateX(-120%);
   animation: tierShine 2.6s ease-in-out infinite;
 }
+/* goat — legendary: luxe gold with the strongest glow + fastest sheen */
+.tier-goat {
+  background: linear-gradient(135deg, #c9971f, #fff3b0 45%, #ffd700);
+  color: #2a1d00; border-color: #fff0a0;
+  box-shadow: 0 0 9px rgba(255, 215, 0, 0.75);
+}
+.tier-pill.tier-goat::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  z-index: 1;
+  background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,0.62) 50%, transparent 62%);
+  transform: translateX(-120%);
+  animation: tierShine 2.2s ease-in-out infinite;
+}
 @media (prefers-reduced-motion: reduce) {
-  .tier-pill.tier-A::after, .tier-pill.tier-S::after, .tier-pill.tier-B::after, .tier-pill.tier-C::after { animation: none; display: none; }
+  .tier-pill.tier-goat::after, .tier-pill.tier-diamond::after, .tier-pill.tier-amethyst::after,
+  .tier-pill.tier-sapphire::after, .tier-pill.tier-gold::after, .tier-pill.tier-silver::after,
+  .tier-pill.tier-bronze::after { animation: none; display: none; }
 }
 
 /* Left-edge accent stripe on a draft card, colored by tier. */
-.candidate.tier-card.tier-S { box-shadow: inset 3px 0 0 #8fe6ff; }
-.candidate.tier-card.tier-A { box-shadow: inset 3px 0 0 #b07bf0; }
-.candidate.tier-card.tier-B { box-shadow: inset 3px 0 0 #7fb0e6; }
-.candidate.tier-card.tier-C { box-shadow: inset 3px 0 0 #c87a39; }
-.candidate.tier-card.tier-D { box-shadow: inset 3px 0 0 #3a4350; }
-.candidate.tier-card.tier-E { box-shadow: inset 3px 0 0 #3a4350; }
+.candidate.tier-card.tier-goat     { box-shadow: inset 3px 0 0 #ffd700; }
+.candidate.tier-card.tier-diamond  { box-shadow: inset 3px 0 0 #8fe6ff; }
+.candidate.tier-card.tier-amethyst { box-shadow: inset 3px 0 0 #b07bf0; }
+.candidate.tier-card.tier-sapphire { box-shadow: inset 3px 0 0 #5b97f0; }
+.candidate.tier-card.tier-gold     { box-shadow: inset 3px 0 0 #e6b422; }
+.candidate.tier-card.tier-silver   { box-shadow: inset 3px 0 0 #aec3dc; }
+.candidate.tier-card.tier-bronze   { box-shadow: inset 3px 0 0 #c87a39; }
+.candidate.tier-card.tier-unranked { box-shadow: inset 3px 0 0 #3a4350; }
 .candidate.overbudget { opacity: 0.5; }
 .candidate.overbudget .locked { color: #ffc04d; }
 
 /* Hover tint matches the card's tier (overrides the default orange hover). */
-.candidate.tier-card.tier-S.selectable:hover { border-color: #8fe6ff; background: rgba(120, 220, 255, 0.12); }
-.candidate.tier-card.tier-A.selectable:hover { border-color: #c79bff; background: rgba(167, 102, 230, 0.13); }
-.candidate.tier-card.tier-B.selectable:hover { border-color: #9cc4ee; background: rgba(120, 170, 230, 0.14); }
-.candidate.tier-card.tier-C.selectable:hover { border-color: #d18f54; background: rgba(190, 115, 55, 0.16); }
+.candidate.tier-card.tier-goat.selectable:hover     { border-color: #ffe680; background: rgba(255, 215, 0, 0.13); }
+.candidate.tier-card.tier-diamond.selectable:hover  { border-color: #8fe6ff; background: rgba(120, 220, 255, 0.12); }
+.candidate.tier-card.tier-amethyst.selectable:hover { border-color: #c79bff; background: rgba(167, 102, 230, 0.13); }
+.candidate.tier-card.tier-sapphire.selectable:hover { border-color: #9cc4ff; background: rgba(70, 130, 230, 0.14); }
+.candidate.tier-card.tier-gold.selectable:hover     { border-color: #ffd96a; background: rgba(212, 160, 23, 0.15); }
+.candidate.tier-card.tier-silver.selectable:hover   { border-color: #9cc4ee; background: rgba(120, 170, 230, 0.14); }
+.candidate.tier-card.tier-bronze.selectable:hover   { border-color: #d18f54; background: rgba(190, 115, 55, 0.16); }
 /* Tier cards have dark text on their light tint; the hover bg dims, so flip the
    name (and inherited text) to white to keep it readable. */
 .candidate.tier-card.selectable:hover { color: #eaf2f9; }

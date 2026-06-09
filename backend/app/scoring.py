@@ -12,6 +12,8 @@ say "you won 3 of 5 positional matchups and had the deeper bench score".
 """
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -19,6 +21,33 @@ from . import rating
 
 Position = Literal["PG", "SG", "SF", "PF", "C"]
 CANONICAL_POSITIONS: tuple[Position, ...] = ("PG", "SG", "SF", "PF", "C")
+
+# ---- Final blended overall (2K + BBRef 50/50, curated) ---------------------
+# The canonical per-(player, decade, team) overall lives in this exported file.
+# It is the SOURCE OF TRUTH for a draftable player's rating: score_player()
+# returns it directly when present, so tiers, cost and duel power all agree with
+# the curated blend. Players not in the file (e.g. current-season opponents,
+# uncurated seed stints) fall back to the live formula below.
+_FINAL_RATINGS_PATH = os.path.join(os.path.dirname(__file__), "data", "k2_final_ratings.json")
+_FINAL_RATINGS: dict[str, float] | None = None
+
+
+def _final_ratings() -> dict[str, float]:
+    global _FINAL_RATINGS
+    if _FINAL_RATINGS is None:
+        try:
+            with open(_FINAL_RATINGS_PATH) as f:
+                _FINAL_RATINGS = {k: float(v) for k, v in json.load(f).items()}
+        except (OSError, ValueError):
+            _FINAL_RATINGS = {}
+    return _FINAL_RATINGS
+
+
+def final_overall(name: str, decade: str, team: str) -> float | None:
+    """The curated blended overall for a (player, decade, team), or None."""
+    if not (name and decade and team):
+        return None
+    return _final_ratings().get(f"{name}|{decade}|{team}")
 
 # ---- Tunable weights -------------------------------------------------------
 # Box-score composite. Steals & blocks are intentionally NOT scored here: they
@@ -28,6 +57,33 @@ CANONICAL_POSITIONS: tuple[Position, ...] = ("PG", "SG", "SF", "PF", "C")
 # curated legends). Steals/blocks are still shown on the draft cards & box score.
 W_PTS, W_REB, W_AST = 1.0, 1.2, 1.5
 W_STL, W_BLK = 0.0, 0.0   # excluded from rating (see note above)
+# Shooting-efficiency scaling for the scoring term. Points are weighted by the
+# player's True Shooting % vs a league baseline, so efficient volume scorers
+# (Curry, Durant) are rewarded and inefficient chuckers aren't. Capped so it's a
+# meaningful nudge, not a runaway. Unknown TS% (pre-1974 / unmatched) -> 1.0.
+TS_BASELINE = 0.53
+TS_EFF_MIN, TS_EFF_MAX = 0.85, 1.25
+
+
+def ts_efficiency(ts_pct: float) -> float:
+    if not ts_pct:
+        return 1.0
+    return max(TS_EFF_MIN, min(TS_EFF_MAX, ts_pct / TS_BASELINE))
+
+
+# Extra defensive credit on top of total BPM: box DBPM under-weights elite
+# defense (even DPOYs cap ~+3-4), so we add a bonus on positive DBPM. It only
+# RESCUES under-rated defenders up to a ceiling -- it never inflates players who
+# already rate above it from offense/impact (so two-way stars aren't double-paid).
+DEF_BONUS_PER_DBPM = 4.0
+DEF_BONUS_MAX = 12.0
+DEF_BONUS_CEIL = 76.0
+
+
+def defensive_bonus(dbpm: float) -> float:
+    if dbpm <= 0:
+        return 0.0
+    return min(DEF_BONUS_MAX, dbpm * DEF_BONUS_PER_DBPM)
 # Blend between raw production and the advanced (defensive-inclusive) impact
 # metric. Impact (BPM/PIE) is the only era-fair carrier of defense -- steals/blocks
 # aren't tracked pre-1974 -- so it's weighted equally with production to give
@@ -42,6 +98,20 @@ MATCHUP_STRENGTH = 7.0    # strength points added per head-to-head matchup won
 GAME_BASE = 106.0         # league-ish baseline points both teams sit near
 GAME_SCALE = 0.22         # how strongly a strength gap turns into a points margin
 GAME_MIN, GAME_MAX = 80, 150
+# ---- Per-player duel simulation (Layer #1 stretch + #3 sim + #4 tier mult) --
+# Each player plays ONE simulated game. We de-compress the rating off a floor
+# (#1, mild), amplify it by tier (#4), fold in the matchup's fit/size/hot-slump
+# adjustment, then add a random performance swing (#3). The team's REAL result
+# is the SUM of its five simulated scores; winning a positional matchup adds
+# only a SMALL bonus on top -- so the total duel score is the true decider.
+DUEL_FLOOR = 50.0       # ratings are de-compressed relative to this floor
+DUEL_STRETCH = 1.5      # mild stretch: meaningful, not blown-out, separation
+# Performance swing is PROPORTIONAL to a player's expected duel power: every
+# player varies by ~the same PERCENTAGE around his level (a star's good/bad
+# night moves more points than a role player's), rather than a flat absolute
+# swing that made scrubs the most volatile in relative terms.
+SIM_REL_SIGMA = 0.18    # per-player performance swing (std dev, fraction of power)
+MATCHUP_WIN_BONUS = 3.0 # small team strength bonus per positional matchup won
 # Positional fit quality (added to team total, in rating points). Slots are
 # forced, so balance is automatic; instead we judge how well each player suits
 # their slot. A slot expects a signature stat -- a PG should create (assists),
@@ -69,13 +139,16 @@ HEIGHT_MISMATCH_THRESHOLD = 4.0 # inches gap that counts as a notable mismatch
 SIZE_MISMATCH_WEIGHT = 0.5      # rating points per rebound of size gap (fallback)
 SIZE_MISMATCH_THRESHOLD = 4.0   # rebound gap that counts (fallback)
 MAX_SIZE_MISMATCH = 4.0         # cap on the per-matchup nudge
-# Hot / Slump: rolled once per team -- a random player runs hot or cold.
+# Hot / Slump: rolled once per team -- a random player runs hot or cold. This
+# is applied PURELY as a proportional multiplier on the player's simulated duel
+# score (HOT_SIM_MULT/SLUMP_SIM_MULT) -- the rare "career night" / "ice cold"
+# swing on top of normal variance. It does NOT change his rating. The higher
+# (or lower) duel score then flows through to his box-score statline (see
+# game._simulate_box), so a hot player also puts up bigger numbers.
 HOT_CHANCE = 0.02
 SLUMP_CHANCE = 0.01
-HOT_RATING = 10.0
-SLUMP_RATING = -10.0
-HOT_STAT_MULT = 1.5             # box-score boost when hot
-SLUMP_STAT_MULT = 0.55          # box-score reduction when slumping
+HOT_SIM_MULT = 1.20             # hot: simulated duel score multiplied up
+SLUMP_SIM_MULT = 0.78           # slump: simulated duel score multiplied down
 
 
 def format_height(inches: float) -> str:
@@ -119,6 +192,16 @@ class PlayerStats:
     peak_apg: float = 0.0
     peak_bpm: float = 0.0
     peak_season: str = ""
+    # True Shooting % (0 = unknown -> neutral). Scales the scoring term so
+    # efficient volume scorers (Curry, Durant) are rewarded and chuckers aren't.
+    ts_pct: float = 0.0
+    # Defensive Box Plus/Minus (real, 1973-74+). Drives an extra defensive bonus
+    # so elite stoppers/rim-protectors (Mutombo, Ben Wallace) get credit the
+    # total-BPM impact half under-weights.
+    dbpm: float = 0.0
+    # 3-point shooting (1979-80+; 0 = none/pre-3pt era).
+    three_pa: float = 0.0
+    three_pct: float = 0.0
     # Manual rating override (0-100). 0 = none; when set, score_player returns
     # this as the player's total (a curated correction for formula outliers).
     rating_override: float = 0.0
@@ -127,9 +210,11 @@ class PlayerStats:
         return self.eligible_positions if self.eligible_positions else (self.position,)
 
     def production(self) -> float:
-        """Raw box-score composite."""
+        """Raw box-score composite. Scoring is scaled by shooting efficiency
+        (True Shooting %) vs a league baseline, so points scored efficiently are
+        worth more. Unknown TS% (pre-1974 / unmatched) -> neutral 1.0."""
         return (
-            self.ppg * W_PTS
+            self.ppg * W_PTS * ts_efficiency(self.ts_pct)
             + self.rpg * W_REB
             + self.apg * W_AST
             + self.spg * W_STL
@@ -156,6 +241,8 @@ class MatchupResult:
     note: str = ""
     home_delta: float = 0.0   # fit + size adjustment applied to home (signed)
     away_delta: float = 0.0
+    home_sim: float = 0.0     # simulated duel score this game (decides the matchup)
+    away_sim: float = 0.0
 
 
 @dataclass
@@ -186,6 +273,10 @@ class DuelResult:
     regulation: int | None = None          # tied regulation points (if OT)
     home_status: dict = field(default_factory=dict)  # {player_name: 'hot'|'slump'}
     away_status: dict = field(default_factory=dict)
+    # Per-player performance factor = simulated score / expected power (~1.0 is
+    # an average night, >1 a good game, <1 a poor one). Drives the box score.
+    home_perf: dict = field(default_factory=dict)
+    away_perf: dict = field(default_factory=dict)
 
     def summary(self) -> str:
         if self.winner == "tie":
@@ -214,12 +305,20 @@ def _normalize_advanced(bpm: float) -> float:
 def score_player(p: PlayerStats) -> PlayerScore:
     prod = _normalize_production(p.production())
     adv = _normalize_advanced(p.bpm)
+    # Primary source: the curated 2K+BBRef blended overall for this exact
+    # (player, decade, team). Already final (overrides + era-cap baked in), so
+    # it is used as-is -- no formula, no tier-rounding.
+    blended = final_overall(p.name, p.decade, p.team)
+    if blended is not None:
+        return PlayerScore(player=p, production=prod, advanced=adv, total=blended)
+    # Fallback (opponents / uncurated stints): live formula + overrides.
     total = prod * PRODUCTION_WEIGHT + adv * ADVANCED_WEIGHT
     if p.rating_override:
         total = p.rating_override   # curated correction (drives tier + duel)
-    # Round a score sitting in the top point of a tier UP to the tier floor
-    # (79.x -> 80, 69.x -> 70, ...), so the NUMBER itself rounds -- not just the
-    # tier badge -- in both the displayed rating and in-duel strength.
+    else:
+        # Extra defensive credit, but only to RESCUE under-rated defenders up to
+        # a ceiling (never inflates players already above it from offense).
+        total = max(total, min(total + defensive_bonus(p.dbpm), DEF_BONUS_CEIL))
     total = rating.tier_round(total)
     return PlayerScore(player=p, production=prod, advanced=adv, total=total)
 
@@ -284,19 +383,11 @@ def roll_status(players: list[PlayerStats], rng) -> dict:
 
 
 def score_team(players: list[PlayerStats], status: dict | None = None) -> TeamScore:
-    status = status or {}
+    # `status` (hot/slump) no longer alters a player's RATING -- it is applied
+    # purely as a multiplier on the simulated duel score (see _sim_score). We
+    # keep the param + the empty status_deltas for payload compatibility.
     scores = [score_player(p) for p in players]
     status_deltas: dict[str, float] = {}
-    for s in scores:
-        st = status.get(s.player.name)
-        if st == "hot":
-            before = s.total
-            s.total = min(100.0, s.total + HOT_RATING)
-            status_deltas[s.player.name] = round(s.total - before, 1)
-        elif st == "slump":
-            before = s.total
-            s.total = max(0.0, s.total + SLUMP_RATING)
-            status_deltas[s.player.name] = round(s.total - before, 1)
     base_total = sum(s.total for s in scores)
     fit_adj, fit_notes, fit_deltas = evaluate_fit(players)
     return TeamScore(
@@ -390,6 +481,54 @@ def _project_points(strength: float, avg: float) -> int:
     return int(round(max(float(GAME_MIN), min(float(GAME_MAX), pts))))
 
 
+def duel_power(rating_value: float, eff_adjust: float = 0.0) -> float:
+    """A player's expected 'duel power' (pre-randomness).
+
+    Layer #1 (stretch): de-compress the rating off DUEL_FLOOR so a 2-point
+    rating edge becomes a meaningful gap -- mildly, not blown out.
+    Layer #4 (tier): amplify by the player's tier multiplier so a true elite is
+    decisively valuable. Tier is taken from the player's TRUE base rating, so a
+    hot game doesn't bump someone into a higher tier.
+    `eff_adjust` is the signed rating-point matchup adjustment (positional fit +
+    size/height mismatch + hot/slump), folded in before stretching.
+    """
+    tier_m = rating.tier_mult(rating_value)
+    base = max(0.0, rating_value + eff_adjust - DUEL_FLOOR)
+    return base * DUEL_STRETCH * tier_m
+
+
+def _sim_score(rng, rating_value: float, eff_adjust: float, status: str | None) -> float:
+    """One player's simulated duel score for the night.
+
+    Layer #3 (variance): a PROPORTIONAL swing -- the score moves by a random
+    PERCENTAGE of the player's expected power, so a star's good/bad night is a
+    bigger point swing than a role player's, but everyone varies by the same
+    relative amount. Hot/Slump (rare) then FURTHER multiplies the score up/down
+    on top of the normal swing -- the career-night / ice-cold game.
+    """
+    expected = duel_power(rating_value, eff_adjust)
+    score = expected * (1.0 + rng.gauss(0.0, SIM_REL_SIGMA))
+    if status == "hot":
+        score *= HOT_SIM_MULT
+    elif status == "slump":
+        score *= SLUMP_SIM_MULT
+    return max(0.0, score)
+
+
+# How far a player's box-score line can stretch from his per-game averages on a
+# great/poor night. Keeps statlines believable (a 1.0 night = his averages).
+PERF_MIN = 0.40
+PERF_MAX = 2.10
+
+
+def _perf_factor(sim: float, expected: float) -> float:
+    """How well a player performed vs his expected level (sim / expected),
+    clamped so a hot night inflates -- but never breaks -- his statline."""
+    if expected <= 1e-6:
+        return 1.0
+    return max(PERF_MIN, min(PERF_MAX, sim / expected))
+
+
 def duel(home_players: list[PlayerStats], away_players: list[PlayerStats],
          home_status: dict | None = None, away_status: dict | None = None,
          rng=None) -> DuelResult:
@@ -401,11 +540,51 @@ def duel(home_players: list[PlayerStats], away_players: list[PlayerStats],
     away = score_team(away_players, away_status)
     matchups = compute_matchups(home, away)
 
-    home_wins = sum(1 for m in matchups if m.winner == "home")
-    away_wins = sum(1 for m in matchups if m.winner == "away")
+    # ---- Per-player simulation -------------------------------------------
+    # Each player plays ONE simulated game: expected duel power (stretch + tier
+    # mult + the matchup's fit/size/hot-slump adjustment) swung by a random
+    # PROPORTIONAL performance factor, then -- if he's hot or slumping (rare) --
+    # FURTHER multiplied up or down. The matchup winner is whoever had the
+    # better *simulated* game (a small upset is possible -- the lower-rated
+    # player can outplay the favorite that night). The team's real result is the
+    # SUM of its five simulated scores; each matchup won adds only a small bonus.
+    home_sim_total = 0.0
+    away_sim_total = 0.0
+    home_wins = 0
+    away_wins = 0
+    home_perf: dict[str, float] = {}
+    away_perf: dict[str, float] = {}
+    for m in matchups:
+        if m.home_player != "(none)":
+            h_exp = duel_power(m.home_score, m.home_delta)
+            h_sim = _sim_score(rng, m.home_score, m.home_delta,
+                               home_status.get(m.home_player))
+            home_perf[m.home_player] = _perf_factor(h_sim, h_exp)
+        else:
+            h_sim = 0.0
+        if m.away_player != "(none)":
+            a_exp = duel_power(m.away_score, m.away_delta)
+            a_sim = _sim_score(rng, m.away_score, m.away_delta,
+                               away_status.get(m.away_player))
+            away_perf[m.away_player] = _perf_factor(a_sim, a_exp)
+        else:
+            a_sim = 0.0
+        m.home_sim = round(h_sim, 1)
+        m.away_sim = round(a_sim, 1)
+        home_sim_total += h_sim
+        away_sim_total += a_sim
+        if abs(h_sim - a_sim) < 1e-9:
+            m.winner = "tie"
+        elif h_sim > a_sim:
+            m.winner = "home"
+            home_wins += 1
+        else:
+            m.winner = "away"
+            away_wins += 1
 
-    home_strength = home.base_total + home_wins * MATCHUP_STRENGTH
-    away_strength = away.base_total + away_wins * MATCHUP_STRENGTH
+    # Total simulated score is the true decider; matchup wins are a small bonus.
+    home_strength = home_sim_total + home_wins * MATCHUP_WIN_BONUS
+    away_strength = away_sim_total + away_wins * MATCHUP_WIN_BONUS
 
     avg = (home_strength + away_strength) / 2.0
     home_pts = _project_points(home_strength, avg)
@@ -445,4 +624,6 @@ def duel(home_players: list[PlayerStats], away_players: list[PlayerStats],
         regulation=regulation,
         home_status=home_status,
         away_status=away_status,
+        home_perf=home_perf,
+        away_perf=away_perf,
     )

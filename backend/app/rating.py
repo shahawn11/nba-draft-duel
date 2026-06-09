@@ -79,17 +79,46 @@ def streak_bonus(win_streak: int) -> int:
 # spender ~61%; 5 stars impossible; S drafted ~1/3 of games).
 CAP_BUDGET = 250
 
-# (id, label, min player-rating inclusive, flat cost). Descending by min.
+# The 8 named tiers on the blended 0-100 overall. ONE source of truth carrying
+# both the salary-cap COST and the per-tier DUEL MULTIPLIER (Layer #4):
+#   * cost  -> flat price within the tier for the draft economy.
+#   * mult  -> amplifies the player's contribution to the simulated duel so a
+#              true elite is decisively valuable, not just a 1-2 point edge.
+# Costs are re-tuned (sim-validated) for the compressed-high blended scale,
+# where ~84% of players sit >=80; budget 250 over 5 slots keeps stacking elites
+# infeasible while a full team is always affordable. Descending by min rating.
+# (id, label, min player-rating inclusive, flat cost, duel multiplier)
 CAP_TIERS: list[dict] = [
-    {"id": "S", "label": "Diamond", "min": 80, "cost": 80},
-    {"id": "A", "label": "A", "min": 70, "cost": 62},
-    {"id": "B", "label": "B", "min": 60, "cost": 50},
-    {"id": "C", "label": "C", "min": 50, "cost": 38},
-    {"id": "D", "label": "D", "min": 35, "cost": 28},
-    {"id": "E", "label": "E", "min": 0,  "cost": 18},
+    {"id": "goat",     "label": "GOAT",     "min": 98, "cost": 95, "mult": 1.20},
+    {"id": "diamond",  "label": "Diamond",  "min": 96, "cost": 80, "mult": 1.15},
+    {"id": "amethyst", "label": "Amethyst", "min": 93, "cost": 66, "mult": 1.10},
+    {"id": "sapphire", "label": "Sapphire", "min": 88, "cost": 54, "mult": 1.06},
+    {"id": "gold",     "label": "Gold",     "min": 84, "cost": 46, "mult": 1.03},
+    {"id": "silver",   "label": "Silver",   "min": 82, "cost": 40, "mult": 1.00},
+    {"id": "bronze",   "label": "Bronze",   "min": 80, "cost": 34, "mult": 0.97},
+    {"id": "unranked", "label": "Unranked", "min": 0,  "cost": 28, "mult": 0.94},
 ]
 
 CHEAPEST_COST = min(t["cost"] for t in CAP_TIERS)   # floor used by feasibility
+
+
+# ---------------------------------------------------------------------------
+# Duel tiers are the SAME 8 bands (CAP_TIERS), reused so cost + multiplier never
+# drift apart. duel_tier()/tier_mult() read the shared list.
+DUEL_TIERS = CAP_TIERS
+
+
+def duel_tier(player_rating: float) -> dict:
+    """8-band tier dict for a player's 0-100 overall (GOAT ... Unranked)."""
+    for t in DUEL_TIERS:
+        if player_rating >= t["min"]:
+            return t
+    return DUEL_TIERS[-1]
+
+
+def tier_mult(player_rating: float) -> float:
+    """Per-tier duel-power multiplier (Layer #4)."""
+    return duel_tier(player_rating)["mult"]
 
 
 # Manual rating overrides (0-100 scale), keyed by (player, decade, team) so only
@@ -136,13 +165,11 @@ POOL_FORCE_INCLUDE: dict[tuple[str, str], list[str]] = {
 
 
 def tier_round(player_rating: float) -> float:
-    """Round a rating that sits in the top point of a tier UP into the next one,
-    so a 59.x lands B, 69.x lands A, 79.x lands S (and 49.x lands C). Avoids the
-    "just missed the tier" feel for borderline stars (e.g. Carmelo 59.1, a
-    Finals-MVP Kawhi season at 69.5). Not applied at the low D/E boundary."""
-    for t in CAP_TIERS:
-        if t["min"] >= 50 and t["min"] - 1.0 <= player_rating < t["min"]:
-            return float(t["min"])
+    """Identity on the blended scale. The old "round up into the next tier"
+    snap was designed for the coarse 10-wide formula bands; the curated blended
+    overall sits on fine 2-3 wide bands where snapping would mis-tier players
+    (a curated 95 Amethyst must not jump to Diamond). Kept as a stable hook for
+    the formula fallback path."""
     return player_rating
 
 

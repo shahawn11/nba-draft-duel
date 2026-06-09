@@ -44,11 +44,17 @@ def _blended_by_key(path: Path) -> dict[str, dict[str, tuple[float, PlayerStats]
         has_gp = "gp" in cols
         has_height = "height_in" in cols
         has_season = "season" in cols
+        has_ts = "ts_pct" in cols
+        has_dbpm = "dbpm" in cols
+        has_three = "three_pa" in cols
         sel = "decade, team, name, position, ppg, rpg, apg, spg, bpg, bpm"
         sel += ", eligible" if has_elig else ""
         sel += ", gp" if has_gp else ""
         sel += ", height_in" if has_height else ""
         sel += ", season" if has_season else ""
+        sel += ", ts_pct" if has_ts else ""
+        sel += ", dbpm" if has_dbpm else ""
+        sel += ", three_pa, three_pct" if has_three else ""
         rows = conn.execute(f"SELECT {sel} FROM players").fetchall()
     except sqlite3.OperationalError:
         return {}
@@ -62,6 +68,10 @@ def _blended_by_key(path: Path) -> dict[str, dict[str, tuple[float, PlayerStats]
         by_player[key][r["name"]].append({
             "ppg": r["ppg"] or 0.0, "rpg": r["rpg"] or 0.0, "apg": r["apg"] or 0.0,
             "spg": r["spg"] or 0.0, "bpg": r["bpg"] or 0.0, "bpm": r["bpm"] or 0.0,
+            "ts_pct": (r["ts_pct"] if has_ts else 0.0) or 0.0,
+            "dbpm": (r["dbpm"] if has_dbpm else 0.0) or 0.0,
+            "three_pa": (r["three_pa"] if has_three else 0.0) or 0.0,
+            "three_pct": (r["three_pct"] if has_three else 0.0) or 0.0,
             "gp": float(r["gp"]) if has_gp and r["gp"] else 1.0,
             "position": r["position"],
             "eligible": (r["eligible"] if has_elig else "") or "",
@@ -74,6 +84,8 @@ def _blended_by_key(path: Path) -> dict[str, dict[str, tuple[float, PlayerStats]
         decade, team = key.split("|", 1)
         per_name: dict[str, tuple[float, PlayerStats]] = {}
         for name, seasons in namemap.items():
+            # Games-weighted decade average (a full season is more representative
+            # than a short one).
             wtot = sum(s["gp"] for s in seasons) or 1.0
             def avg(stat: str) -> float:
                 return sum(s[stat] * s["gp"] for s in seasons) / wtot
@@ -84,11 +96,13 @@ def _blended_by_key(path: Path) -> dict[str, dict[str, tuple[float, PlayerStats]
             elig = tuple(p for p in sample["eligible"].split(",") if p) or \
                 eligible_from_raw(None, sample["position"])
 
-            def mk_from_stats(ppg, rpg, apg, spg, bpg, bpm, *, peak_label: str) -> PlayerStats:
+            def mk_from_stats(ppg, rpg, apg, spg, bpg, bpm, ts, dbpm, t3a, t3p, *, peak_label: str) -> PlayerStats:
                 return PlayerStats(
                     name=name, position=sample["position"],
                     ppg=round(ppg, 1), rpg=round(rpg, 1), apg=round(apg, 1),
                     spg=round(spg, 1), bpg=round(bpg, 1), bpm=round(bpm, 2),
+                    ts_pct=round(ts, 3), dbpm=round(dbpm, 2),
+                    three_pa=round(t3a, 1), three_pct=round(t3p, 3),
                     team=team, season=peak_label, decade=decade,
                     height_in=sample["height_in"], eligible_positions=elig,
                     decade_ppg=round(d_ppg, 1), decade_rpg=round(d_rpg, 1),
@@ -100,7 +114,7 @@ def _blended_by_key(path: Path) -> dict[str, dict[str, tuple[float, PlayerStats]
             def score_of(s: dict) -> float:
                 return score_player(mk_from_stats(
                     s["ppg"], s["rpg"], s["apg"], s["spg"], s["bpg"], s["bpm"],
-                    peak_label="")).total
+                    s["ts_pct"], s["dbpm"], s["three_pa"], s["three_pct"], peak_label="")).total
 
             qualifying = [s for s in seasons if s["gp"] >= PEAK_MIN_GP] or seasons
             pk = max(qualifying, key=score_of)
@@ -111,6 +125,8 @@ def _blended_by_key(path: Path) -> dict[str, dict[str, tuple[float, PlayerStats]
                 blend("ppg", pk["ppg"]), blend("rpg", pk["rpg"]),
                 blend("apg", pk["apg"]), blend("spg", pk["spg"]),
                 blend("bpg", pk["bpg"]), blend("bpm", pk["bpm"]),
+                blend("ts_pct", pk["ts_pct"]), blend("dbpm", pk["dbpm"]),
+                blend("three_pa", pk["three_pa"]), blend("three_pct", pk["three_pct"]),
                 peak_label=pk["season"],
             )
             player = replace(
@@ -127,7 +143,8 @@ def _blended_by_key(path: Path) -> dict[str, dict[str, tuple[float, PlayerStats]
 # Stat/display fields copied when a seed player is enriched from real DB data
 # (their curated position / eligibility / height / team identity are kept).
 _INJECT_FIELDS = (
-    "ppg", "rpg", "apg", "spg", "bpg", "bpm", "season",
+    "ppg", "rpg", "apg", "spg", "bpg", "bpm", "season", "ts_pct", "dbpm",
+    "three_pa", "three_pct",
     "decade_ppg", "decade_rpg", "decade_apg", "decade_spg", "decade_bpg",
     "peak_ppg", "peak_rpg", "peak_apg", "peak_bpm", "peak_season",
 )

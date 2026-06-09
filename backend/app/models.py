@@ -33,6 +33,10 @@ def player_to_dict(p: PlayerStats) -> dict:
         "peak_apg": p.peak_apg,
         "peak_bpm": p.peak_bpm,
         "peak_season": p.peak_season,
+        "ts_pct": p.ts_pct,
+        "dbpm": p.dbpm,
+        "three_pa": p.three_pa,
+        "three_pct": p.three_pct,
         "rating_override": p.rating_override,
     }
 
@@ -62,6 +66,10 @@ def player_from_dict(d: dict) -> PlayerStats:
         peak_apg=d.get("peak_apg", 0.0),
         peak_bpm=d.get("peak_bpm", 0.0),
         peak_season=d.get("peak_season", ""),
+        ts_pct=d.get("ts_pct", 0.0),
+        dbpm=d.get("dbpm", 0.0),
+        three_pa=d.get("three_pa", 0.0),
+        three_pct=d.get("three_pct", 0.0),
         rating_override=d.get("rating_override", 0.0),
     )
 

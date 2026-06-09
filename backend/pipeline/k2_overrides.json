@@ -1,0 +1,5 @@
+{
+  "_note": "Explicit per-combo 2K overrides, keyed name|decade|team. Highest precedence; bypass the era-cap. Hand-set corrections.",
+  "James Harden|2010s|Houston Rockets": 98,
+  "Shaquille O'Neal|2000s|Phoenix Suns": 81
+}

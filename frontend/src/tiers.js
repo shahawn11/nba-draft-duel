@@ -1,22 +1,27 @@
-// Salary-cap tier metadata — mirrors backend rating.CAP_TIERS.
-// Each draftable player belongs to a tier (by their 0-100 rating); the tier
-// drives both the flat cost and the visual treatment on the card.
-//   S — gold, animated flame   A — amethyst (shiny)
-//   B — silver                 C — bronze                 D — plain
+// Salary-cap / duel tier metadata — mirrors backend rating.CAP_TIERS (the 8
+// named bands on the blended 0-100 overall). Each draftable player belongs to a
+// tier (by their rating); the tier drives the flat cost and the card visual.
+//   goat — legendary gold      diamond  — icy blue
+//   amethyst — purple          sapphire — deep blue
+//   gold — warm gold           silver   — steel
+//   bronze — copper            unranked — plain
+// Tier ids are lowercase and match the backend payload's `tier` field exactly.
 export const TIERS = {
-  S: { label: '💎', cost: 80, name: 'Diamond' },
-  A: { label: 'A', cost: 62, name: 'All-Star' },
-  B: { label: 'B', cost: 50, name: 'Starter' },
-  C: { label: 'C', cost: 38, name: 'Rotation' },
-  D: { label: 'D', cost: 28, name: 'Role player' },
-  E: { label: '–', cost: 18, name: 'Bench' },
+  goat:     { label: '👑', cost: 95, name: 'GOAT' },
+  diamond:  { label: '💎', cost: 80, name: 'Diamond' },
+  amethyst: { label: '🔮', cost: 66, name: 'Amethyst' },
+  sapphire: { label: '🔷', cost: 54, name: 'Sapphire' },
+  gold:     { label: '🥇', cost: 46, name: 'Gold' },
+  silver:   { label: '🥈', cost: 40, name: 'Silver' },
+  bronze:   { label: '🥉', cost: 34, name: 'Bronze' },
+  unranked: { label: '–',  cost: 28, name: 'Unranked' },
 }
 
 export function tierMeta(tier) {
-  return TIERS[tier] || TIERS.D
+  return TIERS[tier] || TIERS.unranked
 }
 
-// Class used to color a tier pill / card accent, e.g. `tier-S`.
+// Class used to color a tier pill / card accent, e.g. `tier-goat`.
 export function tierClass(tier) {
-  return `tier-${(tier || 'D').toUpperCase()}`
+  return `tier-${tier || 'unranked'}`
 }

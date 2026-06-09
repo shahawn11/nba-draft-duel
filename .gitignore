@@ -27,3 +27,8 @@ npm-debug.log*
 *.swp
 .idea/
 .vscode/
+
+# Scraped 2K roster pages (raw inputs to the rating pipeline; re-scrapeable,
+# not source). Ignored wherever they land (repo root or pipeline/2k_pages/).
+*2K26 Roster*.html
+*.bak

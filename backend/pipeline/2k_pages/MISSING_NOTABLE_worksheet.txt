@@ -1,0 +1,116 @@
+Notable missing players (bpm>=2.0) -- fill in OVERALL (any 2K edition's peak).
+Format per line:  decade | team | player | OVERALL
+BLOCKED = no 2K rating in any edition (licensing) -> leave blank, will use BBRef.
+
+1960s | Boston Celtics | Sam Jones | ____
+1960s | Philadelphia 76ers | Chet Walker | ____
+1960s | Cincinnati Royals | Jack Twyman | ____
+1960s | Philadelphia 76ers | Luke Jackson | ____
+1960s | Cincinnati Royals | Bob Boozer | ____
+1960s | Boston Celtics | K.C. Jones | ____
+1960s | Los Angeles Lakers | Happy Hairston | ____
+1960s | Los Angeles Lakers | Jim McMillian | ____
+1960s | Philadelphia 76ers | Wali Jones | ____
+1960s | Philadelphia 76ers | Larry Costello | ____
+1960s | Cincinnati Royals | Adrian Smith | ____
+1960s | Cincinnati Royals | Arlen Bockhorn | ____
+1960s | Cincinnati Royals | Tom Van Arsdale | ____
+1970s | Boston Celtics | Paul Silas | ____
+1970s | Atlanta Hawks | Bill Bridges | ____
+1970s | Atlanta Hawks | John Drew | ____
+1970s | Los Angeles Lakers | Jim McMillian | ____
+1970s | Los Angeles Lakers | Happy Hairston | ____
+1970s | Portland Trail Blazers | Lionel Hollins | ____
+1970s | Atlanta Hawks | Walt Bellamy | ____
+1970s | Atlanta Hawks | Dan Roundfield | ____
+1970s | Portland Trail Blazers | Bob Gross | ____
+1970s | Portland Trail Blazers | Dave Twardzik | ____
+1970s | New York Knicks | Cazzie Russell | ____
+1970s | Boston Celtics | Don Nelson | ____
+1970s | Boston Celtics | Don Chaney | ____
+1970s | Portland Trail Blazers | Lloyd Neal | ____
+1980s | Philadelphia 76ers | Charles Barkley | ____  <<BLOCKED (no 2K ever)
+1980s | San Antonio Spurs | Alvin Robertson | ____
+1980s | Chicago Bulls | Orlando Woolridge | ____
+1980s | Boston Celtics | Cedric Maxwell | ____
+1980s | Boston Celtics | Tiny Archibald | ____
+1980s | Houston Rockets | Rodney McCray | ____
+1980s | Philadelphia 76ers | Darryl Dawkins | ____
+1980s | Houston Rockets | Lewis Lloyd | ____
+1980s | Houston Rockets | Robert Reid | ____
+1980s | Houston Rockets | John Lucas | ____
+1980s | Houston Rockets | Allen Leavell | ____
+1980s | Houston Rockets | Caldwell Jones | ____
+1990s | Philadelphia 76ers | Charles Barkley | ____  <<BLOCKED (no 2K ever)
+1990s | Phoenix Suns | Charles Barkley | ____  <<BLOCKED (no 2K ever)
+1990s | Atlanta Hawks | Mookie Blaylock | ____
+1990s | Indiana Pacers | Reggie Miller | ____  <<BLOCKED (no 2K ever)
+1990s | Houston Rockets | Charles Barkley | ____  <<BLOCKED (no 2K ever)
+1990s | Milwaukee Bucks | Alvin Robertson | ____
+1990s | Cleveland Cavaliers | Wesley Person | ____
+1990s | Charlotte Hornets | Anthony Mason | ____
+1990s | Indiana Pacers | Mark Jackson | ____
+1990s | Washington Wizards | Rod Strickland | ____
+1990s | Brooklyn Nets | Kerry Kittles | ____
+1990s | Miami Heat | Voshon Lenard | ____
+2000s | Portland Trail Blazers | Rasheed Wallace | ____  <<BLOCKED (no 2K ever)
+2000s | Detroit Pistons | Rasheed Wallace | ____  <<BLOCKED (no 2K ever)
+2000s | Utah Jazz | Ronnie Brewer | ____
+2000s | Cleveland Cavaliers | Clar. Weatherspoon | ____
+2000s | Philadelphia 76ers | Andre Iguodala | ____
+2000s | Sacramento Kings | Brad Miller | ____
+2000s | Indiana Pacers | Brad Miller | ____
+2000s | Indiana Pacers | Troy Murphy | ____
+2000s | Los Angeles Lakers | Andrew Bynum | ____
+2000s | Indiana Pacers | Reggie Miller | ____  <<BLOCKED (no 2K ever)
+2000s | Atlanta Hawks | Jamal Crawford | ____
+2000s | Dallas Mavericks | Josh Howard | ____
+2000s | Cleveland Cavaliers | Mo Williams | ____
+2000s | Chicago Bulls | Luol Deng | ____
+2000s | New York Knicks | David Lee | ____
+2000s | Toronto Raptors | T.J. Ford | ____
+2000s | Minnesota Timberwolves | Al Jefferson | ____
+2010s | Boston Celtics | Isaiah Thomas | ____  <<2K18=89
+2010s | Indiana Pacers | Victor Oladipo | ____
+2010s | Memphis Grizzlies | Tyreke Evans | ____
+2010s | Los Angeles Clippers | Danilo Gallinari | ____  <<2K18=81
+2010s | Orlando Magic | Ryan Anderson | ____
+2010s | Houston Rockets | Lou Williams | ____
+2010s | Atlanta Hawks | Paul Millsap | ____  <<2K18=87
+2010s | Denver Nuggets | Nene | ____
+2010s | Philadelphia 76ers | Lou Williams | ____
+2010s | Utah Jazz | Paul Millsap | ____  <<2K18=87
+2010s | Oklahoma City Thunder | Danilo Gallinari | ____  <<2K18=81
+2010s | Los Angeles Clippers | Montrezl Harrell | ____
+2010s | Phoenix Suns | Eric Bledsoe | ____
+2010s | Detroit Pistons | Christian Wood | ____
+2010s | Memphis Grizzlies | Brandon Clarke | ____
+2010s | Los Angeles Lakers | Andrew Bynum | ____
+2010s | Utah Jazz | Al Jefferson | ____
+2010s | Portland Trail Blazers | Nicolas Batum | ____
+2010s | Milwaukee Bucks | Eric Bledsoe | ____
+2010s | Chicago Bulls | Nate Robinson | ____
+2010s | Toronto Raptors | Lou Williams | ____
+2010s | Brooklyn Nets | D'Angelo Russell | ____
+2010s | New York Knicks | Trey Burke | ____
+2010s | Sacramento Kings | Isaiah Thomas | ____  <<2K18=89
+2010s | Denver Nuggets | Danilo Gallinari | ____  <<2K18=81
+2010s | Portland Trail Blazers | Jusuf Nurkić | ____
+2010s | Denver Nuggets | Ty Lawson | ____
+2010s | Detroit Pistons | Brandon Jennings | ____
+2010s | Milwaukee Bucks | Brandon Jennings | ____
+2010s | New York Knicks | Enes Freedom | ____
+2010s | Portland Trail Blazers | Wesley Matthews | ____
+2010s | New Orleans Pelicans | Nikola Mirotic | ____
+2010s | Detroit Pistons | Greg Monroe | ____
+2010s | Charlotte Hornets | Al Jefferson | ____
+2010s | Los Angeles Clippers | Lou Williams | ____
+2010s | Atlanta Hawks | John Collins | ____
+2010s | Milwaukee Bucks | Greg Monroe | ____
+2020s | Charlotte Hornets | Montrezl Harrell | ____
+2020s | Chicago Bulls | Thaddeus Young | ____
+2020s | Los Angeles Lakers | Montrezl Harrell | ____
+2020s | Boston Celtics | Malcolm Brogdon | ____
+2020s | Minnesota Timberwolves | Patrick Beverley | ____
+2020s | Indiana Pacers | Malcolm Brogdon | ____
+2020s | Portland Trail Blazers | Malcolm Brogdon | ____

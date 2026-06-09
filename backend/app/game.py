@@ -15,7 +15,7 @@ import uuid
 from . import db, dataset, teams, rating
 from .models import player_from_dict, player_to_dict
 from .positions import SLOTS
-from .scoring import duel, roll_status, score_player, HOT_STAT_MULT, SLUMP_STAT_MULT
+from .scoring import duel, roll_status, score_player
 
 
 def _picked_names(state: dict) -> set[str]:
@@ -217,17 +217,22 @@ def _poisson(rng: random.Random, lam: float) -> int:
 
 
 def _simulate_box(players: list, team_pts: int, rng: random.Random,
-                  status: dict | None = None) -> dict:
+                  perf: dict | None = None, status: dict | None = None) -> dict:
     """Simulate a single-game box score per player; points sum to the team's
-    final score. Hot players get boosted lines, slumping players reduced ones."""
+    final score. Each player's line is scaled by his DUEL performance factor
+    (`perf`, ~1.0 = an average night) so a higher duel score yields a bigger
+    statline -- while staying shaped by his real per-game averages so the line
+    still makes sense (a rebounder rebounds, a scorer scores). Hot/slump needs
+    no separate handling here: it is already baked into the duel score -> perf."""
+    perf = perf or {}
     status = status or {}
 
-    def mult(name):
-        st = status.get(name)
-        return HOT_STAT_MULT if st == "hot" else SLUMP_STAT_MULT if st == "slump" else 1.0
+    def pf(name):
+        return perf.get(name, 1.0)
 
-    # Points: allocate the team total by scoring ability (hot/slump tilt it).
-    weights = [max(p.ppg, 1.0) * rng.uniform(0.7, 1.35) * mult(p.name) for p in players]
+    # Points: allocate the team total by scoring ability tilted by how the
+    # player performed in the duel (perf), with a little jitter for variety.
+    weights = [max(p.ppg, 1.0) * pf(p.name) * rng.uniform(0.88, 1.12) for p in players]
     tot = sum(weights) or 1.0
     raw = [team_pts * w / tot for w in weights]
     pts = [max(0, int(round(x))) for x in raw]
@@ -244,13 +249,13 @@ def _simulate_box(players: list, team_pts: int, rng: random.Random,
 
     lines = {}
     for p, pt in zip(players, pts):
-        m = mult(p.name)
+        f = pf(p.name)
         lines[p.name] = {
             "pts": pt,
-            "reb": _poisson(rng, p.rpg * m),
-            "ast": _poisson(rng, p.apg * m),
-            "stl": _poisson(rng, p.spg * m),
-            "blk": _poisson(rng, p.bpg * m),
+            "reb": _poisson(rng, p.rpg * f),
+            "ast": _poisson(rng, p.apg * f),
+            "stl": _poisson(rng, p.spg * f),
+            "blk": _poisson(rng, p.bpg * f),
             "status": status.get(p.name),
         }
     return lines
@@ -271,9 +276,9 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
     outcome = {"home": "win", "away": "loss", "tie": "tie"}[result.winner]
 
     home_box = _simulate_box([s.player for s in result.home.player_scores],
-                             int(result.home_final), rng, home_status)
+                             int(result.home_final), rng, result.home_perf, home_status)
     away_box = _simulate_box([s.player for s in result.away.player_scores],
-                             int(result.away_final), rng, away_status)
+                             int(result.away_final), rng, result.away_perf, away_status)
 
     def team_payload(team, box, status, delta_by_pos) -> dict:
         return {
@@ -328,6 +333,8 @@ def score_lineups(home_players: list, away_players: list, opponent_label: str,
                 "note": m.note,
                 "home_delta": round(m.home_delta, 1),
                 "away_delta": round(m.away_delta, 1),
+                "home_sim": round(m.home_sim, 1),
+                "away_sim": round(m.away_sim, 1),
                 "home_status": home_status.get(m.home_player),
                 "away_status": away_status.get(m.away_player),
                 "home_status_delta": round(result.home.status_deltas.get(m.home_player, 0.0), 1),

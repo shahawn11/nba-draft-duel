@@ -1,0 +1,647 @@
+405 pool (decade, team, player) combos with NO 2K rating (use Peak+BBRef)
+
+
+[1960s] Boston Celtics
+    Sam Jones  (bpm 4.0)
+    K.C. Jones  (bpm 2.0)
+    Frank Ramsey  (bpm 1.5)
+    Tom Sanders  (bpm 1.0)
+
+[1960s] Cincinnati Royals
+    Jack Twyman  (bpm 4.0)
+    Bob Boozer  (bpm 3.0)
+    Adrian Smith  (bpm 2.0)
+    Arlen Bockhorn  (bpm 2.0)
+    Tom Van Arsdale  (bpm 2.0)
+    Connie Dierking  (bpm 1.5)
+    Tom Hawkins  (bpm 1.0)
+
+[1960s] Los Angeles Lakers
+    Happy Hairston  (bpm 2.0)
+    Jim McMillian  (bpm 2.0)
+    LeRoy Ellis  (bpm 1.5)
+    Mel Counts  (bpm 1.0)
+
+[1960s] Philadelphia 76ers
+    Chet Walker  (bpm 4.0)
+    Luke Jackson  (bpm 3.0)
+    Wali Jones  (bpm 2.0)
+    Larry Costello  (bpm 2.0)
+    Dave Gambee  (bpm 1.0)
+    Matt Guokas  (bpm 1.0)
+    Bill Melchionni  (bpm 0.5)
+
+[1970s] Atlanta Hawks
+    Bill Bridges  (bpm 4.0)
+    John Drew  (bpm 3.6)
+    Walt Bellamy  (bpm 3.5)
+    Dan Roundfield  (bpm 2.6)
+    Steve Hawes  (bpm 1.6)
+    Tom Henderson  (bpm -0.3)
+    Charlie Criss  (bpm -0.7)
+    Armond Hill  (bpm -1.8)
+
+[1970s] Boston Celtics
+    Paul Silas  (bpm 4.0)
+    Don Nelson  (bpm 2.0)
+    Don Chaney  (bpm 2.0)
+    Steve Kuberski  (bpm 1.0)
+
+[1970s] Los Angeles Lakers
+    Jim McMillian  (bpm 3.5)
+    Happy Hairston  (bpm 3.5)
+    Flynn Robinson  (bpm 1.5)
+    Jim Cleamons  (bpm 1.5)
+    Pat Riley  (bpm 1.0)
+
+[1970s] Milwaukee Bucks
+    Bob Boozer  (bpm 1.5)
+    Curtis Perry  (bpm 1.0)
+    Wali Jones  (bpm 1.0)
+
+[1970s] New York Knicks
+    Cazzie Russell  (bpm 2.0)
+    Dean Meminger  (bpm 1.0)
+
+[1970s] Portland Trail Blazers
+    Lionel Hollins  (bpm 3.5)
+    Bob Gross  (bpm 2.5)
+    Dave Twardzik  (bpm 2.5)
+    Lloyd Neal  (bpm 2.0)
+    Johnny Davis  (bpm 1.5)
+    Larry Steele  (bpm 1.5)
+    Herm Gilliam  (bpm 1.0)
+    Corky Calhoun  (bpm 0.5)
+
+[1980s] Boston Celtics
+    Cedric Maxwell  (bpm 3.0)
+    Tiny Archibald  (bpm 3.0)
+    Gerald Henderson  (bpm 1.5)
+
+[1980s] Chicago Bulls
+    Orlando Woolridge  (bpm 3.0)
+    Quintin Dailey  (bpm 1.0)
+
+[1980s] Houston Rockets
+    Rodney McCray  (bpm 3.0)
+    Lewis Lloyd  (bpm 2.5)
+    Robert Reid  (bpm 2.5)
+    John Lucas  (bpm 2.5)
+    Allen Leavell  (bpm 2.0)
+    Caldwell Jones  (bpm 2.0)
+    Mitchell Wiggins  (bpm 1.5)
+    Jim Petersen  (bpm 1.5)
+
+[1980s] Philadelphia 76ers
+    Charles Barkley  (bpm 6.7)
+    Darryl Dawkins  (bpm 2.5)
+    Clint Richardson  (bpm 1.5)
+    Steve Mix  (bpm 1.5)
+    Clemon Johnson  (bpm 1.0)
+    Andrew Toney  (bpm -0.0)
+
+[1980s] San Antonio Spurs
+    Alvin Robertson  (bpm 3.8)
+    Mark Olberding  (bpm 0.0)
+    Steve Johnson  (bpm -0.4)
+    Walter Berry  (bpm -0.7)
+    Mike Mitchell  (bpm -1.3)
+
+[1990s] Atlanta Hawks
+    Mookie Blaylock  (bpm 5.7)
+    Steven Smith  (bpm 1.7)
+    Grant Long  (bpm 1.5)
+    Alan Henderson  (bpm -0.1)
+
+[1990s] Boston Celtics
+    Antoine Walker  (bpm 0.3)
+    Todd Day  (bpm -0.4)
+    Ron Mercer  (bpm -1.6)
+
+[1990s] Brooklyn Nets
+    Kerry Kittles  (bpm 2.5)
+    Chris Gatling  (bpm 0.0)
+    Jayson Williams  (bpm -0.5)
+
+[1990s] Charlotte Hornets
+    Anthony Mason  (bpm 2.8)
+
+[1990s] Chicago Bulls
+    Brent Barry  (bpm -0.5)
+
+[1990s] Cleveland Cavaliers
+    Wesley Person  (bpm 2.9)
+    Derek Anderson  (bpm 1.7)
+    Chris Mills  (bpm 1.1)
+    Bobby Phills  (bpm 1.1)
+    Lamond Murray  (bpm -0.3)
+
+[1990s] Dallas Mavericks
+    Gary Trent  (bpm 1.2)
+    Cedric Ceballos  (bpm 1.1)
+    Erick Strickland  (bpm -0.4)
+    Sasha Danilovic  (bpm -1.0)
+
+[1990s] Denver Nuggets
+    Raef LaFrentz  (bpm 0.2)
+    Chris Gatling  (bpm -1.0)
+    Tariq Abdul-Wahad  (bpm -1.2)
+
+[1990s] Detroit Pistons
+    Lindsey Hunter  (bpm 0.8)
+    Bison Dele  (bpm -0.2)
+
+[1990s] Golden State Warriors
+    Donyell Marshall  (bpm 0.8)
+    Larry Hughes  (bpm -0.9)
+    Joe Smith  (bpm -2.3)
+
+[1990s] Houston Rockets
+    Charles Barkley  (bpm 4.9)
+    Walt Williams  (bpm 1.3)
+    Sam Mack  (bpm 0.9)
+    Cuttino Mobley  (bpm -0.3)
+
+[1990s] Indiana Pacers
+    Reggie Miller  (bpm 5.0)
+    Mark Jackson  (bpm 2.8)
+    Dale Davis  (bpm 0.8)
+    Jalen Rose  (bpm 0.7)
+    Austin Croshere  (bpm 0.7)
+    Travis Best  (bpm 0.1)
+
+[1990s] Los Angeles Clippers
+    Ike Austin  (bpm 0.6)
+    Tyrone Nesby  (bpm 0.5)
+    Lamond Murray  (bpm 0.0)
+    Derek Anderson  (bpm -0.1)
+    Malik Sealy  (bpm -0.8)
+    Loy Vaught  (bpm -1.1)
+    Maurice Taylor  (bpm -3.9)
+
+[1990s] Los Angeles Lakers
+    George McCloud  (bpm 0.3)
+
+[1990s] Memphis Grizzlies
+    Michael Dickerson  (bpm 0.0)
+    Anthony Peeler  (bpm -1.8)
+    Sam Mack  (bpm -1.9)
+    Blue Edwards  (bpm -2.2)
+    Tony Massenburg  (bpm -2.9)
+    Othella Harrington  (bpm -3.5)
+
+[1990s] Miami Heat
+    Voshon Lenard  (bpm 2.0)
+    Ike Austin  (bpm 0.6)
+    Brent Barry  (bpm 0.5)
+
+[1990s] Milwaukee Bucks
+    Alvin Robertson  (bpm 3.5)
+    Tim Thomas  (bpm -0.8)
+
+[1990s] Minnesota Timberwolves
+    Anthony Peeler  (bpm 0.6)
+    Malik Sealy  (bpm -0.6)
+    Joe Smith  (bpm -1.0)
+    Sam Mitchell  (bpm -1.1)
+
+[1990s] New York Knicks
+    Chris Mills  (bpm -0.4)
+
+[1990s] Oklahoma City Thunder
+    Ruben Patterson  (bpm 1.9)
+    Brent Barry  (bpm 1.8)
+
+[1990s] Orlando Magic
+    Gerald Wilkins  (bpm -2.5)
+    Ron Mercer  (bpm -3.1)
+
+[1990s] Philadelphia 76ers
+    Charles Barkley  (bpm 8.5)
+    Theo Ratliff  (bpm 1.1)
+    Clar. Weatherspoon  (bpm 0.1)
+    Tim Thomas  (bpm -0.5)
+    Matt Geiger  (bpm -0.8)
+    Joe Smith  (bpm -2.4)
+
+[1990s] Phoenix Suns
+    Charles Barkley  (bpm 7.0)
+    Wesley Person  (bpm 1.9)
+    Cedric Ceballos  (bpm -1.8)
+
+[1990s] Portland Trail Blazers
+    Rasheed Wallace  (bpm 1.9)
+    Steven Smith  (bpm 0.6)
+    Gary Trent  (bpm 0.1)
+
+[1990s] Sacramento Kings
+    Billy Owens  (bpm -0.3)
+    Corliss Williamson  (bpm -1.0)
+
+[1990s] Toronto Raptors
+    Walt Williams  (bpm 0.8)
+    Gary Trent  (bpm -0.8)
+    John Wallace  (bpm -3.0)
+
+[1990s] Utah Jazz
+    Olden Polynice  (bpm -2.8)
+
+[1990s] Washington Wizards
+    Rod Strickland  (bpm 2.6)
+    Tracy Murray  (bpm 1.3)
+    Chris Whitney  (bpm 1.1)
+    Juwan Howard  (bpm -0.4)
+    Gheorghe Muresan  (bpm -0.7)
+    Calbert Cheaney  (bpm -2.3)
+
+[2000s] Atlanta Hawks
+    Jamal Crawford  (bpm 2.4)
+
+[2000s] Boston Celtics
+    Delonte West  (bpm 1.5)
+    Rodney Rogers  (bpm 1.3)
+    Al Jefferson  (bpm 0.1)
+    Ricky Davis  (bpm -0.1)
+
+[2000s] Brooklyn Nets
+    Devin Harris  (bpm 1.9)
+    Courtney Lee  (bpm -1.4)
+
+[2000s] Charlotte Hornets
+    Boris Diaw  (bpm 1.1)
+    Emeka Okafor  (bpm 0.9)
+    Raymond Felton  (bpm 0.6)
+
+[2000s] Chicago Bulls
+    Luol Deng  (bpm 2.1)
+    Ben Gordon  (bpm 1.8)
+    Jamal Crawford  (bpm 1.1)
+    John Salmons  (bpm 0.3)
+    Jalen Rose  (bpm -0.1)
+    Ron Mercer  (bpm -1.9)
+
+[2000s] Cleveland Cavaliers
+    Clar. Weatherspoon  (bpm 3.2)
+    Mo Williams  (bpm 2.2)
+    Lamond Murray  (bpm 0.1)
+    Ricky Davis  (bpm -0.5)
+
+[2000s] Dallas Mavericks
+    Josh Howard  (bpm 2.2)
+
+[2000s] Detroit Pistons
+    Rasheed Wallace  (bpm 3.4)
+    Tayshaun Prince  (bpm 1.8)
+    Clifford Robinson  (bpm -0.1)
+    Rodney Stuckey  (bpm -0.5)
+    Ben Gordon  (bpm -1.4)
+
+[2000s] Golden State Warriors
+    Jamal Crawford  (bpm -1.3)
+
+[2000s] Houston Rockets
+    Cuttino Mobley  (bpm 1.1)
+    Trevor Ariza  (bpm 0.5)
+
+[2000s] Indiana Pacers
+    Brad Miller  (bpm 2.8)
+    Troy Murphy  (bpm 2.6)
+    Reggie Miller  (bpm 2.4)
+    Jalen Rose  (bpm 1.8)
+    Mike Dunleavy  (bpm 1.0)
+
+[2000s] Los Angeles Clippers
+    Jeff McInnis  (bpm -0.6)
+    Cuttino Mobley  (bpm -0.7)
+
+[2000s] Los Angeles Lakers
+    Andrew Bynum  (bpm 2.6)
+
+[2000s] Memphis Grizzlies
+    O.J. Mayo  (bpm -0.3)
+    Michael Dickerson  (bpm -2.2)
+
+[2000s] Miami Heat
+    Anthony Mason  (bpm 1.9)
+    Michael Beasley  (bpm -1.0)
+
+[2000s] Milwaukee Bucks
+    John Salmons  (bpm 1.6)
+    Ruben Patterson  (bpm 1.0)
+    Brandon Jennings  (bpm 0.7)
+
+[2000s] Minnesota Timberwolves
+    Al Jefferson  (bpm 2.0)
+    Ricky Davis  (bpm 0.3)
+    Rashad McCants  (bpm -0.8)
+    Randy Foye  (bpm -1.0)
+
+[2000s] New Orleans Pelicans
+    Marcus Thornton  (bpm 0.9)
+    Dan Dickau  (bpm 0.0)
+    Lee Nailon  (bpm -1.3)
+
+[2000s] New York Knicks
+    David Lee  (bpm 2.0)
+    Danilo Gallinari  (bpm 0.5)
+    Jamal Crawford  (bpm 0.3)
+    Eddy Curry  (bpm -2.0)
+
+[2000s] Oklahoma City Thunder
+    Ruben Patterson  (bpm 1.9)
+    Jeff Green  (bpm -0.7)
+    Flip Murray  (bpm -0.8)
+    Chris Wilcox  (bpm -0.9)
+
+[2000s] Philadelphia 76ers
+    Andre Iguodala  (bpm 3.2)
+    Theo Ratliff  (bpm 1.6)
+    Lou Williams  (bpm 1.4)
+    Kyle Korver  (bpm 0.8)
+
+[2000s] Phoenix Suns
+    Clifford Robinson  (bpm 0.9)
+
+[2000s] Portland Trail Blazers
+    Rasheed Wallace  (bpm 3.9)
+    Bonzi Wells  (bpm 1.6)
+    Steven Smith  (bpm 0.2)
+
+[2000s] Sacramento Kings
+    Brad Miller  (bpm 3.1)
+    Tyreke Evans  (bpm 1.3)
+    Bonzi Wells  (bpm 0.4)
+    Cuttino Mobley  (bpm -0.1)
+
+[2000s] San Antonio Spurs
+    George Hill  (bpm 0.9)
+
+[2000s] Toronto Raptors
+    T.J. Ford  (bpm 2.0)
+    Charlie Villanueva  (bpm -0.9)
+    Jalen Rose  (bpm -1.0)
+    Voshon Lenard  (bpm -1.0)
+
+[2000s] Utah Jazz
+    Ronnie Brewer  (bpm 3.2)
+    Mehmet Okur  (bpm 1.5)
+    Carlos Arroyo  (bpm 0.9)
+    Matt Harpring  (bpm 0.8)
+
+[2000s] Washington Wizards
+    Josh Howard  (bpm -3.3)
+
+[2010s] Atlanta Hawks
+    Paul Millsap  (bpm 3.7)
+    John Collins  (bpm 2.0)
+    Clint Capela  (bpm 1.4)
+
+[2010s] Boston Celtics
+    Isaiah Thomas  (bpm 5.7)
+
+[2010s] Brooklyn Nets
+    D'Angelo Russell  (bpm 2.5)
+    Spencer Dinwiddie  (bpm 1.2)
+    Gerald Green  (bpm 0.2)
+    Thaddeus Young  (bpm -0.0)
+    Caris LeVert  (bpm -0.4)
+
+[2010s] Charlotte Hornets
+    Al Jefferson  (bpm 2.1)
+    Nicolas Batum  (bpm 0.9)
+    Devonte' Graham  (bpm 0.5)
+    Terry Rozier  (bpm -0.4)
+    Ramon Sessions  (bpm -0.4)
+
+[2010s] Chicago Bulls
+    Nate Robinson  (bpm 2.8)
+    Otto Porter Jr.  (bpm 0.9)
+    Lauri Markkanen  (bpm -0.3)
+
+[2010s] Cleveland Cavaliers
+    Rodney Hood  (bpm -0.1)
+    Jordan Clarkson  (bpm -0.3)
+    Dion Waiters  (bpm -1.6)
+    Collin Sexton  (bpm -2.6)
+
+[2010s] Dallas Mavericks
+    Kristaps Porziņģis  (bpm 1.9)
+    Chandler Parsons  (bpm 1.9)
+    Monta Ellis  (bpm -0.2)
+    O.J. Mayo  (bpm -0.5)
+    Dennis Smith Jr.  (bpm -2.4)
+
+[2010s] Denver Nuggets
+    Nene  (bpm 3.6)
+    Danilo Gallinari  (bpm 2.3)
+    Ty Lawson  (bpm 2.3)
+    Arron Afflalo  (bpm 1.1)
+    Will Barton  (bpm 0.8)
+    Raymond Felton  (bpm 0.6)
+    Gary Harris  (bpm 0.1)
+
+[2010s] Detroit Pistons
+    Christian Wood  (bpm 3.1)
+    Brandon Jennings  (bpm 2.2)
+    Greg Monroe  (bpm 2.1)
+    Tobias Harris  (bpm 1.5)
+
+[2010s] Golden State Warriors
+    David Lee  (bpm 1.2)
+    Dorell Wright  (bpm 0.8)
+    Monta Ellis  (bpm 0.8)
+    Jarrett Jack  (bpm 0.5)
+    Eric Paschall  (bpm -2.7)
+
+[2010s] Houston Rockets
+    Lou Williams  (bpm 3.9)
+    Chandler Parsons  (bpm 1.6)
+
+[2010s] Indiana Pacers
+    Victor Oladipo  (bpm 5.3)
+    Malcolm Brogdon  (bpm 1.8)
+    T.J. Warren  (bpm 1.1)
+    Bojan Bogdanovic  (bpm 0.3)
+
+[2010s] Los Angeles Clippers
+    Danilo Gallinari  (bpm 4.3)
+    Montrezl Harrell  (bpm 3.2)
+    Lou Williams  (bpm 2.0)
+    Tobias Harris  (bpm 1.9)
+
+[2010s] Los Angeles Lakers
+    Andrew Bynum  (bpm 3.0)
+    Lou Williams  (bpm 1.3)
+    Jordan Clarkson  (bpm -0.6)
+    Kyle Kuzma  (bpm -1.4)
+
+[2010s] Memphis Grizzlies
+    Tyreke Evans  (bpm 4.5)
+    Brandon Clarke  (bpm 3.1)
+    Jeff Green  (bpm -0.2)
+
+[2010s] Miami Heat
+    Duncan Robinson  (bpm 0.5)
+    Dion Waiters  (bpm -0.7)
+    Kendrick Nunn  (bpm -2.3)
+
+[2010s] Milwaukee Bucks
+    Eric Bledsoe  (bpm 2.8)
+    Brandon Jennings  (bpm 2.2)
+    Greg Monroe  (bpm 2.0)
+    Nikola Mirotic  (bpm 1.5)
+    Monta Ellis  (bpm 0.4)
+    Jabari Parker  (bpm -0.1)
+    Brandon Knight  (bpm -0.5)
+
+[2010s] Minnesota Timberwolves
+    D'Angelo Russell  (bpm 1.9)
+    Nikola Pekovic  (bpm 0.4)
+    Michael Beasley  (bpm -1.9)
+
+[2010s] New Orleans Pelicans
+    Nikola Mirotic  (bpm 2.2)
+    Ryan Anderson  (bpm 1.3)
+    Tyreke Evans  (bpm 1.1)
+
+[2010s] New York Knicks
+    Trey Burke  (bpm 2.5)
+    Enes Freedom  (bpm 2.2)
+    Kristaps Porziņģis  (bpm 1.4)
+
+[2010s] Oklahoma City Thunder
+    Danilo Gallinari  (bpm 3.3)
+    Victor Oladipo  (bpm -0.5)
+    Dennis Schröder  (bpm -0.6)
+
+[2010s] Orlando Magic
+    Ryan Anderson  (bpm 4.2)
+    Victor Oladipo  (bpm 0.8)
+    Terrence Ross  (bpm 0.5)
+    Aaron Gordon  (bpm 0.4)
+    Tobias Harris  (bpm 0.1)
+    Evan Fournier  (bpm 0.0)
+    Arron Afflalo  (bpm -0.8)
+
+[2010s] Philadelphia 76ers
+    Lou Williams  (bpm 3.5)
+    Tobias Harris  (bpm 1.4)
+    Thaddeus Young  (bpm 1.1)
+    Alec Burks  (bpm 0.5)
+    Michael Carter-Williams  (bpm -0.5)
+
+[2010s] Phoenix Suns
+    Eric Bledsoe  (bpm 3.1)
+    Gerald Green  (bpm 1.0)
+    Brandon Knight  (bpm 0.6)
+    Deandre Ayton  (bpm 0.3)
+    T.J. Warren  (bpm -0.4)
+    Kelly Oubre Jr.  (bpm -0.7)
+
+[2010s] Portland Trail Blazers
+    Nicolas Batum  (bpm 2.9)
+    Jusuf Nurkić  (bpm 2.3)
+    Wesley Matthews  (bpm 2.2)
+    Enes Freedom  (bpm 1.0)
+
+[2010s] Sacramento Kings
+    Isaiah Thomas  (bpm 2.4)
+    Buddy Hield  (bpm 1.3)
+    Tyreke Evans  (bpm 1.1)
+    Marcus Thornton  (bpm 0.9)
+    De'Aaron Fox  (bpm 0.7)
+    Marvin Bagley III  (bpm -1.0)
+
+[2010s] San Antonio Spurs
+    Derrick White  (bpm 1.0)
+
+[2010s] Toronto Raptors
+    Lou Williams  (bpm 2.6)
+
+[2010s] Utah Jazz
+    Paul Millsap  (bpm 3.3)
+    Al Jefferson  (bpm 2.9)
+    Jordan Clarkson  (bpm 1.1)
+    Devin Harris  (bpm 0.7)
+    Bojan Bogdanovic  (bpm 0.1)
+
+[2010s] Washington Wizards
+    Trevor Ariza  (bpm 1.7)
+    Davis Bertans  (bpm 0.9)
+    Andray Blatche  (bpm -0.9)
+    Nick Young  (bpm -1.3)
+    Jabari Parker  (bpm -1.5)
+    Bojan Bogdanovic  (bpm -2.2)
+    Bobby Portis  (bpm -2.4)
+
+[2020s] Boston Celtics
+    Malcolm Brogdon  (bpm 2.8)
+    Evan Fournier  (bpm 1.1)
+
+[2020s] Brooklyn Nets
+    Spencer Dinwiddie  (bpm 0.7)
+    Cam Thomas  (bpm -1.2)
+
+[2020s] Charlotte Hornets
+    Montrezl Harrell  (bpm 3.9)
+    Terry Rozier  (bpm 1.3)
+    Devonte' Graham  (bpm 0.7)
+
+[2020s] Chicago Bulls
+    Thaddeus Young  (bpm 3.3)
+
+[2020s] Dallas Mavericks
+    Christian Wood  (bpm 1.7)
+
+[2020s] Denver Nuggets
+    Monte Morris  (bpm -0.1)
+    Will Barton  (bpm -0.8)
+
+[2020s] Detroit Pistons
+    Alec Burks  (bpm 1.2)
+    Bojan Bogdanovic  (bpm 0.8)
+    Malik Beasley  (bpm 0.8)
+    Jaden Ivey  (bpm -1.3)
+
+[2020s] Houston Rockets
+    Christian Wood  (bpm 1.5)
+
+[2020s] Indiana Pacers
+    Malcolm Brogdon  (bpm 2.1)
+
+[2020s] Los Angeles Clippers
+    Reggie Jackson  (bpm -0.5)
+    Marcus Morris Sr.  (bpm -1.0)
+
+[2020s] Los Angeles Lakers
+    Montrezl Harrell  (bpm 3.0)
+
+[2020s] Miami Heat
+    Terry Rozier  (bpm 0.2)
+    Kendrick Nunn  (bpm -0.5)
+    Victor Oladipo  (bpm -1.8)
+
+[2020s] Minnesota Timberwolves
+    Patrick Beverley  (bpm 2.7)
+    Malik Beasley  (bpm -0.4)
+
+[2020s] New York Knicks
+    Evan Fournier  (bpm -0.7)
+    Bojan Bogdanovic  (bpm -3.2)
+
+[2020s] Oklahoma City Thunder
+    Darius Bazley  (bpm -2.4)
+
+[2020s] Orlando Magic
+    Mo Bamba  (bpm 0.7)
+    Cole Anthony  (bpm 0.4)
+    Markelle Fultz  (bpm 0.1)
+
+[2020s] Portland Trail Blazers
+    Malcolm Brogdon  (bpm 2.0)
+
+[2020s] Utah Jazz
+    Bojan Bogdanovic  (bpm -0.1)
+
+[2020s] Washington Wizards
+    Alex Sarr  (bpm -0.5)
