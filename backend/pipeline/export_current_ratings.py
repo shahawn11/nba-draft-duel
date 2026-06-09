@@ -39,7 +39,17 @@ def _load(n, fn):
 kr = _load("kr", "k2_resolve.py")
 cal = _load("cal", "k2_calibrate.py")
 
-W_2K = 0.50   # 50/50 BBRef / 2K blend (same weight as the decade blend)
+W_2K = 0.60   # lean toward the 2K current card; BBRef is the differentiating half
+
+# Current-form BBRef -> game scale. The SHARED decade calibration plateaus at 77
+# across bb 26-77, which collapses ~every current starter to 77 and caps stars.
+# This dedicated curve SPREADS the current single-season distribution so this
+# season's production actually differentiates players (and lifts the field).
+# (bb is the raw 0-100 score_player formula value; anchors below were set from
+# the current-season bb percentiles.) Draft-pool ratings are unaffected.
+CF_ANCHORS = [(9, 68), (18, 71), (27, 74), (36, 77), (47, 80),
+              (60, 83), (77, 87), (86, 91), (92, 95), (100, 99)]
+cf_scale = cal._piecewise(CF_ANCHORS)
 
 
 def _bbref_form(scoring, row) -> float:
@@ -67,9 +77,11 @@ def main():
 
     from app import dataset, scoring
     pools = dataset.historical_pool()
-    f, _mono = cal.build_f(kr, idx, pools, scoring, cur)
+    f, _mono = cal.build_f(kr, idx, pools, scoring, cur)  # only used for sanity refs
 
     season = cur.execute("SELECT MAX(season) FROM players").fetchone()[0]
+    current_names = {r["name"] for r in
+                     cur.execute("SELECT name FROM players WHERE season=?", (season,))}
 
     # Most-recent season row per player name (prefer the current season; a star
     # who missed it falls back to his last DB season for the production half).
@@ -82,30 +94,34 @@ def main():
         latest[r["name"]] = r   # ordered ascending -> last write is most recent
 
     out: dict[str, float] = {"__season__": season}
-    n_card = n_bbonly = 0
+    n_blend = n_inject = n_bbonly = 0
     for name, row in latest.items():
         card = idx.get(kr.ALIAS.get(kr.norm(name), kr.norm(name)), {}).get("current", 0)
-        # Only active players are offline opponents: those who played the current
-        # season, or current-roster stars who carry a 2K "current" card (e.g.
-        # returning from injury). Skip retired/historical-only names.
-        if not card and row["season"] != season:
+        played = name in current_names
+        if not card and not played:
+            continue   # retired / no data
+        if not played:
+            # Out the ENTIRE current season (e.g. Tatum, Haliburton): no this-
+            # season production to blend -> use the 2K current card directly.
+            out[name] = float(card)
+            n_inject += 1
             continue
         bb = _bbref_form(scoring, row)
         if card:
-            blend = round((1 - W_2K) * f(bb) + W_2K * card, 1)
-            n_card += 1
+            out[name] = round((1 - W_2K) * cf_scale(bb) + W_2K * card, 1)
+            n_blend += 1
         else:
-            blend = round(f(bb), 1)   # no current card -> BBRef-only (still 2K scale)
+            out[name] = round(cf_scale(bb), 1)   # active, no card -> BBRef-only
             n_bbonly += 1
-        out[name] = blend
 
     dest = HERE.parent / "app/data/current_ratings.json"
     dest.write_text(json.dumps(out, indent=0, ensure_ascii=False))
-    print(f"wrote {dest}: season={season}, {n_card} blended (w/ 2K card), "
-          f"{n_bbonly} BBRef-only, {len(out)-1} total")
+    print(f"wrote {dest}: season={season}, {n_blend} blended, {n_inject} 2K-only "
+          f"(missed season), {n_bbonly} BBRef-only, {len(out)-1} total")
     # spot check
     for nm in ["Nikola Jokić", "Shai Gilgeous-Alexander", "Luka Dončić",
-               "Victor Wembanyama", "Jayson Tatum", "Stephen Curry"]:
+               "Victor Wembanyama", "Jayson Tatum", "Tyrese Haliburton",
+               "Stephen Curry", "Jaylen Brown", "Aaron Gordon", "Bub Carrington"]:
         if nm in out:
             print(f"  {nm:<28} {out[nm]}")
     conn.close()

@@ -63,8 +63,8 @@ CURATED_STARTING_FIVES: dict[str, list[tuple[str, str]]] = {
         ("Jabari Smith Jr.", "PF"), ("Alperen Sengun", "C"),
     ],
     "Indiana Pacers": [
-        ("Andrew Nembhard", "PG"), ("Aaron Nesmith", "SG"), ("Pascal Siakam", "SF"),
-        ("Jarace Walker", "PF"), ("Ivica Zubac", "C"),
+        ("Tyrese Haliburton", "PG"), ("Andrew Nembhard", "SG"), ("Aaron Nesmith", "SF"),  # *
+        ("Pascal Siakam", "PF"), ("Ivica Zubac", "C"),
     ],
     "Los Angeles Clippers": [
         ("Darius Garland", "PG"), ("Bennedict Mathurin", "SG"), ("Kawhi Leonard", "SF"),
