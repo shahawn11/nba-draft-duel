@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import time
 
-from . import db, game
+from . import db, game, pvp_ai
 from .models import player_from_dict
 from .scoring import score_player, roll_status
 from .positions import SLOTS
@@ -23,19 +23,9 @@ from . import rating
 
 ROUND_SECONDS = 10
 INTRO_SECONDS = 3.6      # brief pause after match-up so the intro animation plays
-AI_WAIT_SECONDS = 60     # how long to wait for a human before falling back to AI
+AI_WAIT_SECONDS = 30     # how long to wait for a human before falling back to AI
 NUM_ROUNDS = len(SLOTS)
 _INVERSE = {"win": "loss", "loss": "win", "tie": "tie"}
-
-
-def _ai_record() -> dict:
-    """The fabricated record for the AI fallback opponent (never persisted)."""
-    return {
-        "username": "Guest", "display_name": "Guest",
-        "wins": 0, "losses": 0, "rating": 1000, "peak_rating": 1000,
-        "tier": "Amateur", "next_tier": "Pro", "next_tier_at": 1500,
-        "avatar": "amateur", "unlocked": ["amateur"], "achievements": [],
-    }
 
 
 class PlayerLeft(Exception):
@@ -62,7 +52,7 @@ class Player:
         return [player_from_dict(p["player"]) for p in self.picks]
 
     def record(self) -> dict:
-        return _ai_record() if self.is_ai else db.get_record(self.username)
+        return db.get_record(self.username)
 
     async def send(self, msg: dict) -> None:
         if self.is_ai:
@@ -240,15 +230,18 @@ class LiveGame:
         self.b.done.set()
 
     def _settle(self, p: Player, payload: dict, outcome: str, old_rating: int) -> None:
-        """Apply a finished result for one player. The AI ('Guest') is cosmetic
-        only -- its record/rating/achievements are never persisted."""
+        """Apply a finished result for one player. The AI plays a REAL account:
+        its W/L + rating persist (so it ranks on the leaderboard), but cosmetic
+        extras (achievements, best-team, streak UI) are skipped."""
         prev_tier = rating.tier_name(old_rating)
         if p.is_ai:
-            payload["record"] = _ai_record()
+            db.apply_result(p.username, outcome)
+            rec = db.get_record(p.username)
+            payload["record"] = rec
             payload["ranked"] = True
-            payload["rating_change"] = 0
+            payload["rating_change"] = rec["rating"] - old_rating
             payload["previous_tier"] = prev_tier
-            payload["promoted"] = False
+            payload["promoted"] = payload["rating_change"] > 0 and rec["tier"] != prev_tier
             return
         db.apply_result(p.username, outcome)
         _, newly = db.award_achievements(p.username, outcome == "win", payload["your_team"]["players"])
@@ -265,7 +258,8 @@ class LiveGame:
 
     async def _handle_left(self, left: Player) -> None:
         other = self.b if left is self.a else self.a
-        rec = other.record() if other.is_ai else db.apply_result(other.username, "win")
+        # The stayer wins; their record persists (AI accounts included).
+        rec = db.apply_result(other.username, "win")
         await other.send({"type": "opponent_left", "record": rec})
         self.a.done.set()
         self.b.done.set()
@@ -309,7 +303,7 @@ class LiveManager:
                         if start_ai:
                             self.waiting = None
                     if start_ai:
-                        ai = Player(None, "Guest", is_ai=True)
+                        ai = Player(None, pvp_ai.pick_ai_identity(), is_ai=True)
                         await LiveGame(p, ai).run()
                     else:
                         # A human matched us right at the deadline; their game
