@@ -174,8 +174,10 @@ SG_PASSFIRST_APG = 4.5
 # Bonus side (NEW, the strategic lever): hitting a slot's SIGNATURE quality earns
 # a STEPPED bonus -- multiple cutoffs so even a lower-minutes player who clears
 # the first tier is still rewarded, while elite production is worth much more.
-# The signature is a value FUNCTION of the player (SF rewards all-around
-# versatility = pts+reb+ast, not pure scoring). Highest tier met wins.
+# The signature is a value FUNCTION of the player. SF rewards all-around
+# VERSATILITY (pts+reb+ast) with EACH category capped (pts<=22, reb<=10, ast<=10)
+# so a one-dimensional high scorer can't game it -- real reb/ast production is
+# required to climb the tiers. Highest tier met wins.
 # slot -> (value_fn, [(threshold, bonus, label), ...] descending)
 FIT_BONUS_TIERS: dict[str, tuple] = {
     "PG": (lambda p: p.apg or 0.0, [
@@ -186,9 +188,9 @@ FIT_BONUS_TIERS: dict[str, tuple] = {
         (26.0, 3.0, "flamethrower"),
         (22.0, 2.0, "bucket-getter"),
         (18.0, 1.0, "scoring guard")]),
-    "SF": (lambda p: (p.ppg or 0.0) + (p.rpg or 0.0) + (p.apg or 0.0), [
-        (44.0, 3.0, "point forward"),
-        (36.0, 2.0, "two-way force"),
+    "SF": (lambda p: min(p.ppg or 0.0, 22.0) + min(p.rpg or 0.0, 10.0) + min(p.apg or 0.0, 10.0), [
+        (40.0, 3.0, "point forward"),
+        (34.0, 2.0, "two-way force"),
         (28.0, 1.0, "do-it-all wing")]),
     "PF": (lambda p: p.rpg or 0.0, [
         (11.0, 3.0, "the enforcer"),
