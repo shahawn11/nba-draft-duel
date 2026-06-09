@@ -19,8 +19,8 @@ from __future__ import annotations
 
 CURATED_STARTING_FIVES: dict[str, list[tuple[str, str]]] = {
     "Atlanta Hawks": [
-        ("Dyson Daniels", "PG"), ("CJ McCollum", "SG"), ("Zaccharie Risacher", "SF"),
-        ("Jalen Johnson", "PF"), ("Onyeka Okongwu", "C"),
+        ("Dyson Daniels", "PG"), ("CJ McCollum", "SG"), ("Jalen Johnson", "SF"),
+        ("Zaccharie Risacher", "PF"), ("Onyeka Okongwu", "C"),
     ],
     "Boston Celtics": [
         ("Derrick White", "PG"), ("Jaylen Brown", "SG"), ("Jayson Tatum", "SF"),  # *
@@ -40,7 +40,7 @@ CURATED_STARTING_FIVES: dict[str, list[tuple[str, str]]] = {
     ],
     "Cleveland Cavaliers": [
         ("James Harden", "PG"), ("Donovan Mitchell", "SG"), ("Jaylon Tyson", "SF"),
-        ("Dean Wade", "PF"), ("Evan Mobley", "C"),
+        ("Evan Mobley", "PF"), ("Jarrett Allen", "C"),
     ],
     "Dallas Mavericks": [
         ("Ryan Nembhard", "PG"), ("Max Christie", "SG"), ("Cooper Flagg", "SF"),
@@ -75,7 +75,7 @@ CURATED_STARTING_FIVES: dict[str, list[tuple[str, str]]] = {
         ("Rui Hachimura", "PF"), ("Deandre Ayton", "C"),
     ],
     "Memphis Grizzlies": [
-        ("Cam Spencer", "PG"), ("Cedric Coward", "SG"), ("Jaylen Wells", "SF"),
+        ("Ja Morant", "PG"), ("Cedric Coward", "SG"), ("Jaylen Wells", "SF"),  # Morant *
         ("GG Jackson", "PF"), ("Santi Aldama", "C"),
     ],
     "Miami Heat": [
@@ -95,8 +95,8 @@ CURATED_STARTING_FIVES: dict[str, list[tuple[str, str]]] = {
         ("Zion Williamson", "PF"), ("Derik Queen", "C"),
     ],
     "New York Knicks": [
-        ("Jalen Brunson", "PG"), ("Mikal Bridges", "SG"), ("OG Anunoby", "SF"),
-        ("Josh Hart", "PF"), ("Karl-Anthony Towns", "C"),
+        ("Jalen Brunson", "PG"), ("Josh Hart", "SG"), ("OG Anunoby", "SF"),
+        ("Mikal Bridges", "PF"), ("Karl-Anthony Towns", "C"),
     ],
     "Oklahoma City Thunder": [
         ("Shai Gilgeous-Alexander", "PG"), ("Luguentz Dort", "SG"), ("Jalen Williams", "SF"),
@@ -124,7 +124,7 @@ CURATED_STARTING_FIVES: dict[str, list[tuple[str, str]]] = {
     ],
     "San Antonio Spurs": [
         ("De'Aaron Fox", "PG"), ("Stephon Castle", "SG"), ("Devin Vassell", "SF"),
-        ("Harrison Barnes", "PF"), ("Victor Wembanyama", "C"),
+        ("Julian Champagnie", "PF"), ("Victor Wembanyama", "C"),
     ],
     "Toronto Raptors": [
         ("Immanuel Quickley", "PG"), ("RJ Barrett", "SG"), ("Brandon Ingram", "SF"),
@@ -135,7 +135,7 @@ CURATED_STARTING_FIVES: dict[str, list[tuple[str, str]]] = {
         ("Jaren Jackson Jr.", "PF"), ("Jusuf Nurkić", "C"),
     ],
     "Washington Wizards": [
-        ("Bub Carrington", "PG"), ("Bilal Coulibaly", "SG"), ("Kyshawn George", "SF"),
-        ("Will Riley", "PF"), ("Alex Sarr", "C"),
+        ("Trae Young", "PG"), ("Bilal Coulibaly", "SG"), ("Kyshawn George", "SF"),  # Young *
+        ("Anthony Davis", "PF"), ("Alex Sarr", "C"),  # Davis *
     ],
 }
