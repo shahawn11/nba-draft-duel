@@ -18,13 +18,13 @@ from . import db
 
 # Realistic basketball/NBA-flavored handles (username == display name).
 AI_USERNAMES: list[str] = [
-    "mambaforever8", "ballin_braydon", "hoopdreamz23", "swishgod",
-    "ankle_snatcher", "downtown_dwill", "dimedealer7", "splash_bro30",
-    "buckets4days", "kingofthe4th", "crossover_kingz", "rimwrecker",
-    "boardman_gets", "iso_killa", "pnr_machine", "fadeaway_fred",
-    "eurostep_eli", "the_real_hooper", "clutch_gene21", "netripper99",
-    "greenlightgunner", "and1_andy", "court_vision11", "iceintheveins",
-    "baseline_bully", "triple_dub_dan",
+    "MambaForever24", "bb_braydon", "dreamzzz23", "swishgod",
+    "ankle_breaker", "downtown_dwill", "DameDolla", "splash_bro30",
+    "bucketzzz", "kingofthe4th", "crossover21", "wrecker",
+    "boardman_gets_paid", "Iso_Joe", "death_machine", "Fadeaway",
+    "Euro_Bro", "DaReal", "clutch_gene21", "netripper99",
+    "greenlight", "And1", "Visonzz", "Icyy",
+    "BBL_Drizzy", "Westbrick",
 ]
 
 _ensured: set[str] = set()
