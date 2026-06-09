@@ -141,7 +141,13 @@ DUEL_STRETCH = 1.5      # mild stretch: meaningful, not blown-out, separation
 # player varies by ~the same PERCENTAGE around his level (a star's good/bad
 # night moves more points than a role player's), rather than a flat absolute
 # swing that made scrubs the most volatile in relative terms.
-SIM_REL_SIGMA = 0.18    # per-player performance swing (std dev, fraction of power)
+SIM_REL_SIGMA = 0.12    # per-player performance swing (std dev, fraction of power)
+# The gem tiers (Sapphire and up) are CONSISTENT stars: their DOWNSIDE swing is
+# dampened so a bad night doesn't sink them as far (the floor rises), while their
+# upside is unchanged. Role players keep the full symmetric swing.
+GEM_TIER_MIN = 88          # Sapphire+ (the gem-named tiers: Sapphire/Amethyst/Diamond/GOAT)
+GEM_DOWNSIDE_DAMP = 0.5    # negative swings for gem tiers are halved
+GOAT_DOWNSIDE_DAMP = 0.25  # GOAT (98+) is the most consistent: downside dampened further
 MATCHUP_WIN_BONUS = 3.0 # small team strength bonus per positional matchup won
 # Positional fit quality (added to team total, in rating points). Slots are
 # forced, so balance is automatic; instead we judge how well each player suits
@@ -561,7 +567,15 @@ def _sim_score(rng, rating_value: float, eff_adjust: float,
     the player gained/lost vs a clean baseline (no fit/size adjust, no hot/slump)
     under the SAME random swing -- i.e. the net effect of bonuses & penalties.
     """
-    swing = 1.0 + rng.gauss(0.0, SIM_REL_SIGMA)
+    swing = rng.gauss(0.0, SIM_REL_SIGMA)
+    # Gem tiers don't fall as far on a bad night (floor rises, upside unchanged);
+    # GOAT is the most consistent of all, so its downside is dampened the most.
+    if swing < 0:
+        if rating_value >= 98:
+            swing *= GOAT_DOWNSIDE_DAMP
+        elif rating_value >= GEM_TIER_MIN:
+            swing *= GEM_DOWNSIDE_DAMP
+    swing = 1.0 + swing
     score = duel_power(rating_value, eff_adjust) * swing
     baseline = max(0.0, duel_power(rating_value, 0.0) * swing)
     if status == "hot":
