@@ -191,7 +191,7 @@ FIT_BONUS_TIERS: dict[str, tuple] = {
     "SF": (lambda p: min(p.ppg or 0.0, 22.0) + min(p.rpg or 0.0, 10.0) + min(p.apg or 0.0, 10.0), [
         (40.0, 3.0, "point forward"),
         (34.0, 2.0, "two-way force"),
-        (28.0, 1.0, "do-it-all wing")]),
+        (25.0, 1.0, "do-it-all wing")]),    # ~15/5/5 balanced role wing
     "PF": (lambda p: p.rpg or 0.0, [
         (11.0, 3.0, "the enforcer"),
         (9.0, 2.0, "glass cleaner"),
