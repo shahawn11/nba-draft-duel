@@ -201,8 +201,8 @@ FIT_BONUS_TIERS: dict[str, tuple] = {
 }
 # Stat-stuffing bonuses (slot-independent, stack on top of the signature bonus):
 # a player who averages a double/triple-double is valuable anywhere.
-DOUBLE_DOUBLE_BONUS = 1.5   # >=10 in two of pts/reb/ast
-TRIPLE_DOUBLE_BONUS = 3.0   # >=10 in all three (rare -- a jackpot)
+DOUBLE_DOUBLE_BONUS = 1.0   # >=10 in two of pts/reb/ast (does NOT stack with TD)
+TRIPLE_DOUBLE_BONUS = 3.0   # >=10 in all three -- averaging a triple-double (rare jackpot)
 # Size/physical mismatch at a matchup. Uses real height (inches) when both
 # players have it, else falls back to a rebounding proxy. Weighted to matter --
 # player matchups are the focus, especially for PvP.
