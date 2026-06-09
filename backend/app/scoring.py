@@ -154,20 +154,47 @@ MATCHUP_WIN_BONUS = 3.0 # small team strength bonus per positional matchup won
 # their slot. A slot expects a signature stat -- a PG should create (assists),
 # a center should rebound -- and players short of it are penalized while strong
 # fits earn a small bonus. (attr, expected, weight, good_label, bad_note)
+# Penalty side (UNCHANGED): a player short of a slot's expected primary stat is
+# nudged down. PF/C size is judged by HEIGHT (a tall big isn't "undersized" even
+# with modest rebounds); falls back to rebounds only when height is unknown.
 SLOT_EXPECTATION: dict[str, dict] = {
     "PG": {"primary": ("apg", 5.0, 0.6), "good": "floor general", "bad": "not a true PG"},
     "SG": {"primary": ("ppg", 16.0, 0.2), "good": "scoring guard", "bad": "pass-first SG"},
     "SF": {"primary": ("ppg", 14.0, 0.2), "good": "scoring wing", "bad": "secondary scorer at SF"},
-    # PF/C size is judged by HEIGHT (a tall big isn't "undersized" even with
-    # modest rebounds). Falls back to rebounds only when height is unknown.
     "PF": {"primary": ("height_in", 80.0, 0.35), "fallback": ("rpg", 6.0, 0.5),
            "good": "good size at PF", "bad": "undersized PF"},
     "C": {"primary": ("height_in", 82.0, 0.45), "fallback": ("rpg", 9.0, 0.7),
           "good": "true center", "bad": "undersized at C"},
 }
-FIT_BONUS_SCALE = 0.25      # fraction of the surplus turned into a bonus
-MAX_FIT_BONUS = 1.0         # cap on per-player fit bonus
-MAX_FIT_PENALTY = 1.0       # cap on per-player fit penalty (fit is a light nudge: -1..+1)
+MAX_FIT_PENALTY = 1.0       # cap on per-player fit penalty (penalties stay light)
+# A SG who scores little is only "pass-first" if he ACTUALLY creates (assists);
+# otherwise he's just a limited scorer at the slot.
+SG_PASSFIRST_APG = 4.5
+
+# Bonus side (NEW, the strategic lever): hitting a slot's SIGNATURE stat earns a
+# STEPPED bonus -- multiple cutoffs so even a lower-minutes player who clears the
+# first tier is still rewarded, while elite production is worth much more. The
+# bonus is a flat duel-score nudge (tier-independent, like fit), computed on the
+# signature stat alone (so e.g. an undersized but elite-rebounding PF still earns
+# the rebounding bonus on top of any height penalty). Highest tier met wins.
+# slot -> (signature stat, [(threshold, bonus, label), ...] descending)
+FIT_BONUS_TIERS: dict[str, tuple[str, list]] = {
+    "PG": ("apg", [(10.0, 3.0, "elite floor general"),
+                   (8.0, 2.0, "floor general"),
+                   (6.0, 1.0, "true point guard")]),
+    "SG": ("ppg", [(26.0, 3.0, "elite scorer"),
+                   (22.0, 2.0, "go-to scorer"),
+                   (18.0, 1.0, "scoring guard")]),
+    "SF": ("ppg", [(25.0, 3.0, "elite wing scorer"),
+                   (20.0, 2.0, "go-to wing"),
+                   (16.0, 1.0, "scoring wing")]),
+    "PF": ("rpg", [(11.0, 3.0, "elite rebounder"),
+                   (9.0, 2.0, "strong rebounder"),
+                   (7.0, 1.0, "rebounding forward")]),
+    "C":  ("rpg", [(14.0, 3.0, "elite rebounder"),
+                   (12.0, 2.0, "dominant on the glass"),
+                   (9.0, 1.0, "rebounding center")]),
+}
 # Size/physical mismatch at a matchup. Uses real height (inches) when both
 # players have it, else falls back to a rebounding proxy. Weighted to matter --
 # player matchups are the focus, especially for PvP.
@@ -384,38 +411,50 @@ def evaluate_fit(players: list[PlayerStats]) -> tuple[float, list[str], dict]:
     deltas: dict[str, float] = {}
 
     for p in players:
+        delta = 0.0
+        # --- Penalty (unchanged): short of the slot's expected primary stat ---
         spec = SLOT_EXPECTATION.get(p.position)
-        if not spec:
-            continue  # SG/SF handled below via dict too; SG/SF have specs
-        attr, expected, weight = spec["primary"]
-        value = getattr(p, attr)
-        is_height = attr == "height_in"
-        if is_height and not value and "fallback" in spec:
-            attr, expected, weight = spec["fallback"]
+        if spec:
+            attr, expected, weight = spec["primary"]
             value = getattr(p, attr)
-            is_height = False
+            is_height = attr == "height_in"
+            if is_height and not value and "fallback" in spec:
+                attr, expected, weight = spec["fallback"]
+                value = getattr(p, attr)
+                is_height = False
+            if value < expected:
+                pen = min(MAX_FIT_PENALTY, round((expected - value) * weight, 1))
+                if pen >= 0.1:
+                    delta -= pen
+                    if is_height:
+                        detail = format_height(value)
+                    elif attr == "rpg":
+                        detail = "low rebounds"
+                    elif attr == "apg":
+                        detail = "low assists"
+                    else:
+                        detail = "low scoring"
+                    bad_label = spec["bad"]
+                    # "Pass-first SG" only fits if he actually creates; a low-
+                    # scoring AND low-assist guard is just a limited scorer.
+                    if p.position == "SG" and (p.apg or 0.0) < SG_PASSFIRST_APG:
+                        bad_label = "limited scorer at SG"
+                    notes.append(f"{p.name} — {bad_label} ({detail}) (-{pen:.1f})")
 
-        if value < expected:
-            pen = min(MAX_FIT_PENALTY, round((expected - value) * weight, 1))
-            if pen < 0.1:
-                continue
-            adjustment -= pen
-            deltas[p.name] = -pen
-            if is_height:
-                detail = format_height(value)
-            elif attr == "rpg":
-                detail = "low rebounds"
-            elif attr == "apg":
-                detail = "low assists"
-            else:
-                detail = "low scoring"
-            notes.append(f"{p.name} — {spec['bad']} ({detail}) (-{pen:.1f})")
-        else:
-            bonus = min(MAX_FIT_BONUS, round((value - expected) * weight * FIT_BONUS_SCALE, 1))
-            if bonus >= 0.5:
-                adjustment += bonus
-                deltas[p.name] = bonus
-                notes.append(f"{p.name} — {spec['good']} (+{bonus:.1f})")
+        # --- Bonus (stepped): clearing a signature-stat cutoff earns a bonus ---
+        sig = FIT_BONUS_TIERS.get(p.position)
+        if sig:
+            sig_attr, tiers = sig
+            v = getattr(p, sig_attr) or 0.0
+            for thresh, bonus, label in tiers:   # descending -> highest met wins
+                if v >= thresh:
+                    delta += bonus
+                    notes.append(f"{p.name} — {label} (+{bonus:.1f})")
+                    break
+
+        if abs(delta) >= 0.05:
+            adjustment += delta
+            deltas[p.name] = round(delta, 1)
 
     return adjustment, notes, deltas
 
