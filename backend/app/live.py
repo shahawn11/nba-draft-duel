@@ -21,7 +21,7 @@ from .scoring import score_player, roll_status
 from .positions import SLOTS
 from . import rating
 
-ROUND_SECONDS = 10
+ROUND_SECONDS = 24       # per-round draft clock (matches a 24s shot clock)
 INTRO_SECONDS = 3.6      # brief pause after match-up so the intro animation plays
 AI_WAIT_SECONDS = 30     # how long to wait for a human before falling back to AI
 NUM_ROUNDS = len(SLOTS)
