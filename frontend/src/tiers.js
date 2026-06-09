@@ -11,9 +11,9 @@ export const TIERS = {
   diamond:  { label: '💎', cost: 75, name: 'Diamond' },
   amethyst: { label: '🔮', cost: 63, name: 'Amethyst' },
   sapphire: { label: '🔷', cost: 54, name: 'Sapphire' },
-  gold:     { label: '🥇', cost: 46, name: 'Gold' },
-  silver:   { label: '🥈', cost: 40, name: 'Silver' },
-  bronze:   { label: '🥉', cost: 34, name: 'Bronze' },
+  gold:     { label: '', cost: 46, name: 'Gold' },
+  silver:   { label: '', cost: 40, name: 'Silver' },
+  bronze:   { label: '', cost: 34, name: 'Bronze' },
   unranked: { label: '–',  cost: 28, name: 'Unranked' },
 }
 

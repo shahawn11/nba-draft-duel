@@ -12,7 +12,7 @@ export default function TierBadge({ tier, cost, size, title }) {
       className={`tier-pill ${tierClass(t)} ${size === 'sm' ? 'sm' : ''}`}
       title={title || `${meta.name} tier${cost != null ? ` · cost ${cost}` : ''}`}
     >
-      <span className="tier-letter">{meta.label}</span>
+      {meta.label && <span className="tier-letter">{meta.label}</span>}
       {cost != null && <span className="tier-cost">${cost}</span>}
     </span>
   )
