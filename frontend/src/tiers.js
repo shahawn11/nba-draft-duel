@@ -7,8 +7,8 @@
 //   bronze — copper            unranked — plain
 // Tier ids are lowercase and match the backend payload's `tier` field exactly.
 export const TIERS = {
-  goat:     { label: '👑', cost: 82, name: 'GOAT' },
-  diamond:  { label: '💎', cost: 75, name: 'Diamond' },
+  goat:     { label: '👑', cost: 80, name: 'GOAT' },
+  diamond:  { label: '💎', cost: 73, name: 'Diamond' },
   amethyst: { label: '🔮', cost: 63, name: 'Amethyst' },
   sapphire: { label: '🔷', cost: 54, name: 'Sapphire' },
   gold:     { label: '', cost: 46, name: 'Gold' },
