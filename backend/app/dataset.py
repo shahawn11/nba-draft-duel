@@ -28,6 +28,22 @@ MIN_CANDIDATES = POOL_SIZE
 MAX_CANDIDATES = POOL_SIZE
 PEAK_MIN_GP = 25        # a season needs this many games to qualify as the "peak"
 
+# Real heights (inches) for draftable players the pipeline left without one
+# (mostly 1990s rows). Used as a fallback so the fit/size logic judges them on
+# true size instead of the rebound proxy. Keyed by player name.
+HEIGHT_OVERRIDES: dict[str, float] = {
+    "Luc Longley": 86,        # 7'2"
+    "Matt Geiger": 84,        # 7'0"
+    "Chris Gatling": 82,      # 6'10"
+    "Chris Mullin": 78,       # 6'6"
+    "Todd Day": 78,           # 6'6"
+    "Eddie Johnson": 79,      # 6'7"
+    "Isaiah Rider": 77,       # 6'5"
+    "Sam Mack": 79,           # 6'7"
+    "Vinny Del Negro": 76,    # 6'4"
+    "Mookie Blaylock": 72,    # 6'0"
+}
+
 
 def _blended_by_key(path: Path) -> dict[str, dict[str, tuple[float, PlayerStats]]]:
     """Per (decade|team, player): a PlayerStats whose scoring stats are a 50/50
@@ -75,7 +91,7 @@ def _blended_by_key(path: Path) -> dict[str, dict[str, tuple[float, PlayerStats]
             "gp": float(r["gp"]) if has_gp and r["gp"] else 1.0,
             "position": r["position"],
             "eligible": (r["eligible"] if has_elig else "") or "",
-            "height_in": (r["height_in"] if has_height else 0.0) or 0.0,
+            "height_in": (r["height_in"] if has_height else 0.0) or HEIGHT_OVERRIDES.get(r["name"], 0.0),
             "season": (r["season"] if has_season else "") or "",
         })
 
