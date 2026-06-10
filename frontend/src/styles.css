@@ -1089,9 +1089,9 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 104px;
-  height: 92px;
-  margin: -50px 0 0 -52px;
+  width: 112px;
+  height: 104px;
+  margin: -56px 0 0 -56px;
   z-index: 0;
   pointer-events: none;
   opacity: 0.9;
