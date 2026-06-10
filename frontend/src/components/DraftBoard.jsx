@@ -1,9 +1,11 @@
 // Sequential draft with free slot choice + UX polish.
 // Interaction: click a player card -> a modal shows the open slots that player
 // can fill -> click a slot to draft them there. Ineligible players are locked.
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { startMusic, stopMusic } from '../music.js'
 import TierBadge from './TierBadge.jsx'
+// Lazy so the three.js bundle only loads when a GOAT card actually appears.
+const Crown3D = lazy(() => import('./Crown3D.jsx'))
 import { tierClass } from '../tiers.js'
 
 const SLOTS = ['PG', 'SG', 'SF', 'PF', 'C']
@@ -87,6 +89,7 @@ function Candidate({ p, index, onSelect, busy, openSlots }) {
       disabled={!eligible || busy}
       onClick={() => eligible && onSelect(p)}
     >
+      {p.tier === 'goat' && <Suspense fallback={null}><Crown3D /></Suspense>}
       <div className="cand-top">
         <TierBadge tier={p.tier} cost={p.cost} />
         <span className="pos-badges">
