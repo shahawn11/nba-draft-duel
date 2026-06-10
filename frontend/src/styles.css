@@ -1061,9 +1061,9 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
 }
 
 /* Left-edge accent stripe on a draft card, colored by tier. */
-/* GOAT draft card — legendary: three layered animations — a breathing gold
-   halo (pulsing glow + shimmering border), a slow rotating light beam, and a
-   periodic diagonal flash sweep. Clearly a class above a Gold card. */
+/* GOAT draft card — legendary: a breathing gold halo (pulsing glow + shimmering
+   border), a slowly turning 3D crown watermark in the center, and a periodic
+   diagonal flash sweep. Clearly a class above a Gold card. */
 .candidate.tier-card.tier-goat {
   position: relative;
   overflow: hidden;
@@ -1076,6 +1076,7 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
     radial-gradient(120% 80% at 50% -10%, rgba(255, 226, 130, 0.18), transparent 60%),
     var(--panel-2);
   animation: goatGlow 2.8s ease-in-out infinite;
+  perspective: 600px;   /* gives the 3D crown (::before) real depth */
 }
 @keyframes goatGlow {
   0%, 100% { box-shadow: 0 0 12px rgba(255, 200, 0, 0.32), inset 0 0 20px rgba(255, 215, 0, 0.07);
@@ -1083,20 +1084,25 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   50%      { box-shadow: 0 0 26px rgba(255, 218, 0, 0.62), inset 0 0 28px rgba(255, 215, 0, 0.15);
              border-color: #fff3ad; }
 }
-/* rotating light beam */
+/* slowly turning 3D crown watermark (replaces the old rotating light beam) */
 .candidate.tier-card.tier-goat::before {
-  content: '';
+  content: '👑';
   position: absolute;
-  inset: -60%;
+  top: 50%;
+  left: 50%;
   z-index: 0;
-  background: conic-gradient(from 0deg,
-    transparent 0 60%,
-    rgba(255, 228, 140, 0.45) 72%,
-    rgba(255, 255, 255, 0.65) 78%,
-    rgba(255, 228, 140, 0.45) 84%,
-    transparent 92%);
-  animation: goatSweep 4.5s linear infinite;
+  font-size: 4.2rem;
+  line-height: 1;
+  opacity: 0.20;
+  transform: translate(-50%, -50%);
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 3px 4px rgba(140, 90, 0, 0.55));
+  animation: goatCrown 6.5s ease-in-out infinite;
   pointer-events: none;
+}
+@keyframes goatCrown {
+  0%, 100% { transform: translate(-50%, -50%) rotateY(-32deg) rotateX(8deg); }
+  50%      { transform: translate(-50%, -50%) rotateY(32deg) rotateX(8deg); }
 }
 /* periodic diagonal flash across the whole card */
 .candidate.tier-card.tier-goat::after {
@@ -1110,12 +1116,12 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   pointer-events: none;
 }
 .candidate.tier-card.tier-goat > * { position: relative; z-index: 1; }
-@keyframes goatSweep { to { transform: rotate(1turn); } }
 @keyframes goatFlash { 0% { transform: translateX(-130%); } 55%, 100% { transform: translateX(130%); } }
 @media (prefers-reduced-motion: reduce) {
   .candidate.tier-card.tier-goat { animation: none;
     box-shadow: 0 0 16px rgba(255, 215, 0, 0.45), inset 0 0 22px rgba(255, 215, 0, 0.10); }
-  .candidate.tier-card.tier-goat::before { animation: none; opacity: 0.5; }
+  .candidate.tier-card.tier-goat::before { animation: none;
+    transform: translate(-50%, -50%) rotateY(-14deg) rotateX(8deg); }
   .candidate.tier-card.tier-goat::after { animation: none; opacity: 0; }
 }
 .candidate.tier-card.tier-diamond  { box-shadow: inset 3px 0 0 #8fe6ff; }
