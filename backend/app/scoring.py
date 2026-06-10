@@ -142,12 +142,17 @@ DUEL_STRETCH = 1.5      # mild stretch: meaningful, not blown-out, separation
 # night moves more points than a role player's), rather than a flat absolute
 # swing that made scrubs the most volatile in relative terms.
 SIM_REL_SIGMA = 0.12    # per-player performance swing (std dev, fraction of power)
-# The gem tiers (Sapphire and up) are CONSISTENT stars: their DOWNSIDE swing is
-# dampened so a bad night doesn't sink them as far (the floor rises), while their
-# upside is unchanged. Role players keep the full symmetric swing.
-GEM_TIER_MIN = 88          # Sapphire+ (the gem-named tiers: Sapphire/Amethyst/Diamond/GOAT)
-GEM_DOWNSIDE_DAMP = 0.5    # negative swings for gem tiers are halved
-GOAT_DOWNSIDE_DAMP = 0.25  # GOAT (98+) is the most consistent: downside dampened further
+# Every player's DOWNSIDE swing is dampened so a bad night doesn't sink the duel
+# score as far (the floor rises, the upside is unchanged) -- tighter, more
+# predictable duel scores across all tiers. Stars stay the most consistent:
+# GOAT is dampened the most, then the gem tiers, then everyone else.
+GEM_TIER_MIN = 88           # Sapphire+ (the gem-named tiers: Sapphire/Amethyst/Diamond/GOAT)
+BASE_DOWNSIDE_DAMP = 0.6    # Gold and below
+GEM_DOWNSIDE_DAMP = 0.5     # Sapphire / Amethyst / Diamond
+GOAT_DOWNSIDE_DAMP = 0.25   # GOAT (98+) -- most consistent of all
+# Upside is also dampened for every tier EXCEPT GOAT, so only a GOAT can spike to
+# a true career night; everyone else has a tighter ceiling too.
+UPSIDE_DAMP = 0.6           # positive-swing multiplier for all non-GOAT tiers
 MATCHUP_WIN_BONUS = 3.0 # small team strength bonus per positional matchup won
 # Positional fit quality (added to team total, in rating points). Slots are
 # forced, so balance is automatic; instead we judge how well each player suits
@@ -637,13 +642,17 @@ def _sim_score(rng, rating_value: float, eff_adjust: float,
     under the SAME random swing -- i.e. the net effect of bonuses & penalties.
     """
     swing = rng.gauss(0.0, SIM_REL_SIGMA)
-    # Gem tiers don't fall as far on a bad night (floor rises, upside unchanged);
-    # GOAT is the most consistent of all, so its downside is dampened the most.
+    # Every tier dampens its downside (floor rises, stars most consistent). The
+    # upside is dampened for everyone EXCEPT GOAT, so only a GOAT can pop off.
     if swing < 0:
         if rating_value >= 98:
             swing *= GOAT_DOWNSIDE_DAMP
         elif rating_value >= GEM_TIER_MIN:
             swing *= GEM_DOWNSIDE_DAMP
+        else:
+            swing *= BASE_DOWNSIDE_DAMP
+    elif rating_value < 98:
+        swing *= UPSIDE_DAMP
     swing = 1.0 + swing
     score = duel_power(rating_value, eff_adjust) * swing
     baseline = max(0.0, duel_power(rating_value, 0.0) * swing)
