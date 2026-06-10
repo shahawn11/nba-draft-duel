@@ -6,8 +6,8 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 
-const W = 132
-const H = 120
+const W = 104
+const H = 92
 
 export default function Crown3D() {
   const mountRef = useRef(null)
@@ -55,11 +55,15 @@ export default function Crown3D() {
       spike.position.set(cx * 0.97, 0.72, cz * 0.97)
       crown.add(spike)
       const c = gemColors[i % gemColors.length]
-      const gemMat = new THREE.MeshStandardMaterial({
-        color: c, metalness: 0.15, roughness: 0.12, envMapIntensity: 1.5,
-        emissive: c, emissiveIntensity: 0.22,
+      // Faceted refractive jewel: glassy transmission + high IOR bends light
+      // through the low-poly facets; tinted via attenuation.
+      const gemMat = new THREE.MeshPhysicalMaterial({
+        color: c, metalness: 0.0, roughness: 0.05,
+        transmission: 0.92, ior: 2.2, thickness: 0.5,
+        attenuationColor: new THREE.Color(c), attenuationDistance: 0.55,
+        envMapIntensity: 1.6, specularIntensity: 1.0,
       })
-      const gem = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 0), gemMat)
+      const gem = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 0), gemMat)
       gem.position.set(cx * 1.0, 0.12, cz * 1.0)
       crown.add(gem); gems.push(gemMat)
     }

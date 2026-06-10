@@ -1089,14 +1089,16 @@ header h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 132px;
-  height: 120px;
-  margin: -64px 0 0 -66px;
+  width: 104px;
+  height: 92px;
+  margin: -50px 0 0 -52px;
   z-index: 0;
   pointer-events: none;
   opacity: 0.9;
 }
-.candidate.tier-card.tier-goat .crown3d { z-index: 0; }   /* behind content (beats `> *`) */
+/* Beat `.tier-goat > *` (which would force position:relative and grow the card):
+   keep the crown ABSOLUTE so it never affects card height, and behind content. */
+.candidate.tier-card.tier-goat .crown3d { position: absolute; z-index: 0; }
 .crown3d canvas { display: block; }
 /* periodic diagonal flash across the whole card */
 .candidate.tier-card.tier-goat::after {
