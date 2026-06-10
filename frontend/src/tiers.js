@@ -14,7 +14,7 @@ export const TIERS = {
   gold:     { label: '', cost: 46, name: 'Gold' },
   silver:   { label: '', cost: 40, name: 'Silver' },
   bronze:   { label: '', cost: 34, name: 'Bronze' },
-  unranked: { label: '–',  cost: 28, name: 'Unranked' },
+  unranked: { label: '',  cost: 28, name: 'Unranked' },
 }
 
 export function tierMeta(tier) {
